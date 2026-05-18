@@ -26,6 +26,54 @@ public class AppDbContext : DbContext
             .WithMany(c => c.Voturi)
             .HasForeignKey(v => v.ConsilierId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Institutie>().HasQueryFilter(e => !e.EsteSters);
+        modelBuilder.Entity<Consilier>().HasQueryFilter(e => !e.EsteSters);
+        modelBuilder.Entity<Comisie>().HasQueryFilter(e => !e.EsteSters);
+        modelBuilder.Entity<ComisieMembru>().HasQueryFilter(e => !e.EsteSters);
+        modelBuilder.Entity<Mandat>().HasQueryFilter(e => !e.EsteSters);
+        modelBuilder.Entity<Sedinta>().HasQueryFilter(e => !e.EsteSters);
+        modelBuilder.Entity<PunctOrdineZi>().HasQueryFilter(e => !e.EsteSters);
+        modelBuilder.Entity<Prezenta>().HasQueryFilter(e => !e.EsteSters);
+        modelBuilder.Entity<Vot>().HasQueryFilter(e => !e.EsteSters);
+        modelBuilder.Entity<ProcesVerbal>().HasQueryFilter(e => !e.EsteSters);
+    }
+
+    public override int SaveChanges()
+    {
+        AplicaAuditSiSoftDelete();
+        return base.SaveChanges();
+    }
+
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        AplicaAuditSiSoftDelete();
+        return base.SaveChangesAsync(cancellationToken);
+    }
+
+    private void AplicaAuditSiSoftDelete()
+    {
+        var acum = DateTime.UtcNow;
+
+        foreach (var intrare in ChangeTracker.Entries<EntitateDeBaza>())
+        {
+            switch (intrare.State)
+            {
+                case EntityState.Added:
+                    intrare.Entity.CreatLa = acum;
+                    break;
+
+                case EntityState.Modified:
+                    intrare.Entity.ModificatLa = acum;
+                    break;
+
+                case EntityState.Deleted:
+                    intrare.State = EntityState.Modified;
+                    intrare.Entity.EsteSters = true;
+                    intrare.Entity.StersLa = acum;
+                    break;
+            }
+        }
     }
 
     public DbSet<Institutie> Institutii { get; set; }

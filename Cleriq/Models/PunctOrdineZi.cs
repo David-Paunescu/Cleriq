@@ -2,9 +2,8 @@
 
 namespace Cleriq.Models;
 
-public class PunctOrdineZi
+public class PunctOrdineZi : EntitateDeBaza
 {
-    public int Id { get; set; }
     public int Ordine { get; set; }
     [MaxLength(500)]
     public string Titlu { get; set; } = "";

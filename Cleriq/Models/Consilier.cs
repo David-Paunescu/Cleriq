@@ -2,9 +2,8 @@
 
 namespace Cleriq.Models;
 
-public class Consilier
+public class Consilier : EntitateDeBaza
 {
-    public int Id { get; set; }
     [MaxLength(200)]
     public string NumeComplet { get; set; } = "";
     [MaxLength(256)]

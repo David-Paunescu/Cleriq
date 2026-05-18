@@ -2,10 +2,8 @@
 
 namespace Cleriq.Models;
 
-public class Mandat
+public class Mandat : EntitateDeBaza
 {
-    public int Id { get; set; }
-
     public DateOnly DataInceput { get; set; }
     public DateOnly? DataSfarsit { get; set; }
 

@@ -2,10 +2,8 @@
 
 namespace Cleriq.Models;
 
-public class Comisie
+public class Comisie : EntitateDeBaza
 {
-    public int Id { get; set; }
-
     [MaxLength(200)]
     public string Denumire { get; set; } = "";
 

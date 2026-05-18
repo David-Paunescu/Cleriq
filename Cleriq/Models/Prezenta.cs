@@ -3,10 +3,8 @@
 namespace Cleriq.Models;
 
 [Index(nameof(SedintaId), nameof(ConsilierId), IsUnique = true)]
-public class Prezenta
+public class Prezenta : EntitateDeBaza
 {
-    public int Id { get; set; }
-
     public StatusPrezenta Status { get; set; }
 
     public DateTime? OraSosire { get; set; }

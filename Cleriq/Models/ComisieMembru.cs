@@ -1,9 +1,10 @@
-﻿namespace Cleriq.Models;
+﻿using Microsoft.EntityFrameworkCore;
 
-public class ComisieMembru
+namespace Cleriq.Models;
+
+[Index(nameof(ComisieId), nameof(ConsilierId), IsUnique = true)]
+public class ComisieMembru : EntitateDeBaza
 {
-    public int Id { get; set; }
-
     public int ComisieId { get; set; }
     public Comisie Comisie { get; set; } = null!;
 

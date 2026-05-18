@@ -1,8 +1,7 @@
 ﻿namespace Cleriq.Models;
 
-public class ProcesVerbal
+public class ProcesVerbal : EntitateDeBaza
 {
-    public int Id { get; set; }
     public string? Continut { get; set; }
     public StatusProcesVerbal Status { get; set; } = StatusProcesVerbal.Draft;
     public DateTime? DataGenerare { get; set; }
