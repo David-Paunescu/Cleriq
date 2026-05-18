@@ -4,6 +4,7 @@ using Cleriq.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Cleriq.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260518110115_AddPrezentaVot")]
+    partial class AddPrezentaVot
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -204,37 +207,6 @@ namespace Cleriq.Migrations
                     b.ToTable("Prezente");
                 });
 
-            modelBuilder.Entity("Cleriq.Models.ProcesVerbal", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Continut")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("DataFinalizare")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("DataGenerare")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("SedintaId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SedintaId")
-                        .IsUnique();
-
-                    b.ToTable("ProceseVerbale");
-                });
-
             modelBuilder.Entity("Cleriq.Models.PunctOrdineZi", b =>
                 {
                     b.Property<int>("Id")
@@ -423,17 +395,6 @@ namespace Cleriq.Migrations
                     b.Navigation("Sedinta");
                 });
 
-            modelBuilder.Entity("Cleriq.Models.ProcesVerbal", b =>
-                {
-                    b.HasOne("Cleriq.Models.Sedinta", "Sedinta")
-                        .WithOne("ProcesVerbal")
-                        .HasForeignKey("Cleriq.Models.ProcesVerbal", "SedintaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Sedinta");
-                });
-
             modelBuilder.Entity("Cleriq.Models.PunctOrdineZi", b =>
                 {
                     b.HasOne("Cleriq.Models.Sedinta", "Sedinta")
@@ -508,8 +469,6 @@ namespace Cleriq.Migrations
             modelBuilder.Entity("Cleriq.Models.Sedinta", b =>
                 {
                     b.Navigation("Prezente");
-
-                    b.Navigation("ProcesVerbal");
 
                     b.Navigation("Puncte");
                 });
