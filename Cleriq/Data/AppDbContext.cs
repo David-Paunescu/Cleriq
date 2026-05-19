@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Linq.Expressions;
+using Microsoft.EntityFrameworkCore;
 using Cleriq.Models;
 
 namespace Cleriq.Data;
@@ -27,16 +28,20 @@ public class AppDbContext : DbContext
             .HasForeignKey(v => v.ConsilierId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        modelBuilder.Entity<Institutie>().HasQueryFilter(e => !e.EsteSters);
-        modelBuilder.Entity<Consilier>().HasQueryFilter(e => !e.EsteSters);
-        modelBuilder.Entity<Comisie>().HasQueryFilter(e => !e.EsteSters);
-        modelBuilder.Entity<ComisieMembru>().HasQueryFilter(e => !e.EsteSters);
-        modelBuilder.Entity<Mandat>().HasQueryFilter(e => !e.EsteSters);
-        modelBuilder.Entity<Sedinta>().HasQueryFilter(e => !e.EsteSters);
-        modelBuilder.Entity<PunctOrdineZi>().HasQueryFilter(e => !e.EsteSters);
-        modelBuilder.Entity<Prezenta>().HasQueryFilter(e => !e.EsteSters);
-        modelBuilder.Entity<Vot>().HasQueryFilter(e => !e.EsteSters);
-        modelBuilder.Entity<ProcesVerbal>().HasQueryFilter(e => !e.EsteSters);
+        // Aplică automat filtrul de soft-delete pe orice entitate
+        // care moștenește EntitateDeBaza.
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            if (typeof(EntitateDeBaza).IsAssignableFrom(entityType.ClrType))
+            {
+                var parametru = Expression.Parameter(entityType.ClrType, "e");
+                var proprietate = Expression.Property(parametru, nameof(EntitateDeBaza.EsteSters));
+                var negat = Expression.Not(proprietate);
+                var lambda = Expression.Lambda(negat, parametru);
+
+                modelBuilder.Entity(entityType.ClrType).HasQueryFilter(lambda);
+            }
+        }
     }
 
     public override int SaveChanges()
