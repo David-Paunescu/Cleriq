@@ -1,6 +1,49 @@
-@Cleriq_HostAddress = http://localhost:5013
+@host = https://localhost:7006
 
-GET {{Cleriq_HostAddress}}/weatherforecast/
-Accept: application/json
+### 1. Login — TRIMITE ASTA PRIMA DATĂ
+# @name login
+POST {{host}}/api/Auth/login
+Content-Type: application/json
 
-###
+{
+  "email": "test@test.com",
+  "parola": "Parola123!"
+}
+
+### 2. Creează instituția
+POST {{host}}/api/Institutii
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.token}}
+
+{
+  "denumire": "Primăria Slobozia",
+  "judet": "Ialomița",
+  "codSiruta": "104454",
+  "tip": 1
+}
+
+### 3. Listează instituțiile
+GET {{host}}/api/Institutii
+Authorization: Bearer {{login.response.body.$.token}}
+
+### 4. Creează o ședință (InstitutieId vine automat din token)
+POST {{host}}/api/Sedinte
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.token}}
+
+{
+  "titlu": "Ședință ordinară iunie 2026",
+  "numar": "12",
+  "tip": 1,
+  "dataOra": "2026-06-15T14:00:00Z",
+  "loc": "Sala de consiliu",
+  "modDesfasurare": 1
+}
+
+### 5. Listează ședințele
+GET {{host}}/api/Sedinte
+Authorization: Bearer {{login.response.body.$.token}}
+
+### 6. Soft-delete ședința 1
+DELETE {{host}}/api/Sedinte/1
+Authorization: Bearer {{login.response.body.$.token}}

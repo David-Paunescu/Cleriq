@@ -2,7 +2,7 @@
 
 namespace Cleriq.Models;
 
-public class PunctOrdineZi : EntitateDeBaza
+public class PunctOrdineZi : EntitateDeBaza, IEntitateCuTenant
 {
     public int Ordine { get; set; }
     [MaxLength(500)]
@@ -15,4 +15,5 @@ public class PunctOrdineZi : EntitateDeBaza
     public int SedintaId { get; set; }
     public Sedinta Sedinta { get; set; } = null!;
     public List<Vot> Voturi { get; set; } = new();
+    public int InstitutieId { get; set; }
 }

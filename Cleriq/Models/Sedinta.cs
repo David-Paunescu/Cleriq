@@ -2,7 +2,7 @@
 
 namespace Cleriq.Models;
 
-public class Sedinta : EntitateDeBaza
+public class Sedinta : EntitateDeBaza, IEntitateCuTenant
 {
     [MaxLength(300)]
     public string Titlu { get; set; } = "";

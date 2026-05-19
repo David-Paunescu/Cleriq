@@ -7,4 +7,5 @@ public class Utilizator : IdentityUser<int>
 {
     [MaxLength(200)]
     public string NumeComplet { get; set; } = "";
+    public int InstitutieId { get; set; }
 }

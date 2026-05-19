@@ -2,7 +2,7 @@
 
 namespace Cleriq.Models;
 
-public class Comisie : EntitateDeBaza
+public class Comisie : EntitateDeBaza, IEntitateCuTenant
 {
     [MaxLength(200)]
     public string Denumire { get; set; } = "";

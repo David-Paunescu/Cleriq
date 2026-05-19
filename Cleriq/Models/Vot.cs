@@ -3,7 +3,7 @@
 namespace Cleriq.Models;
 
 [Index(nameof(PunctId), nameof(ConsilierId), IsUnique = true)]
-public class Vot : EntitateDeBaza
+public class Vot : EntitateDeBaza, IEntitateCuTenant
 {
     public OptiuneVot Optiune { get; set; }
     public DateTime DataOra { get; set; }
@@ -11,4 +11,5 @@ public class Vot : EntitateDeBaza
     public PunctOrdineZi Punct { get; set; } = null!;
     public int ConsilierId { get; set; }
     public Consilier Consilier { get; set; } = null!;
+    public int InstitutieId { get; set; }
 }

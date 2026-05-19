@@ -2,12 +2,19 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Cleriq.Models;
+using Cleriq.Services;
 
 namespace Cleriq.Data;
 
 public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+    public int InstitutieIdCurenta { get; }
+
+    public AppDbContext(DbContextOptions<AppDbContext> options, IFurnizorTenant tenant)
+        : base(options)
+    {
+        InstitutieIdCurenta = tenant.InstitutieId;
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -31,19 +38,42 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             .HasForeignKey(v => v.ConsilierId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Aplică automat filtrul de soft-delete pe orice entitate
-        // care moștenește EntitateDeBaza.
+        // Filtru global automat: soft-delete (toate entitățile)
+        // + tenant (cele care au InstitutieId). Orice entitate nouă
+        // care moștenește EntitateDeBaza primește filtrul singură.
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
-            if (typeof(EntitateDeBaza).IsAssignableFrom(entityType.ClrType))
-            {
-                var parametru = Expression.Parameter(entityType.ClrType, "e");
-                var proprietate = Expression.Property(parametru, nameof(EntitateDeBaza.EsteSters));
-                var negat = Expression.Not(proprietate);
-                var lambda = Expression.Lambda(negat, parametru);
+            var clrType = entityType.ClrType;
+            if (!typeof(EntitateDeBaza).IsAssignableFrom(clrType))
+                continue;
 
-                modelBuilder.Entity(entityType.ClrType).HasQueryFilter(lambda);
+            var e = Expression.Parameter(clrType, "e");
+
+            // !e.EsteSters
+            Expression predicat = Expression.Not(
+                Expression.Property(e, nameof(EntitateDeBaza.EsteSters)));
+
+            var institutieContext = Expression.Property(
+                Expression.Constant(this), nameof(InstitutieIdCurenta));
+
+            if (typeof(IEntitateCuTenant).IsAssignableFrom(clrType))
+            {
+                // && e.InstitutieId == InstitutieIdCurenta
+                var institutieEntitate = Expression.Property(
+                    e, nameof(IEntitateCuTenant.InstitutieId));
+                predicat = Expression.AndAlso(predicat,
+                    Expression.Equal(institutieEntitate, institutieContext));
             }
+            else if (clrType == typeof(Institutie))
+            {
+                // Instituția ESTE tenantul: && e.Id == InstitutieIdCurenta
+                var idEntitate = Expression.Property(e, nameof(EntitateDeBaza.Id));
+                predicat = Expression.AndAlso(predicat,
+                    Expression.Equal(idEntitate, institutieContext));
+            }
+
+            var lambda = Expression.Lambda(predicat, e);
+            modelBuilder.Entity(clrType).HasQueryFilter(lambda);
         }
     }
 
@@ -69,6 +99,11 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             {
                 case EntityState.Added:
                     intrare.Entity.CreatLa = acum;
+
+                    // Forțează apartenența la instituția userului logat,
+                    // ca să nu se poată insera date în alt tenant.
+                    if (InstitutieIdCurenta != 0 && intrare.Entity is IEntitateCuTenant tenantNou)
+                        tenantNou.InstitutieId = InstitutieIdCurenta;
                     break;
 
                 case EntityState.Modified:

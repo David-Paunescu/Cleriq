@@ -30,7 +30,8 @@ public class AuthController : ControllerBase
         {
             UserName = dto.Email,
             Email = dto.Email,
-            NumeComplet = dto.NumeComplet
+            NumeComplet = dto.NumeComplet,
+            InstitutieId = dto.InstitutieId
         };
 
         var rezultat = await _userManager.CreateAsync(user, dto.Parola);
@@ -54,7 +55,8 @@ public class AuthController : ControllerBase
         {
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new(ClaimTypes.Email, user.Email!),
-            new("NumeComplet", user.NumeComplet)
+            new("NumeComplet", user.NumeComplet),
+            new("InstitutieId", user.InstitutieId.ToString())
         };
         claims.AddRange(roluri.Select(r => new Claim(ClaimTypes.Role, r)));
 

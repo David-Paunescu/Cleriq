@@ -2,7 +2,7 @@
 {
     public class AuthDto
     {
-        public record InregistrareDto(string Email, string Parola, string NumeComplet, string Rol);
+        public record InregistrareDto(string Email, string Parola, string NumeComplet, string Rol, int InstitutieId);
         public record LoginDto(string Email, string Parola);
     }
 }

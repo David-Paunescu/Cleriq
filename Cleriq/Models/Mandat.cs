@@ -2,7 +2,7 @@
 
 namespace Cleriq.Models;
 
-public class Mandat : EntitateDeBaza
+public class Mandat : EntitateDeBaza, IEntitateCuTenant
 {
     public DateOnly DataInceput { get; set; }
     public DateOnly? DataSfarsit { get; set; }
@@ -12,4 +12,5 @@ public class Mandat : EntitateDeBaza
 
     public int ConsilierId { get; set; }
     public Consilier Consilier { get; set; } = null!;
+    public int InstitutieId { get; set; }
 }
