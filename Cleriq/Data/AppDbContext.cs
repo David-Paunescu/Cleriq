@@ -1,15 +1,18 @@
 ﻿using System.Linq.Expressions;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Cleriq.Models;
 
 namespace Cleriq.Data;
 
-public class AppDbContext : DbContext
+public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
+
         modelBuilder.Entity<ComisieMembru>()
             .HasOne(cm => cm.Consilier)
             .WithMany(c => c.Apartenente)
