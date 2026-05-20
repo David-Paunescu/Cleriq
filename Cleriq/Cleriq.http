@@ -1,13 +1,82 @@
 @host = https://localhost:7006
 
+### 0. Login ca SuperAdmin
+# @name loginSuperAdmin
+POST {{host}}/api/Auth/login
+Content-Type: application/json
+
+{
+  "email": "superadmin@cleriq.ro",
+  "parola": "SuperAdmin1!"
+}
+
+### 0a. Provisioning: creează instituție + primul Admin
+POST {{host}}/api/Provisioning
+Content-Type: application/json
+Authorization: Bearer {{loginSuperAdmin.response.body.$.token}}
+
+{
+  "denumire": "Primăria Slobozia",
+  "judet": "Ialomița",
+  "codSiruta": "104454",
+  "tip": 1,
+  "emailAdmin": "admin.slobozia@cleriq.ro",
+  "parolaAdmin": "AdminSlobozia1!",
+  "numeCompletAdmin": "Admin Slobozia"
+}
+
+### 0b. Login ca noul Admin
+# @name loginAdmin
+POST {{host}}/api/Auth/login
+Content-Type: application/json
+
+{
+  "email": "admin.slobozia@cleriq.ro",
+  "parola": "AdminSlobozia1!"
+}
+
+
+
+### 0c. Test negativ: fără token → așteptăm 401
+POST {{host}}/api/Provisioning
+Content-Type: application/json
+
+{
+  "denumire": "Test fără token",
+  "judet": "X",
+  "codSiruta": "000001",
+  "tip": 1,
+  "emailAdmin": "fara.token@cleriq.ro",
+  "parolaAdmin": "TestX1234!",
+  "numeCompletAdmin": "Fără Token"
+}
+
+### 0d. Test negativ: token de Admin obișnuit → așteptăm 403
+POST {{host}}/api/Provisioning
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "denumire": "Test cu Admin",
+  "judet": "X",
+  "codSiruta": "000002",
+  "tip": 1,
+  "emailAdmin": "test.admin@cleriq.ro",
+  "parolaAdmin": "TestX1234!",
+  "numeCompletAdmin": "Cu Admin"
+}
+
+
+
+
 ### 1. Login — TRIMITE ASTA PRIMA DATĂ
 # @name login
 POST {{host}}/api/Auth/login
 Content-Type: application/json
 
 {
-  "email": "test@test.com",
-  "parola": "Parola123!"
+  "email": "superadmin@cleriq.ro",
+  "parola": "SuperAdmin1!"
 }
 
 ### 2. Creează instituția
@@ -47,3 +116,130 @@ Authorization: Bearer {{login.response.body.$.token}}
 ### 6. Soft-delete ședința 1
 DELETE {{host}}/api/Sedinte/1
 Authorization: Bearer {{login.response.body.$.token}}
+
+
+
+
+
+
+
+
+### Register: Admin creează un Secretar pentru instituția lui
+POST {{host}}/api/Auth/register
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "email": "secretar.slobozia@cleriq.ro",
+  "parola": "Secretar1234!",
+  "numeComplet": "Secretar Slobozia",
+  "rol": "Secretar"
+}
+
+### Login ca noul Secretar
+# @name loginSecretar
+POST {{host}}/api/Auth/login
+Content-Type: application/json
+
+{
+  "email": "secretar.slobozia@cleriq.ro",
+  "parola": "Secretar1234!"
+}
+
+### Negativ: register fără token → 401
+POST {{host}}/api/Auth/register
+Content-Type: application/json
+
+{
+  "email": "fara.token@cleriq.ro",
+  "parola": "Test1234!",
+  "numeComplet": "Fără Token",
+  "rol": "Secretar"
+}
+
+### Negativ: register cu token SuperAdmin → 403 (n-are rolul Admin)
+POST {{host}}/api/Auth/register
+Content-Type: application/json
+Authorization: Bearer {{loginSuperAdmin.response.body.$.token}}
+
+{
+  "email": "test.sa@cleriq.ro",
+  "parola": "Test1234!",
+  "numeComplet": "Test SA",
+  "rol": "Secretar"
+}
+
+### Negativ: Admin încearcă să creeze un SuperAdmin → 400 (rol blocat)
+POST {{host}}/api/Auth/register
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "email": "escalare@cleriq.ro",
+  "parola": "Test1234!",
+  "numeComplet": "Escalare",
+  "rol": "SuperAdmin"
+}
+
+
+
+
+
+
+
+### Negativ: Admin încearcă să creeze direct o instituție → 403
+POST {{host}}/api/Institutii
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "denumire": "Instituție ilegală",
+  "judet": "X",
+  "codSiruta": "111111",
+  "tip": 1
+}
+
+### Pozitiv: Secretar creează o ședință → 200
+POST {{host}}/api/Sedinte
+Content-Type: application/json
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+{
+  "titlu": "Ședință creată de Secretar",
+  "numar": "13",
+  "tip": 1,
+  "dataOra": "2026-07-01T14:00:00Z",
+  "loc": "Sala mare",
+  "modDesfasurare": 1
+}
+
+### Negativ: SuperAdmin încearcă să creeze ședință → 403 (rol greșit)
+POST {{host}}/api/Sedinte
+Content-Type: application/json
+Authorization: Bearer {{loginSuperAdmin.response.body.$.token}}
+
+{
+  "titlu": "N-ar trebui să meargă",
+  "numar": "99",
+  "tip": 1,
+  "dataOra": "2026-07-01T14:00:00Z",
+  "loc": "X",
+  "modDesfasurare": 1
+}
+
+### Negativ: Secretarul încearcă să șteargă o ședință → 403
+DELETE {{host}}/api/Sedinte/2
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+### Pozitiv: Admin șterge o ședință → 204
+DELETE {{host}}/api/Sedinte/2
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+
+
+
+
+
+### Test UTC: listează ședințele cu Admin → dataOra trebuie să aibă "Z"
+GET {{host}}/api/Sedinte
+Authorization: Bearer {{loginAdmin.response.body.$.token}}

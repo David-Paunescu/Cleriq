@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Cleriq.Models;
 using Cleriq.Services;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Cleriq.Data;
 
@@ -19,6 +20,31 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // Forțează ca toate DateTime/DateTime? citite din SQL să fie marcate Kind=Utc.
+        // La scriere, dacă cineva trimite un DateTime non-UTC, îl normalizăm la UTC.
+        var converterDateTime = new ValueConverter<DateTime, DateTime>(
+            v => v.Kind == DateTimeKind.Utc ? v : v.ToUniversalTime(),
+            v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+
+        var converterDateTimeNullable = new ValueConverter<DateTime?, DateTime?>(
+            v => v.HasValue
+                ? (v.Value.Kind == DateTimeKind.Utc ? v.Value : v.Value.ToUniversalTime())
+                : null,
+            v => v.HasValue
+                ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc)
+                : null);
+
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            foreach (var property in entityType.GetProperties())
+            {
+                if (property.ClrType == typeof(DateTime))
+                    property.SetValueConverter(converterDateTime);
+                else if (property.ClrType == typeof(DateTime?))
+                    property.SetValueConverter(converterDateTimeNullable);
+            }
+        }
 
         modelBuilder.Entity<ComisieMembru>()
             .HasOne(cm => cm.Consilier)

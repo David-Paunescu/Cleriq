@@ -1,5 +1,7 @@
 ﻿using Cleriq.DTOs;
 using Cleriq.Models;
+using Cleriq.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -14,24 +16,39 @@ namespace Cleriq.Controllers;
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
+    private static readonly string[] RoluriPermiseLaInregistrare = { "Admin", "Secretar", "Consilier" };
+
     private readonly UserManager<Utilizator> _userManager;
     private readonly IConfiguration _config;
+    private readonly IFurnizorTenant _furnizorTenant;
 
-    public AuthController(UserManager<Utilizator> userManager, IConfiguration config)
+    public AuthController(
+        UserManager<Utilizator> userManager,
+        IConfiguration config,
+        IFurnizorTenant furnizorTenant)
     {
         _userManager = userManager;
         _config = config;
+        _furnizorTenant = furnizorTenant;
     }
 
     [HttpPost("register")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Register(InregistrareDto dto)
     {
+        if (!RoluriPermiseLaInregistrare.Contains(dto.Rol))
+            return BadRequest($"Rol invalid. Permise: {string.Join(", ", RoluriPermiseLaInregistrare)}.");
+
+        var institutieId = _furnizorTenant.InstitutieId;
+        if (institutieId == 0)
+            return BadRequest("Token-ul nu conține InstitutieId valid.");
+
         var user = new Utilizator
         {
             UserName = dto.Email,
             Email = dto.Email,
             NumeComplet = dto.NumeComplet,
-            InstitutieId = dto.InstitutieId
+            InstitutieId = institutieId
         };
 
         var rezultat = await _userManager.CreateAsync(user, dto.Parola);
@@ -39,7 +56,7 @@ public class AuthController : ControllerBase
             return BadRequest(rezultat.Errors);
 
         await _userManager.AddToRoleAsync(user, dto.Rol);
-        return Ok(new { user.Id, user.Email });
+        return Ok(new { user.Id, user.Email, user.InstitutieId });
     }
 
     [HttpPost("login")]

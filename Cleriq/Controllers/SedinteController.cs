@@ -20,6 +20,7 @@ public class SedinteController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin,Secretar")]
     public async Task<IActionResult> Creeaza(CreareSedintaDto dto)
     {
         var sedinta = new Sedinta
@@ -50,6 +51,7 @@ public class SedinteController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Sterge(int id)
     {
         var sedinta = await _context.Sedinte.FirstOrDefaultAsync(s => s.Id == id);

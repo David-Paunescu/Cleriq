@@ -20,6 +20,7 @@ public class InstitutiiController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "SuperAdmin")]
     public async Task<IActionResult> Creeaza(CreareInstitutieDto dto)
     {
         var institutie = new Institutie
