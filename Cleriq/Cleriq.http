@@ -243,3 +243,201 @@ Authorization: Bearer {{loginAdmin.response.body.$.token}}
 ### Test UTC: listează ședințele cu Admin → dataOra trebuie să aibă "Z"
 GET {{host}}/api/Sedinte
 Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+
+
+
+
+
+
+
+
+
+### Consilieri 1. Admin creează primul consilier
+POST {{host}}/api/Consilieri
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "numeComplet": "Ion Popescu",
+  "email": "ion.popescu@slobozia.ro",
+  "telefon": "0721000111"
+}
+
+### Consilieri 2. Admin mai creează unul
+POST {{host}}/api/Consilieri
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "numeComplet": "Maria Ionescu",
+  "email": "maria.ionescu@slobozia.ro",
+  "telefon": "0721000222"
+}
+
+### Consilieri 3. Listează (cu Secretar, ca să confirmăm că vede)
+GET {{host}}/api/Consilieri
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+### Consilieri 4. Detalii consilier 1
+GET {{host}}/api/Consilieri/1
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+### Consilieri 5. Admin actualizează consilier 1
+PUT {{host}}/api/Consilieri/1
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "numeComplet": "Ion Popescu",
+  "email": "ion.popescu.nou@slobozia.ro",
+  "telefon": "0721000111",
+  "activ": true
+}
+
+### Consilieri 6. Negativ: Secretar încearcă să creeze → 403
+POST {{host}}/api/Consilieri
+Content-Type: application/json
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+{
+  "numeComplet": "N-ar trebui creat",
+  "email": null,
+  "telefon": null
+}
+
+### Consilieri 7. Admin face soft-delete consilier 2 → 204
+DELETE {{host}}/api/Consilieri/2
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### Consilieri 8. Listează din nou → consilier 2 nu mai apare
+GET {{host}}/api/Consilieri
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+
+
+
+
+
+
+
+
+
+### Comisii 1. Admin creează "Comisia de buget"
+POST {{host}}/api/Comisii
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "denumire": "Comisia de buget",
+  "descriere": "Analizează propunerile de buget local"
+}
+
+### Comisii 2. Admin creează "Comisia juridică"
+POST {{host}}/api/Comisii
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "denumire": "Comisia juridică",
+  "descriere": null
+}
+
+### Comisii 3. Listează (Secretar)
+GET {{host}}/api/Comisii
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+### Comisii 4. Creează al doilea consilier activ (Vasile, va fi id=3)
+POST {{host}}/api/Consilieri
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "numeComplet": "Vasile Georgescu",
+  "email": "vasile@slobozia.ro",
+  "telefon": "0721000333"
+}
+
+### Comisii 5. Adaugă Ion (id=1) la Comisia 1 ca Președinte (rol=1)
+POST {{host}}/api/Comisii/1/Membri
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "consilierId": 1,
+  "rol": 1
+}
+
+### Comisii 6. Adaugă Vasile (id=3) la Comisia 1 ca Membru (rol=3)
+POST {{host}}/api/Comisii/1/Membri
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "consilierId": 3,
+  "rol": 3
+}
+
+### Comisii 7. Detalii Comisia 1 — 2 membri
+GET {{host}}/api/Comisii/1
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+### Comisii 8. Negativ: Secretar adaugă membru → 403
+POST {{host}}/api/Comisii/1/Membri
+Content-Type: application/json
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+{
+  "consilierId": 1,
+  "rol": 3
+}
+
+### Comisii 9. Negativ: Ion deja membru → 409
+POST {{host}}/api/Comisii/1/Membri
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "consilierId": 1,
+  "rol": 3
+}
+
+### Comisii 10. Negativ: consilier inexistent → 404
+POST {{host}}/api/Comisii/1/Membri
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "consilierId": 999,
+  "rol": 3
+}
+
+### Comisii 11. Admin scoate Ion → 204
+DELETE {{host}}/api/Comisii/1/Membri/1
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### Comisii 12. Detalii — doar Vasile
+GET {{host}}/api/Comisii/1
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### Comisii 13. Adaugă Ion din nou ca Secretar (rol=2) — test restore
+POST {{host}}/api/Comisii/1/Membri
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "consilierId": 1,
+  "rol": 2
+}
+
+### Comisii 14. Detalii — Ion înapoi, rolul lui este Secretar (2)
+GET {{host}}/api/Comisii/1
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### Comisii 15. Admin soft-delete Comisia 2 → 204
+DELETE {{host}}/api/Comisii/2
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### Comisii 16. Listează — doar Comisia 1
+GET {{host}}/api/Comisii
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
