@@ -79,21 +79,10 @@ Content-Type: application/json
   "parola": "SuperAdmin1!"
 }
 
-### 2. Creează instituția
-POST {{host}}/api/Institutii
-Content-Type: application/json
-Authorization: Bearer {{login.response.body.$.token}}
 
-{
-  "denumire": "Primăria Slobozia",
-  "judet": "Ialomița",
-  "codSiruta": "104454",
-  "tip": 1
-}
-
-### 3. Listează instituțiile
+### 3. Listează instituțiile (cu Admin → vede instituția lui)
 GET {{host}}/api/Institutii
-Authorization: Bearer {{login.response.body.$.token}}
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
 
 ### 4. Creează o ședință (InstitutieId vine automat din token)
 POST {{host}}/api/Sedinte
@@ -182,23 +171,6 @@ Authorization: Bearer {{loginAdmin.response.body.$.token}}
 }
 
 
-
-
-
-
-
-### Negativ: Admin încearcă să creeze direct o instituție → 403
-POST {{host}}/api/Institutii
-Content-Type: application/json
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-
-{
-  "denumire": "Instituție ilegală",
-  "judet": "X",
-  "codSiruta": "111111",
-  "tip": 1
-}
-
 ### Pozitiv: Secretar creează o ședință → 200
 POST {{host}}/api/Sedinte
 Content-Type: application/json
@@ -284,7 +256,7 @@ GET {{host}}/api/Consilieri/1
 Authorization: Bearer {{loginSecretar.response.body.$.token}}
 
 ### Consilieri 5. Admin actualizează consilier 1
-PUT {{host}}/api/Consilieri/1
+PUT {{host}}/api/Consilieri/5
 Content-Type: application/json
 Authorization: Bearer {{loginAdmin.response.body.$.token}}
 
@@ -629,4 +601,91 @@ Authorization: Bearer {{loginAdmin.response.body.$.token}}
 
 ### Prezența 10. Negativ: cvorum pe ședință inexistentă → 404
 GET {{host}}/api/Sedinte/9999/Cvorum
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+
+### Register Secretar (dacă nu există)
+POST {{host}}/api/Auth/register
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "email": "secretar.slobozia@cleriq.ro",
+  "parola": "Secretar1234!",
+  "numeComplet": "Secretar Slobozia",
+  "rol": "Secretar"
+}
+
+
+### Test audit: șterge consilierul 5
+DELETE {{host}}/api/Consilieri/5
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+
+
+
+### Cascadă test: adaugă consilierul 6 la Comisia 1
+POST {{host}}/api/Comisii/1/Membri
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "consilierId": 6,
+  "rol": 3
+}
+
+
+  ### Cascadă test: mandat pentru consilierul 6
+POST {{host}}/api/Mandate
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "consilierId": 6,
+  "dataInceput": "2024-10-01",
+  "dataSfarsit": null,
+  "grupPolitic": "TEST"
+}
+
+
+### Cascadă test: șterge consilierul 6
+DELETE {{host}}/api/Consilieri/6
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+
+
+
+
+
+
+
+
+### Cascadă test: ședință
+# @name sedintaCascada
+POST {{host}}/api/Sedinte
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "titlu": "Ședință test cascadă",
+  "numar": "CASC-1",
+  "tip": 1,
+  "dataOra": "2026-09-01T14:00:00Z",
+  "loc": "Sala mare",
+  "modDesfasurare": 1
+}
+
+### Cascadă test: prezență pe ședința nouă (consilier 1)
+POST {{host}}/api/Sedinte/{{sedintaCascada.response.body.$.id}}/Prezente
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "consilierId": 1,
+  "status": 1,
+  "oraSosire": "2026-09-01T14:05:00Z"
+}
+
+### Cascadă test: șterge ședința
+DELETE {{host}}/api/Sedinte/{{sedintaCascada.response.body.$.id}}
 Authorization: Bearer {{loginAdmin.response.body.$.token}}

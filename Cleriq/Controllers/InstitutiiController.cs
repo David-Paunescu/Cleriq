@@ -1,6 +1,5 @@
 ﻿using Cleriq.Data;
 using Cleriq.DTOs;
-using Cleriq.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -17,26 +16,6 @@ public class InstitutiiController : ControllerBase
     public InstitutiiController(AppDbContext context)
     {
         _context = context;
-    }
-
-    [HttpPost]
-    [Authorize(Roles = "SuperAdmin")]
-    public async Task<IActionResult> Creeaza(CreareInstitutieDto dto)
-    {
-        var institutie = new Institutie
-        {
-            Denumire = dto.Denumire,
-            Judet = dto.Judet,
-            CodSiruta = dto.CodSiruta,
-            Tip = dto.Tip
-        };
-
-        _context.Institutii.Add(institutie);
-        await _context.SaveChangesAsync();
-
-        return Ok(new InstitutieDto(
-            institutie.Id, institutie.Denumire, institutie.Judet, institutie.CodSiruta,
-            institutie.Tip, institutie.StatusAbonament, institutie.CreatLa));
     }
 
     [HttpGet]

@@ -10,11 +10,16 @@ namespace Cleriq.Data;
 public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
 {
     public int InstitutieIdCurenta { get; }
+    public int? UserIdCurent { get; }
 
-    public AppDbContext(DbContextOptions<AppDbContext> options, IFurnizorTenant tenant)
+    public AppDbContext(
+        DbContextOptions<AppDbContext> options,
+        IFurnizorTenant tenant,
+        IFurnizorUtilizator utilizator)
         : base(options)
     {
         InstitutieIdCurenta = tenant.InstitutieId;
+        UserIdCurent = utilizator.UserId;
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -118,13 +123,18 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
     private void AplicaAuditSiSoftDelete()
     {
         var acum = DateTime.UtcNow;
+        var userId = UserIdCurent;
 
-        foreach (var intrare in ChangeTracker.Entries<EntitateDeBaza>())
+        // Snapshot — pentru că adăugăm noi tracked entities în timpul cascadei
+        var intrari = ChangeTracker.Entries<EntitateDeBaza>().ToList();
+
+        foreach (var intrare in intrari)
         {
             switch (intrare.State)
             {
                 case EntityState.Added:
                     intrare.Entity.CreatLa = acum;
+                    intrare.Entity.CreatDe = userId;
 
                     // Forțează apartenența la instituția userului logat,
                     // ca să nu se poată insera date în alt tenant.
@@ -134,14 +144,51 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
 
                 case EntityState.Modified:
                     intrare.Entity.ModificatLa = acum;
+                    intrare.Entity.ModificatDe = userId;
                     break;
 
                 case EntityState.Deleted:
                     intrare.State = EntityState.Modified;
                     intrare.Entity.EsteSters = true;
                     intrare.Entity.StersLa = acum;
+                    intrare.Entity.StersDe = userId;
+
+                    AplicaCascadaSoftDelete(intrare.Entity, acum, userId);
                     break;
             }
+        }
+    }
+
+    private void AplicaCascadaSoftDelete(EntitateDeBaza parinte, DateTime acum, int? userId)
+    {
+        switch (parinte)
+        {
+            case Consilier c:
+                CascadaPeColectie(ComisieMembri.Where(m => m.ConsilierId == c.Id), acum, userId);
+                CascadaPeColectie(Mandate.Where(m => m.ConsilierId == c.Id), acum, userId);
+                break;
+
+            case Sedinta s:
+                CascadaPeColectie(Prezente.Where(p => p.SedintaId == s.Id), acum, userId);
+                CascadaPeColectie(ProceseVerbale.Where(pv => pv.SedintaId == s.Id), acum, userId);
+                // TODO la implementarea Vot:
+                // CascadaPeColectie(PuncteOrdineZi.Where(po => po.SedintaId == s.Id), acum, userId);
+                // și extinde switch-ul pentru case PunctOrdineZi → Voturi
+                break;
+        }
+    }
+
+    private void CascadaPeColectie<T>(IQueryable<T> query, DateTime acum, int? userId)
+        where T : EntitateDeBaza
+    {
+        // Filtrul global elimină automat cele deja soft-deleted + alt tenant
+        var copii = query.ToList();
+        foreach (var copil in copii)
+        {
+            copil.EsteSters = true;
+            copil.StersLa = acum;
+            copil.StersDe = userId;
+            Entry(copil).State = EntityState.Modified;
         }
     }
 
