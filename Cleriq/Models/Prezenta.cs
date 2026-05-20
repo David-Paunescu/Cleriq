@@ -1,12 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿namespace Cleriq.Models;
 
-namespace Cleriq.Models;
-
-[Index(nameof(SedintaId), nameof(ConsilierId), IsUnique = true)]
 public class Prezenta : EntitateDeBaza, IEntitateCuTenant
 {
     public StatusPrezenta Status { get; set; }
-
     public DateTime? OraSosire { get; set; }
     public int SedintaId { get; set; }
     public Sedinta Sedinta { get; set; } = null!;

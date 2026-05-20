@@ -1,8 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿namespace Cleriq.Models;
 
-namespace Cleriq.Models;
-
-[Index(nameof(ComisieId), nameof(ConsilierId), IsUnique = true)]
 public class ComisieMembru : EntitateDeBaza, IEntitateCuTenant
 {
     public int ComisieId { get; set; }

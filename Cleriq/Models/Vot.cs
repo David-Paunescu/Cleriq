@@ -1,8 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿namespace Cleriq.Models;
 
-namespace Cleriq.Models;
-
-[Index(nameof(PunctId), nameof(ConsilierId), IsUnique = true)]
 public class Vot : EntitateDeBaza, IEntitateCuTenant
 {
     public OptiuneVot Optiune { get; set; }

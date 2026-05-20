@@ -689,3 +689,52 @@ Authorization: Bearer {{loginAdmin.response.body.$.token}}
 ### Cascadă test: șterge ședința
 DELETE {{host}}/api/Sedinte/{{sedintaCascada.response.body.$.id}}
 Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+
+
+
+
+
+
+
+
+
+### Filtru index: creează consilier
+POST {{host}}/api/Consilieri
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "numeComplet": "Test Filtru",
+  "email": null,
+  "telefon": null
+}
+
+
+////////////
+
+
+
+  ### Filtru index: adaugă în Comisia 1
+POST {{host}}/api/Comisii/1/Membri
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "consilierId": 7,
+  "rol": 3
+}
+
+### Filtru index: scoate-l din Comisia 1
+DELETE {{host}}/api/Comisii/1/Membri/7
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### Filtru index: adaugă-l din nou (restore-on-re-add)
+POST {{host}}/api/Comisii/1/Membri
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "consilierId": 7,
+  "rol": 2
+}

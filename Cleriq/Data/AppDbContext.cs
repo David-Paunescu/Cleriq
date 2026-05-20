@@ -69,6 +69,23 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             .HasForeignKey(v => v.ConsilierId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // Indexuri unice filtrate: aplică unicitatea doar pe rândurile active.
+        // Astfel restore-on-re-add devine opțional (rămâne folosit pentru audit continuu),
+        // iar un INSERT direct nu mai eșuează când există un rând soft-deleted.
+        modelBuilder.Entity<ComisieMembru>()
+            .HasIndex(cm => new { cm.ComisieId, cm.ConsilierId })
+            .IsUnique()
+            .HasFilter("[EsteSters] = 0");
+
+        modelBuilder.Entity<Prezenta>()
+            .HasIndex(p => new { p.SedintaId, p.ConsilierId })
+            .IsUnique()
+            .HasFilter("[EsteSters] = 0");
+
+        modelBuilder.Entity<Vot>()
+            .HasIndex(v => new { v.PunctId, v.ConsilierId })
+            .IsUnique()
+            .HasFilter("[EsteSters] = 0");
         // Filtru global automat: soft-delete (toate entitățile)
         // + tenant (cele care au InstitutieId). Orice entitate nouă
         // care moștenește EntitateDeBaza primește filtrul singură.
