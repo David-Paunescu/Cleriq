@@ -441,3 +441,192 @@ Authorization: Bearer {{loginAdmin.response.body.$.token}}
 ### Comisii 16. Listează — doar Comisia 1
 GET {{host}}/api/Comisii
 Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+
+
+
+
+
+
+### Mandate 1. Mandatul lui Ion (id=1): 2020-10-01 → null, PSD
+POST {{host}}/api/Mandate
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "consilierId": 1,
+  "dataInceput": "2020-10-01",
+  "dataSfarsit": null,
+  "grupPolitic": "PSD"
+}
+
+### Mandate 2. Mandatul anterior al lui Ion (închis): 2016-06-01 → 2020-09-30, PNL
+POST {{host}}/api/Mandate
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "consilierId": 1,
+  "dataInceput": "2016-06-01",
+  "dataSfarsit": "2020-09-30",
+  "grupPolitic": "PNL"
+}
+
+### Mandate 3. Mandatul lui Vasile (id=3): 2024-10-01, USR
+POST {{host}}/api/Mandate
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "consilierId": 3,
+  "dataInceput": "2024-10-01",
+  "dataSfarsit": null,
+  "grupPolitic": "USR"
+}
+
+### Mandate 4. Listează toate
+GET {{host}}/api/Mandate
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+### Mandate 5. Listează doar mandatele lui Ion
+GET {{host}}/api/Mandate?consilierId=1
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+### Mandate 6. Detalii mandat 1
+GET {{host}}/api/Mandate/1
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+### Mandate 7. Admin actualizează mandat 1 (închide-l la 2024-09-30)
+PUT {{host}}/api/Mandate/1
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "dataInceput": "2020-10-01",
+  "dataSfarsit": "2024-09-30",
+  "grupPolitic": "PSD"
+}
+
+### Mandate 8. Negativ: data sfârșit înaintea celei de început → 400
+POST {{host}}/api/Mandate
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "consilierId": 1,
+  "dataInceput": "2024-01-01",
+  "dataSfarsit": "2020-01-01",
+  "grupPolitic": "X"
+}
+
+### Mandate 9. Negativ: Secretar încearcă să creeze → 403
+POST {{host}}/api/Mandate
+Content-Type: application/json
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+{
+  "consilierId": 1,
+  "dataInceput": "2024-01-01",
+  "dataSfarsit": null,
+  "grupPolitic": null
+}
+
+### Mandate 10. Negativ: consilier inexistent → 404
+POST {{host}}/api/Mandate
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "consilierId": 999,
+  "dataInceput": "2024-01-01",
+  "dataSfarsit": null,
+  "grupPolitic": null
+}
+
+### Mandate 11. Admin soft-delete mandat 2 → 204
+DELETE {{host}}/api/Mandate/2
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### Mandate 12. Lista mandatelor lui Ion — doar mandat 1 rămâne
+GET {{host}}/api/Mandate?consilierId=1
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+
+
+
+
+### Prezența 0. Secretar creează o ședință pentru test
+# @name sedintaPrezenta
+POST {{host}}/api/Sedinte
+Content-Type: application/json
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+{
+  "titlu": "Ședință test prezență",
+  "numar": "TEST-1",
+  "tip": 1,
+  "dataOra": "2026-08-01T14:00:00Z",
+  "loc": "Sala mare",
+  "modDesfasurare": 1
+}
+
+### Prezența 1. GET listă: toți consilierii activi, default Absent
+GET {{host}}/api/Sedinte/{{sedintaPrezenta.response.body.$.id}}/Prezente
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### Prezența 2. GET cvorum: prezenti=0, neîntrunit
+GET {{host}}/api/Sedinte/{{sedintaPrezenta.response.body.$.id}}/Cvorum
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### Prezența 3. Secretar marchează Ion ca Prezent (Status=1) la 14:05 UTC
+POST {{host}}/api/Sedinte/{{sedintaPrezenta.response.body.$.id}}/Prezente
+Content-Type: application/json
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+{
+  "consilierId": 1,
+  "status": 1,
+  "oraSosire": "2026-08-01T14:05:00Z"
+}
+
+### Prezența 4. GET cvorum: prezenti=1, încă neîntrunit
+GET {{host}}/api/Sedinte/{{sedintaPrezenta.response.body.$.id}}/Cvorum
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### Prezența 5. Secretar marchează Vasile ca OnlinePrezent (Status=4)
+POST {{host}}/api/Sedinte/{{sedintaPrezenta.response.body.$.id}}/Prezente
+Content-Type: application/json
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+{
+  "consilierId": 3,
+  "status": 4,
+  "oraSosire": "2026-08-01T14:10:00Z"
+}
+
+### Prezența 6. GET cvorum: prezenti=2, ÎNTRUNIT
+GET {{host}}/api/Sedinte/{{sedintaPrezenta.response.body.$.id}}/Cvorum
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### Prezența 7. Secretar schimbă Vasile pe AbsentMotivat (Status=3) — upsert
+POST {{host}}/api/Sedinte/{{sedintaPrezenta.response.body.$.id}}/Prezente
+Content-Type: application/json
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+{
+  "consilierId": 3,
+  "status": 3,
+  "oraSosire": null
+}
+
+### Prezența 8. GET cvorum: prezenti=1 din nou, NU mai e întrunit
+GET {{host}}/api/Sedinte/{{sedintaPrezenta.response.body.$.id}}/Cvorum
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### Prezența 9. GET listă: starea curentă
+GET {{host}}/api/Sedinte/{{sedintaPrezenta.response.body.$.id}}/Prezente
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### Prezența 10. Negativ: cvorum pe ședință inexistentă → 404
+GET {{host}}/api/Sedinte/9999/Cvorum
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
