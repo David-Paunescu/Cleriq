@@ -68,6 +68,12 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             .WithMany(c => c.Voturi)
             .HasForeignKey(v => v.ConsilierId)
             .OnDelete(DeleteBehavior.Restrict);
+        
+        modelBuilder.Entity<Convocare>()
+            .HasOne(co => co.Consilier)
+            .WithMany(c => c.Convocari)
+            .HasForeignKey(co => co.ConsilierId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         // Indexuri unice filtrate: aplică unicitatea doar pe rândurile active.
         modelBuilder.Entity<ComisieMembru>()
@@ -82,6 +88,11 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
 
         modelBuilder.Entity<Vot>()
             .HasIndex(v => new { v.PunctId, v.ConsilierId })
+            .IsUnique()
+            .HasFilter("[EsteSters] = 0");
+
+        modelBuilder.Entity<Convocare>()
+            .HasIndex(co => new { co.SedintaId, co.ConsilierId })
             .IsUnique()
             .HasFilter("[EsteSters] = 0");
 
@@ -195,6 +206,7 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
                 CascadaPeColectie(Prezente.Where(p => p.SedintaId == s.Id), acum, userId, coada);
                 CascadaPeColectie(ProceseVerbale.Where(pv => pv.SedintaId == s.Id), acum, userId, coada);
                 CascadaPeColectie(PuncteOrdineZi.Where(po => po.SedintaId == s.Id), acum, userId, coada);
+                CascadaPeColectie(Convocari.Where(co => co.SedintaId == s.Id), acum, userId, coada);
                 break;
 
             case PunctOrdineZi p:
@@ -229,4 +241,5 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
     public DbSet<Prezenta> Prezente { get; set; }
     public DbSet<Vot> Voturi { get; set; }
     public DbSet<ProcesVerbal> ProceseVerbale { get; set; }
+    public DbSet<Convocare> Convocari { get; set; }
 }

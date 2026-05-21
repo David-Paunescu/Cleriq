@@ -17,4 +17,5 @@ public class Consilier : EntitateDeBaza, IEntitateCuTenant
     public List<Mandat> Mandate { get; set; } = new();
     public List<Prezenta> Prezente { get; set; } = new();
     public List<Vot> Voturi { get; set; } = new();
+    public List<Convocare> Convocari { get; set; } = new();
 }

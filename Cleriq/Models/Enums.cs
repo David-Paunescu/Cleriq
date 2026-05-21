@@ -86,3 +86,10 @@ public enum StatusProcesVerbal
     Draft = 1,
     Finalizat = 2
 }
+
+public enum StatusTrimitere
+{
+    Trimisa = 1,
+    Esuata = 2,
+    FaraDestinatie = 3
+}

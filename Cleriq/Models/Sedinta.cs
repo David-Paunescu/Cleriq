@@ -20,4 +20,5 @@ public class Sedinta : EntitateDeBaza, IEntitateCuTenant
     public List<PunctOrdineZi> Puncte { get; set; } = new();
     public List<Prezenta> Prezente { get; set; } = new();
     public ProcesVerbal? ProcesVerbal { get; set; }
+    public List<Convocare> Convocari { get; set; } = new();
 }
