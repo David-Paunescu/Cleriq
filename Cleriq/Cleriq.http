@@ -738,3 +738,517 @@ Authorization: Bearer {{loginAdmin.response.body.$.token}}
   "consilierId": 7,
   "rol": 2
 }
+
+
+
+
+
+///////////
+
+
+
+### Puncte 1. Creează ședință pentru testarea punctelor
+# @name sedintaPuncte
+POST {{host}}/api/Sedinte
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "titlu": "Ședință test puncte",
+  "numar": "PCT-1",
+  "tip": 1,
+  "dataOra": "2026-10-01T14:00:00Z",
+  "loc": "Sala mare",
+  "modDesfasurare": 1
+}
+
+### Puncte 2. Secretar adaugă punct cu vot (HCL, majoritate simplă)
+POST {{host}}/api/Sedinte/{{sedintaPuncte.response.body.$.id}}/Puncte
+Content-Type: application/json
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+{
+  "ordine": 1,
+  "titlu": "Aprobarea bugetului local pe 2026",
+  "descriere": "Proiect HCL nr. 12",
+  "tip": 1,
+  "necesitaVot": true,
+  "tipMajoritate": 1
+}
+
+### Puncte 3. Punct fără vot (informare)
+POST {{host}}/api/Sedinte/{{sedintaPuncte.response.body.$.id}}/Puncte
+Content-Type: application/json
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+{
+  "ordine": 2,
+  "titlu": "Informare execuție buget Q3",
+  "descriere": null,
+  "tip": 2,
+  "necesitaVot": false,
+  "tipMajoritate": null
+}
+
+### Puncte 4. Listă (ordonată după Ordine)
+GET {{host}}/api/Sedinte/{{sedintaPuncte.response.body.$.id}}/Puncte
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+### Puncte 5. Detalii punct 1
+GET {{host}}/api/Sedinte/{{sedintaPuncte.response.body.$.id}}/Puncte/1
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### Puncte 6. Negativ: necesitaVot=true fără tipMajoritate → 400
+POST {{host}}/api/Sedinte/{{sedintaPuncte.response.body.$.id}}/Puncte
+Content-Type: application/json
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+{
+  "ordine": 3,
+  "titlu": "Test invalid",
+  "descriere": null,
+  "tip": 1,
+  "necesitaVot": true,
+  "tipMajoritate": null
+}
+
+### Puncte 7. Negativ: ordine duplicată → 409
+POST {{host}}/api/Sedinte/{{sedintaPuncte.response.body.$.id}}/Puncte
+Content-Type: application/json
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+{
+  "ordine": 1,
+  "titlu": "Ordine duplicată",
+  "descriere": null,
+  "tip": 1,
+  "necesitaVot": true,
+  "tipMajoritate": 1
+}
+
+### Puncte 8. Actualizare: schimbă ordinea punct 1 → 5, păstrează vot
+PUT {{host}}/api/Sedinte/{{sedintaPuncte.response.body.$.id}}/Puncte/1
+Content-Type: application/json
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+{
+  "ordine": 5,
+  "titlu": "Aprobarea bugetului local pe 2026 (revizuit)",
+  "descriere": "Proiect HCL nr. 12",
+  "tip": 1,
+  "necesitaVot": true,
+  "tipMajoritate": 2
+}
+
+### Puncte 9. Negativ: ședință inexistentă → 404
+POST {{host}}/api/Sedinte/9999/Puncte
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "ordine": 1,
+  "titlu": "X",
+  "descriere": null,
+  "tip": 1,
+  "necesitaVot": false,
+  "tipMajoritate": null
+}
+
+### Puncte 10. Soft-delete punct 2
+DELETE {{host}}/api/Sedinte/{{sedintaPuncte.response.body.$.id}}/Puncte/2
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### Puncte 11. Listă — rămâne doar punctul 1 cu ordine=5
+GET {{host}}/api/Sedinte/{{sedintaPuncte.response.body.$.id}}/Puncte
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### Puncte 12. Cascadă: șterge ședința
+DELETE {{host}}/api/Sedinte/{{sedintaPuncte.response.body.$.id}}
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+
+//////---/////
+
+### Cascada regresie 1. Creează ședință + 2 puncte
+# @name sedintaRegresie
+POST {{host}}/api/Sedinte
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "titlu": "Ședință regresie cascadă",
+  "numar": "REG-1",
+  "tip": 1,
+  "dataOra": "2026-11-01T14:00:00Z",
+  "loc": "Sala mare",
+  "modDesfasurare": 1
+}
+
+### Cascada regresie 2. Punct 1
+POST {{host}}/api/Sedinte/{{sedintaRegresie.response.body.$.id}}/Puncte
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "ordine": 1,
+  "titlu": "Punct regresie 1",
+  "descriere": null,
+  "tip": 1,
+  "necesitaVot": true,
+  "tipMajoritate": 1
+}
+
+### Cascada regresie 3. Punct 2
+POST {{host}}/api/Sedinte/{{sedintaRegresie.response.body.$.id}}/Puncte
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "ordine": 2,
+  "titlu": "Punct regresie 2",
+  "descriere": null,
+  "tip": 2,
+  "necesitaVot": false,
+  "tipMajoritate": null
+}
+
+### Cascada regresie 4. Prezență pe ședință
+POST {{host}}/api/Sedinte/{{sedintaRegresie.response.body.$.id}}/Prezente
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "consilierId": 1,
+  "status": 1,
+  "oraSosire": "2026-11-01T14:05:00Z"
+}
+
+### Cascada regresie 5. Șterge ședința → cascadează pe puncte ȘI prezente
+DELETE {{host}}/api/Sedinte/{{sedintaRegresie.response.body.$.id}}
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+
+//--->
+
+### Voturi 1. Creează ședință
+# @name sedintaVoturi
+POST {{host}}/api/Sedinte
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "titlu": "Ședință test voturi",
+  "numar": "VOT-1",
+  "tip": 1,
+  "dataOra": "2026-12-01T14:00:00Z",
+  "loc": "Sala mare",
+  "modDesfasurare": 1
+}
+
+### Voturi 2. Punct cu vot
+# @name punctVot
+POST {{host}}/api/Sedinte/{{sedintaVoturi.response.body.$.id}}/Puncte
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "ordine": 1,
+  "titlu": "Aprobare buget",
+  "descriere": null,
+  "tip": 1,
+  "necesitaVot": true,
+  "tipMajoritate": 1
+}
+
+### Voturi 3. Punct FĂRĂ vot (pentru test negativ)
+# @name punctFaraVot
+POST {{host}}/api/Sedinte/{{sedintaVoturi.response.body.$.id}}/Puncte
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "ordine": 2,
+  "titlu": "Informare",
+  "descriere": null,
+  "tip": 2,
+  "necesitaVot": false,
+  "tipMajoritate": null
+}
+
+### Voturi 4. Prezență: consilier 1 → Prezent
+POST {{host}}/api/Sedinte/{{sedintaVoturi.response.body.$.id}}/Prezente
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "consilierId": 1,
+  "status": 1,
+  "oraSosire": "2026-12-01T14:05:00Z"
+}
+
+### Voturi 5. Prezență: consilier 3 → OnlinePrezent
+POST {{host}}/api/Sedinte/{{sedintaVoturi.response.body.$.id}}/Prezente
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "consilierId": 3,
+  "status": 4,
+  "oraSosire": "2026-12-01T14:10:00Z"
+}
+
+### Voturi 6. Vot Pentru de la consilier 1
+POST {{host}}/api/Sedinte/{{sedintaVoturi.response.body.$.id}}/Puncte/{{punctVot.response.body.$.id}}/Voturi
+Content-Type: application/json
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+{
+  "consilierId": 1,
+  "optiune": 1
+}
+
+### Voturi 7. Vot Împotrivă de la consilier 3
+POST {{host}}/api/Sedinte/{{sedintaVoturi.response.body.$.id}}/Puncte/{{punctVot.response.body.$.id}}/Voturi
+Content-Type: application/json
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+{
+  "consilierId": 3,
+  "optiune": 2
+}
+
+### Voturi 8. Listă voturi → 2 voturi
+GET {{host}}/api/Sedinte/{{sedintaVoturi.response.body.$.id}}/Puncte/{{punctVot.response.body.$.id}}/Voturi
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### Voturi 9. Upsert: consilier 1 schimbă în Abținere
+POST {{host}}/api/Sedinte/{{sedintaVoturi.response.body.$.id}}/Puncte/{{punctVot.response.body.$.id}}/Voturi
+Content-Type: application/json
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+{
+  "consilierId": 1,
+  "optiune": 3
+}
+
+### Voturi 10. Listă → consilier 1 Abținere, consilier 3 Împotrivă
+GET {{host}}/api/Sedinte/{{sedintaVoturi.response.body.$.id}}/Puncte/{{punctVot.response.body.$.id}}/Voturi
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### Voturi 11. Negativ: consilier 7 NU e marcat prezent → 400
+POST {{host}}/api/Sedinte/{{sedintaVoturi.response.body.$.id}}/Puncte/{{punctVot.response.body.$.id}}/Voturi
+Content-Type: application/json
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+{
+  "consilierId": 7,
+  "optiune": 1
+}
+
+### Voturi 12. Negativ: vot pe punct fără vot → 400
+POST {{host}}/api/Sedinte/{{sedintaVoturi.response.body.$.id}}/Puncte/{{punctFaraVot.response.body.$.id}}/Voturi
+Content-Type: application/json
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+{
+  "consilierId": 1,
+  "optiune": 1
+}
+
+### Voturi 13. Negativ: consilier inexistent → 404
+POST {{host}}/api/Sedinte/{{sedintaVoturi.response.body.$.id}}/Puncte/{{punctVot.response.body.$.id}}/Voturi
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "consilierId": 999,
+  "optiune": 1
+}
+
+### Voturi 14. Negativ: punct inexistent → 404
+POST {{host}}/api/Sedinte/{{sedintaVoturi.response.body.$.id}}/Puncte/9999/Voturi
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "consilierId": 1,
+  "optiune": 1
+}
+
+### Voturi 15. Admin anulează vot consilier 1
+DELETE {{host}}/api/Sedinte/{{sedintaVoturi.response.body.$.id}}/Puncte/{{punctVot.response.body.$.id}}/Voturi/1
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### Voturi 16. Re-înregistrare vot consilier 1 → Pentru (test restore-on-re-add)
+POST {{host}}/api/Sedinte/{{sedintaVoturi.response.body.$.id}}/Puncte/{{punctVot.response.body.$.id}}/Voturi
+Content-Type: application/json
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+{
+  "consilierId": 1,
+  "optiune": 1
+}
+
+### Voturi 17. Listă finală → consilier 1 Pentru, consilier 3 Împotrivă
+GET {{host}}/api/Sedinte/{{sedintaVoturi.response.body.$.id}}/Puncte/{{punctVot.response.body.$.id}}/Voturi
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### Voturi 18. TEST CASCADĂ RECURSIVĂ — șterge ședința
+DELETE {{host}}/api/Sedinte/{{sedintaVoturi.response.body.$.id}}
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+
+
+
+/// ----   ////
+
+
+### Inchide 1. Setup ședință
+# @name sedintaInchide
+POST {{host}}/api/Sedinte
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "titlu": "Ședință test închidere vot",
+  "numar": "INC-1",
+  "tip": 1,
+  "dataOra": "2027-01-01T14:00:00Z",
+  "loc": "Sala mare",
+  "modDesfasurare": 1
+}
+
+### Inchide 2. Punct simplă
+# @name punctSimpla
+POST {{host}}/api/Sedinte/{{sedintaInchide.response.body.$.id}}/Puncte
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{ "ordine": 1, "titlu": "Test majoritate simplă", "descriere": null, "tip": 1, "necesitaVot": true, "tipMajoritate": 1 }
+
+### Inchide 3. Punct absolută
+# @name punctAbsoluta
+POST {{host}}/api/Sedinte/{{sedintaInchide.response.body.$.id}}/Puncte
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{ "ordine": 2, "titlu": "Test majoritate absolută", "descriere": null, "tip": 1, "necesitaVot": true, "tipMajoritate": 2 }
+
+### Inchide 4. Punct calificată
+# @name punctCalificata
+POST {{host}}/api/Sedinte/{{sedintaInchide.response.body.$.id}}/Puncte
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{ "ordine": 3, "titlu": "Test majoritate calificată", "descriere": null, "tip": 1, "necesitaVot": true, "tipMajoritate": 3 }
+
+### Inchide 5. Punct pentru Amana
+# @name punctAmana
+POST {{host}}/api/Sedinte/{{sedintaInchide.response.body.$.id}}/Puncte
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{ "ordine": 4, "titlu": "Punct de amânat", "descriere": null, "tip": 1, "necesitaVot": true, "tipMajoritate": 1 }
+
+### Inchide 6. Punct pentru Retrage
+# @name punctRetrage
+POST {{host}}/api/Sedinte/{{sedintaInchide.response.body.$.id}}/Puncte
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{ "ordine": 5, "titlu": "Punct de retras", "descriere": null, "tip": 1, "necesitaVot": true, "tipMajoritate": 1 }
+
+### Inchide 7. Prezență consilier 1
+POST {{host}}/api/Sedinte/{{sedintaInchide.response.body.$.id}}/Prezente
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{ "consilierId": 1, "status": 1, "oraSosire": "2027-01-01T14:05:00Z" }
+
+### Inchide 8. Prezență consilier 3
+POST {{host}}/api/Sedinte/{{sedintaInchide.response.body.$.id}}/Prezente
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{ "consilierId": 3, "status": 1, "oraSosire": "2027-01-01T14:05:00Z" }
+
+### Inchide 9. Prezență consilier 7
+POST {{host}}/api/Sedinte/{{sedintaInchide.response.body.$.id}}/Prezente
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{ "consilierId": 7, "status": 1, "oraSosire": "2027-01-01T14:05:00Z" }
+
+### Inchide 10. Voturi simplă: 2 Pentru, 1 Împotrivă → prag=(3/2)+1=2, pentru=2≥2 → Adoptat
+POST {{host}}/api/Sedinte/{{sedintaInchide.response.body.$.id}}/Puncte/{{punctSimpla.response.body.$.id}}/Voturi
+Content-Type: application/json
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+{ "consilierId": 1, "optiune": 1 }
+
+### Inchide 11.
+POST {{host}}/api/Sedinte/{{sedintaInchide.response.body.$.id}}/Puncte/{{punctSimpla.response.body.$.id}}/Voturi
+Content-Type: application/json
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+{ "consilierId": 3, "optiune": 1 }
+
+### Inchide 12.
+POST {{host}}/api/Sedinte/{{sedintaInchide.response.body.$.id}}/Puncte/{{punctSimpla.response.body.$.id}}/Voturi
+Content-Type: application/json
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+{ "consilierId": 7, "optiune": 2 }
+
+### Inchide 13. Închide simplă → Adoptat (rezultat=1, prag=2)
+POST {{host}}/api/Sedinte/{{sedintaInchide.response.body.$.id}}/Puncte/{{punctSimpla.response.body.$.id}}/Inchide
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+### Inchide 14. Negativ: încercare re-închidere → 409
+POST {{host}}/api/Sedinte/{{sedintaInchide.response.body.$.id}}/Puncte/{{punctSimpla.response.body.$.id}}/Inchide
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+### Inchide 15. Negativ: încercare vot pe punct închis → 409
+POST {{host}}/api/Sedinte/{{sedintaInchide.response.body.$.id}}/Puncte/{{punctSimpla.response.body.$.id}}/Voturi
+Content-Type: application/json
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+{ "consilierId": 1, "optiune": 3 }
+
+### Inchide 16. Voturi absolută: doar 1 Pentru → prag=(3/2)+1=2, pentru=1<2 → Respins
+POST {{host}}/api/Sedinte/{{sedintaInchide.response.body.$.id}}/Puncte/{{punctAbsoluta.response.body.$.id}}/Voturi
+Content-Type: application/json
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+{ "consilierId": 1, "optiune": 1 }
+
+### Inchide 17. Închide absolută → Respins (rezultat=2, prag=2, pentru=1)
+POST {{host}}/api/Sedinte/{{sedintaInchide.response.body.$.id}}/Puncte/{{punctAbsoluta.response.body.$.id}}/Inchide
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+### Inchide 18. Voturi calificată: 2 Pentru → prag=ceil(2*3/3)=2, pentru=2≥2 → Adoptat
+POST {{host}}/api/Sedinte/{{sedintaInchide.response.body.$.id}}/Puncte/{{punctCalificata.response.body.$.id}}/Voturi
+Content-Type: application/json
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+{ "consilierId": 1, "optiune": 1 }
+
+### Inchide 19.
+POST {{host}}/api/Sedinte/{{sedintaInchide.response.body.$.id}}/Puncte/{{punctCalificata.response.body.$.id}}/Voturi
+Content-Type: application/json
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+{ "consilierId": 3, "optiune": 1 }
+
+### Inchide 20. Închide calificată → Adoptat (prag=2, pentru=2)
+POST {{host}}/api/Sedinte/{{sedintaInchide.response.body.$.id}}/Puncte/{{punctCalificata.response.body.$.id}}/Inchide
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+### Inchide 21. Amana
+POST {{host}}/api/Sedinte/{{sedintaInchide.response.body.$.id}}/Puncte/{{punctAmana.response.body.$.id}}/Amana
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+### Inchide 22. Retrage
+POST {{host}}/api/Sedinte/{{sedintaInchide.response.body.$.id}}/Puncte/{{punctRetrage.response.body.$.id}}/Retrage
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+### Inchide 23. Negativ: Amana pe punct deja închis → 409
+POST {{host}}/api/Sedinte/{{sedintaInchide.response.body.$.id}}/Puncte/{{punctSimpla.response.body.$.id}}/Amana
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+### Inchide 24. Listă finală — verifică toate Rezultat
+GET {{host}}/api/Sedinte/{{sedintaInchide.response.body.$.id}}/Puncte
+Authorization: Bearer {{loginAdmin.response.body.$.token}}

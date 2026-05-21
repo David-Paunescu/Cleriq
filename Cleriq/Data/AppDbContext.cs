@@ -70,8 +70,6 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             .OnDelete(DeleteBehavior.Restrict);
 
         // Indexuri unice filtrate: aplică unicitatea doar pe rândurile active.
-        // Astfel restore-on-re-add devine opțional (rămâne folosit pentru audit continuu),
-        // iar un INSERT direct nu mai eșuează când există un rând soft-deleted.
         modelBuilder.Entity<ComisieMembru>()
             .HasIndex(cm => new { cm.ComisieId, cm.ConsilierId })
             .IsUnique()
@@ -86,9 +84,8 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             .HasIndex(v => new { v.PunctId, v.ConsilierId })
             .IsUnique()
             .HasFilter("[EsteSters] = 0");
-        // Filtru global automat: soft-delete (toate entitățile)
-        // + tenant (cele care au InstitutieId). Orice entitate nouă
-        // care moștenește EntitateDeBaza primește filtrul singură.
+
+        // Filtru global automat: soft-delete + tenant
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
             var clrType = entityType.ClrType;
@@ -97,7 +94,6 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
 
             var e = Expression.Parameter(clrType, "e");
 
-            // !e.EsteSters
             Expression predicat = Expression.Not(
                 Expression.Property(e, nameof(EntitateDeBaza.EsteSters)));
 
@@ -106,7 +102,6 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
 
             if (typeof(IEntitateCuTenant).IsAssignableFrom(clrType))
             {
-                // && e.InstitutieId == InstitutieIdCurenta
                 var institutieEntitate = Expression.Property(
                     e, nameof(IEntitateCuTenant.InstitutieId));
                 predicat = Expression.AndAlso(predicat,
@@ -114,7 +109,6 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             }
             else if (clrType == typeof(Institutie))
             {
-                // Instituția ESTE tenantul: && e.Id == InstitutieIdCurenta
                 var idEntitate = Expression.Property(e, nameof(EntitateDeBaza.Id));
                 predicat = Expression.AndAlso(predicat,
                     Expression.Equal(idEntitate, institutieContext));
@@ -142,8 +136,12 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
         var acum = DateTime.UtcNow;
         var userId = UserIdCurent;
 
-        // Snapshot — pentru că adăugăm noi tracked entities în timpul cascadei
         var intrari = ChangeTracker.Entries<EntitateDeBaza>().ToList();
+
+        // Coadă pentru propagarea cascadei (worklist pattern).
+        // Permite cascadă N-level: copiii marcați în timpul procesării
+        // sunt enqueued și li se aplică propria cascadă la rândul lor.
+        var coadaCascada = new Queue<EntitateDeBaza>();
 
         foreach (var intrare in intrari)
         {
@@ -153,8 +151,6 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
                     intrare.Entity.CreatLa = acum;
                     intrare.Entity.CreatDe = userId;
 
-                    // Forțează apartenența la instituția userului logat,
-                    // ca să nu se poată insera date în alt tenant.
                     if (InstitutieIdCurenta != 0 && intrare.Entity is IEntitateCuTenant tenantNou)
                         tenantNou.InstitutieId = InstitutieIdCurenta;
                     break;
@@ -169,36 +165,49 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
                     intrare.Entity.EsteSters = true;
                     intrare.Entity.StersLa = acum;
                     intrare.Entity.StersDe = userId;
-
-                    AplicaCascadaSoftDelete(intrare.Entity, acum, userId);
+                    coadaCascada.Enqueue(intrare.Entity);
                     break;
             }
         }
+
+        // Procesează cascada până se golește coada.
+        // Notă: modelul nu are cicluri (Consilier → ComisieMembru/Mandat,
+        // Sedinta → Prezenta/ProcesVerbal/PunctOrdineZi → Vot), deci nu
+        // e nevoie de HashSet de protecție. De adăugat dacă apar cicluri.
+        while (coadaCascada.Count > 0)
+        {
+            var parinte = coadaCascada.Dequeue();
+            AplicaCascadaSoftDelete(parinte, acum, userId, coadaCascada);
+        }
     }
 
-    private void AplicaCascadaSoftDelete(EntitateDeBaza parinte, DateTime acum, int? userId)
+    private void AplicaCascadaSoftDelete(
+        EntitateDeBaza parinte, DateTime acum, int? userId, Queue<EntitateDeBaza> coada)
     {
         switch (parinte)
         {
             case Consilier c:
-                CascadaPeColectie(ComisieMembri.Where(m => m.ConsilierId == c.Id), acum, userId);
-                CascadaPeColectie(Mandate.Where(m => m.ConsilierId == c.Id), acum, userId);
+                CascadaPeColectie(ComisieMembri.Where(m => m.ConsilierId == c.Id), acum, userId, coada);
+                CascadaPeColectie(Mandate.Where(m => m.ConsilierId == c.Id), acum, userId, coada);
                 break;
 
             case Sedinta s:
-                CascadaPeColectie(Prezente.Where(p => p.SedintaId == s.Id), acum, userId);
-                CascadaPeColectie(ProceseVerbale.Where(pv => pv.SedintaId == s.Id), acum, userId);
-                // TODO la implementarea Vot:
-                // CascadaPeColectie(PuncteOrdineZi.Where(po => po.SedintaId == s.Id), acum, userId);
-                // și extinde switch-ul pentru case PunctOrdineZi → Voturi
+                CascadaPeColectie(Prezente.Where(p => p.SedintaId == s.Id), acum, userId, coada);
+                CascadaPeColectie(ProceseVerbale.Where(pv => pv.SedintaId == s.Id), acum, userId, coada);
+                CascadaPeColectie(PuncteOrdineZi.Where(po => po.SedintaId == s.Id), acum, userId, coada);
+                break;
+
+            case PunctOrdineZi p:
+                CascadaPeColectie(Voturi.Where(v => v.PunctId == p.Id), acum, userId, coada);
                 break;
         }
     }
 
-    private void CascadaPeColectie<T>(IQueryable<T> query, DateTime acum, int? userId)
+    private void CascadaPeColectie<T>(
+        IQueryable<T> query, DateTime acum, int? userId, Queue<EntitateDeBaza> coada)
         where T : EntitateDeBaza
     {
-        // Filtrul global elimină automat cele deja soft-deleted + alt tenant
+        // Filtrul global elimină automat cele deja soft-deleted + alt tenant.
         var copii = query.ToList();
         foreach (var copil in copii)
         {
@@ -206,6 +215,7 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             copil.StersLa = acum;
             copil.StersDe = userId;
             Entry(copil).State = EntityState.Modified;
+            coada.Enqueue(copil);
         }
     }
 
