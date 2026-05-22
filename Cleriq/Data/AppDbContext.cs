@@ -51,6 +51,10 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             }
         }
 
+        modelBuilder.Entity<Institutie>()
+            .Property(i => i.FusOrar)
+            .HasDefaultValue("Europe/Bucharest");
+
         modelBuilder.Entity<ComisieMembru>()
             .HasOne(cm => cm.Consilier)
             .WithMany(c => c.Apartenente)

@@ -21,6 +21,9 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IFurnizorTenant, FurnizorTenant>();
 builder.Services.AddScoped<IFurnizorUtilizator, FurnizorUtilizator>();
 
+builder.Services.AddScoped<IGeneratorConvocare, GeneratorConvocare>();
+builder.Services.AddScoped<IServiciuNotificare, NotificareLogger>();
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
 

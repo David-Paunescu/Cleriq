@@ -1,11 +1,12 @@
-﻿using System.Globalization;
-using System.Text;
-using Cleriq.Data;
+﻿using Cleriq.Data;
 using Cleriq.DTOs;
+using Cleriq.Helpers;
 using Cleriq.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
+using System.Text;
 
 namespace Cleriq.Controllers;
 
@@ -139,7 +140,8 @@ public class ProcesVerbalController : ControllerBase
         sb.AppendLine($"**Instituția:** {s.Institutie.Denumire}");
         if (!string.IsNullOrWhiteSpace(s.Numar))
             sb.AppendLine($"**Număr ședință:** {s.Numar}");
-        sb.AppendLine($"**Data și ora:** {s.DataOra.ToString("dd MMMM yyyy, HH:mm", culturaRo)} UTC");
+        var dataOraLocala = s.DataOra.LaFusOrar(s.Institutie.FusOrar);
+        sb.AppendLine($"**Data și ora:** {dataOraLocala.ToString("dd MMMM yyyy, HH:mm", culturaRo)}");
         if (!string.IsNullOrWhiteSpace(s.Loc))
             sb.AppendLine($"**Loc:** {s.Loc}");
         sb.AppendLine($"**Tip ședință:** {TipSedintaText(s.Tip)}");

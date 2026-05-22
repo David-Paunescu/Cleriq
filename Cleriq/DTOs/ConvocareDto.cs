@@ -31,5 +31,4 @@ public record RezultatConvocareDto(
     int PartialSucces,
     int Esuata,
     int FaraCoordonate,
-    int Sarite,
-    DateTime ConvocareTrimisaLa);
+    DateTime? ConvocareTrimisaLa);

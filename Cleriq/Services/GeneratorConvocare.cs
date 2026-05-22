@@ -20,13 +20,15 @@ public class GeneratorConvocare : IGeneratorConvocare
 
     private static string GenereazaSubiect(Sedinta s)
     {
-        var dataStr = s.DataOra.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
+        var dataLocala = s.DataOra.LaFusOrar(s.Institutie.FusOrar);
+        var dataStr = dataLocala.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
         return $"Convocare ședință {s.Tip.Eticheta().ToLower()} — {s.Institutie.Denumire} — {dataStr}";
     }
 
     private static string GenereazaEmail(Sedinta s, Consilier c)
     {
-        var dataOraStr = s.DataOra.ToString("dddd, d MMMM yyyy, HH:mm", CulturaRo);
+        var dataLocala = s.DataOra.LaFusOrar(s.Institutie.FusOrar);
+        var dataOraStr = dataLocala.ToString("dddd, d MMMM yyyy, HH:mm", CulturaRo);
 
         var sb = new StringBuilder();
         sb.AppendLine("<!DOCTYPE html>");
@@ -71,7 +73,8 @@ public class GeneratorConvocare : IGeneratorConvocare
 
     private static string GenereazaSms(Sedinta s)
     {
-        var dataStr = s.DataOra.ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture);
+        var dataLocala = s.DataOra.LaFusOrar(s.Institutie.FusOrar);
+        var dataStr = dataLocala.ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture);
         var locStr = !string.IsNullOrWhiteSpace(s.Loc) ? $", {s.Loc}" : "";
         var nrPuncte = s.Puncte.Count;
         return $"Convocare CL {s.Institutie.Denumire}: ședință {s.Tip.Eticheta().ToLower()} {dataStr}{locStr}. {nrPuncte} puncte pe ordinea de zi. Detalii pe email.";

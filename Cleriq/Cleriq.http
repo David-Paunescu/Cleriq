@@ -58,3 +58,158 @@ Authorization: Bearer {{loginAdmin.response.body.$.token}}
   "numeComplet": "Secretar Slobozia",
   "rol": "Secretar"
 }
+
+
+// -- // == //
+
+
+  ### Ion Popescu (id 1): are AMBELE coordonate
+PUT {{host}}/api/Consilieri/1
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "numeComplet": "Ion Popescu",
+  "email": "ion.popescu@slobozia.ro",
+  "telefon": "+40720123456",
+  "activ": true
+}
+
+### Vasile Georgescu (id 3): doar EMAIL
+PUT {{host}}/api/Consilieri/3
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "numeComplet": "Vasile Georgescu",
+  "email": "vasile.georgescu@slobozia.ro",
+  "telefon": null,
+  "activ": true
+}
+
+### Test Filtru (id 7): FĂRĂ coordonate
+PUT {{host}}/api/Consilieri/7
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "numeComplet": "Test Filtru",
+  "email": null,
+  "telefon": null,
+  "activ": true
+}
+
+
+
+// // /// // // /  
+
+### Creează ședință nouă
+# @name sedintaConvocare
+POST {{host}}/api/Sedinte
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "titlu": "Ședință test convocare",
+  "numar": "1/2026",
+  "tip": 1,
+  "dataOra": "2026-06-15T11:00:00Z",
+  "loc": "Sala mare a Primăriei Slobozia",
+  "modDesfasurare": 1
+}
+
+### Punct 1
+POST {{host}}/api/Sedinte/{{sedintaConvocare.response.body.$.id}}/Puncte
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "ordine": 1,
+  "titlu": "Aprobare buget local 2026",
+  "descriere": "Discutarea și aprobarea bugetului pe anul 2026",
+  "tip": 1,
+  "necesitaVot": true,
+  "tipMajoritate": 2
+}
+
+### Punct 2
+POST {{host}}/api/Sedinte/{{sedintaConvocare.response.body.$.id}}/Puncte
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "ordine": 2,
+  "titlu": "Informare privind investițiile în infrastructură",
+  "descriere": null,
+  "tip": 2,
+  "necesitaVot": false,
+  "tipMajoritate": null
+}
+
+
+
+
+
+
+  // / / / -----
+
+
+  ### Convocare în masă
+POST {{host}}/api/Sedinte/{{sedintaConvocare.response.body.$.id}}/Convocare
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+
+
+
+
+---------
+### Verifică detalii convocări
+GET {{host}}/api/Sedinte/{{sedintaConvocare.response.body.$.id}}/Convocari
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+###  Verifică starea ședinței
+GET {{host}}/api/Sedinte
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+
+### Re-convocare (idempotență)
+POST {{host}}/api/Sedinte/{{sedintaConvocare.response.body.$.id}}/Convocare
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+###
+POST {{host}}/api/Sedinte/14/Convocare
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+
+
+/// ---- ? ... === //
+
+###
+POST {{host}}/api/Sedinte/13/ProcesVerbal/Genereaza
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+
+###
+GET {{host}}/api/Sedinte/13/ProcesVerbal/Markdown
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+
+
+
+----
+###
+POST {{host}}/api/Sedinte/14/ProcesVerbal/Genereaza
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+###
+GET {{host}}/api/Sedinte/14/ProcesVerbal/Markdown
+Authorization: Bearer {{loginSecretar.response.body.$.token}}
+
+
+
+....
+
+
+###
+POST {{host}}/api/Sedinte/14/Convocare
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
