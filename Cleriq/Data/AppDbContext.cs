@@ -9,8 +9,14 @@ namespace Cleriq.Data;
 
 public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
 {
-    public int InstitutieIdCurenta { get; }
-    public int? UserIdCurent { get; }
+    private readonly IFurnizorTenant _tenant;
+    private readonly IFurnizorUtilizator _utilizator;
+
+    // Computed properties: citesc dinamic de la furnizori la fiecare acces.
+    // Esențial pentru ca SlugTenantMiddleware să poată seta tenant-ul DUPĂ
+    // construirea DbContext-ului (pe rutele publice).
+    public int InstitutieIdCurenta => _tenant.InstitutieId;
+    public int? UserIdCurent => _utilizator.UserId;
 
     public AppDbContext(
         DbContextOptions<AppDbContext> options,
@@ -18,8 +24,8 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
         IFurnizorUtilizator utilizator)
         : base(options)
     {
-        InstitutieIdCurenta = tenant.InstitutieId;
-        UserIdCurent = utilizator.UserId;
+        _tenant = tenant;
+        _utilizator = utilizator;
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -27,7 +33,6 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
         base.OnModelCreating(modelBuilder);
 
         // Forțează ca toate DateTime/DateTime? citite din SQL să fie marcate Kind=Utc.
-        // La scriere, dacă cineva trimite un DateTime non-UTC, îl normalizăm la UTC.
         var converterDateTime = new ValueConverter<DateTime, DateTime>(
             v => v.Kind == DateTimeKind.Utc ? v : v.ToUniversalTime(),
             v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
@@ -55,6 +60,11 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             .Property(i => i.FusOrar)
             .HasDefaultValue("Europe/Bucharest");
 
+        // Slug: index unic GLOBAL — fără HasFilter pe soft-delete.
+        modelBuilder.Entity<Institutie>()
+            .HasIndex(i => i.Slug)
+            .IsUnique();
+
         modelBuilder.Entity<ComisieMembru>()
             .HasOne(cm => cm.Consilier)
             .WithMany(c => c.Apartenente)
@@ -72,14 +82,13 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             .WithMany(c => c.Voturi)
             .HasForeignKey(v => v.ConsilierId)
             .OnDelete(DeleteBehavior.Restrict);
-        
+
         modelBuilder.Entity<Convocare>()
             .HasOne(co => co.Consilier)
             .WithMany(c => c.Convocari)
             .HasForeignKey(co => co.ConsilierId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Indexuri unice filtrate: aplică unicitatea doar pe rândurile active.
         modelBuilder.Entity<ComisieMembru>()
             .HasIndex(cm => new { cm.ComisieId, cm.ConsilierId })
             .IsUnique()
@@ -150,12 +159,9 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
     {
         var acum = DateTime.UtcNow;
         var userId = UserIdCurent;
+        var institutieId = InstitutieIdCurenta;  // citește o singură dată per SaveChanges
 
         var intrari = ChangeTracker.Entries<EntitateDeBaza>().ToList();
-
-        // Coadă pentru propagarea cascadei (worklist pattern).
-        // Permite cascadă N-level: copiii marcați în timpul procesării
-        // sunt enqueued și li se aplică propria cascadă la rândul lor.
         var coadaCascada = new Queue<EntitateDeBaza>();
 
         foreach (var intrare in intrari)
@@ -166,8 +172,8 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
                     intrare.Entity.CreatLa = acum;
                     intrare.Entity.CreatDe = userId;
 
-                    if (InstitutieIdCurenta != 0 && intrare.Entity is IEntitateCuTenant tenantNou)
-                        tenantNou.InstitutieId = InstitutieIdCurenta;
+                    if (institutieId != 0 && intrare.Entity is IEntitateCuTenant tenantNou)
+                        tenantNou.InstitutieId = institutieId;
                     break;
 
                 case EntityState.Modified:
@@ -185,10 +191,6 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             }
         }
 
-        // Procesează cascada până se golește coada.
-        // Notă: modelul nu are cicluri (Consilier → ComisieMembru/Mandat,
-        // Sedinta → Prezenta/ProcesVerbal/PunctOrdineZi → Vot), deci nu
-        // e nevoie de HashSet de protecție. De adăugat dacă apar cicluri.
         while (coadaCascada.Count > 0)
         {
             var parinte = coadaCascada.Dequeue();
@@ -223,7 +225,6 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
         IQueryable<T> query, DateTime acum, int? userId, Queue<EntitateDeBaza> coada)
         where T : EntitateDeBaza
     {
-        // Filtrul global elimină automat cele deja soft-deleted + alt tenant.
         var copii = query.ToList();
         foreach (var copil in copii)
         {

@@ -60,156 +60,163 @@ Authorization: Bearer {{loginAdmin.response.body.$.token}}
 }
 
 
-// -- // == //
+
+  // -- //-- Alte endpoint-uri de testat ulterior --//
 
 
-  ### Ion Popescu (id 1): are AMBELE coordonate
-PUT {{host}}/api/Consilieri/1
+ ### Test 1: fără slug → auto-derivare ("Primăria Focșani" → "primaria-focsani"). Așteptat 200
+POST {{host}}/api/Provisioning
 Content-Type: application/json
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
+Authorization: Bearer {{loginSuperAdmin.response.body.$.token}}
 
 {
-  "numeComplet": "Ion Popescu",
-  "email": "ion.popescu@slobozia.ro",
-  "telefon": "+40720123456",
-  "activ": true
-}
-
-### Vasile Georgescu (id 3): doar EMAIL
-PUT {{host}}/api/Consilieri/3
-Content-Type: application/json
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-
-{
-  "numeComplet": "Vasile Georgescu",
-  "email": "vasile.georgescu@slobozia.ro",
-  "telefon": null,
-  "activ": true
-}
-
-### Test Filtru (id 7): FĂRĂ coordonate
-PUT {{host}}/api/Consilieri/7
-Content-Type: application/json
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-
-{
-  "numeComplet": "Test Filtru",
-  "email": null,
-  "telefon": null,
-  "activ": true
-}
-
-
-
-// // /// // // /  
-
-### Creează ședință nouă
-# @name sedintaConvocare
-POST {{host}}/api/Sedinte
-Content-Type: application/json
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-
-{
-  "titlu": "Ședință test convocare",
-  "numar": "1/2026",
-  "tip": 1,
-  "dataOra": "2026-06-15T11:00:00Z",
-  "loc": "Sala mare a Primăriei Slobozia",
-  "modDesfasurare": 1
-}
-
-### Punct 1
-POST {{host}}/api/Sedinte/{{sedintaConvocare.response.body.$.id}}/Puncte
-Content-Type: application/json
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-
-{
-  "ordine": 1,
-  "titlu": "Aprobare buget local 2026",
-  "descriere": "Discutarea și aprobarea bugetului pe anul 2026",
-  "tip": 1,
-  "necesitaVot": true,
-  "tipMajoritate": 2
-}
-
-### Punct 2
-POST {{host}}/api/Sedinte/{{sedintaConvocare.response.body.$.id}}/Puncte
-Content-Type: application/json
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-
-{
-  "ordine": 2,
-  "titlu": "Informare privind investițiile în infrastructură",
-  "descriere": null,
+  "denumire": "Primăria Focșani",
+  "judet": "Vrancea",
+  "codSiruta": "176410",
   "tip": 2,
-  "necesitaVot": false,
-  "tipMajoritate": null
+  "slug": null,
+  "emailAdmin": "admin.focsani@cleriq.ro",
+  "parolaAdmin": "AdminFocsani1!",
+  "numeCompletAdmin": "Admin Focșani"
+}
+
+### Test 2: slug explicit care produce conflict cu Slobozia. Așteptat 409 cu sugestii
+POST {{host}}/api/Provisioning
+Content-Type: application/json
+Authorization: Bearer {{loginSuperAdmin.response.body.$.token}}
+
+{
+  "denumire": "Test Conflict",
+  "judet": "Ialomița",
+  "codSiruta": "999999",
+  "tip": 1,
+  "slug": "primaria-slobozia",
+  "emailAdmin": "test@cleriq.ro",
+  "parolaAdmin": "Test12345!",
+  "numeCompletAdmin": "Test"
+}
+
+### Test 3: slug invalid (majuscule + spațiu). Așteptat 400 cu mesaj despre format
+POST {{host}}/api/Provisioning
+Content-Type: application/json
+Authorization: Bearer {{loginSuperAdmin.response.body.$.token}}
+
+{
+  "denumire": "Test Format",
+  "judet": "Ialomița",
+  "codSiruta": "888888",
+  "tip": 1,
+  "slug": "Test Slug",
+  "emailAdmin": "test2@cleriq.ro",
+  "parolaAdmin": "Test12345!",
+  "numeCompletAdmin": "Test"
+}
+
+### Test 4: slug rezervat ("admin"). Așteptat 400 cu mesaj „rezervat"
+POST {{host}}/api/Provisioning
+Content-Type: application/json
+Authorization: Bearer {{loginSuperAdmin.response.body.$.token}}
+
+{
+  "denumire": "Test Rezervat",
+  "judet": "Ialomița",
+  "codSiruta": "777777",
+  "tip": 1,
+  "slug": "admin",
+  "emailAdmin": "test3@cleriq.ro",
+  "parolaAdmin": "Test12345!",
+  "numeCompletAdmin": "Test"
 }
 
 
 
+  // -- // ??
 
 
+  ### Test middleware: slug valid Slobozia — Așteptat 200, institutieIdRezolvata = 2
+GET {{host}}/public/primaria-slobozia/_ping
 
-  // / / / -----
+### Test middleware: slug valid Focșani — Așteptat 200, institutieIdRezolvata = 5
+GET {{host}}/public/primaria-focsani/_ping
 
+### Test middleware: slug inexistent — Așteptat 404 (cache-uit 1 min)
+GET {{host}}/public/instituție-inexistentă-xyz/_ping
 
-  ### Convocare în masă
-POST {{host}}/api/Sedinte/{{sedintaConvocare.response.body.$.id}}/Convocare
+### Test middleware: format invalid (uppercase) — Așteptat 404 fast (fără DB, fără cache)
+GET {{host}}/public/PRIMARIA/_ping
+
+### Test middleware: rută /public/ fără slug — Așteptat 404
+GET {{host}}/public/_ping
+
+### Test compatibilitate: ruta autentificată existentă merge în continuare
+GET {{host}}/api/Consilieri
 Authorization: Bearer {{loginAdmin.response.body.$.token}}
 
 
 
 
 
----------
-### Verifică detalii convocări
-GET {{host}}/api/Sedinte/{{sedintaConvocare.response.body.$.id}}/Convocari
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-
-###  Verifică starea ședinței
-GET {{host}}/api/Sedinte
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
 
 
-### Re-convocare (idempotență)
-POST {{host}}/api/Sedinte/{{sedintaConvocare.response.body.$.id}}/Convocare
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
-
-###
-POST {{host}}/api/Sedinte/14/Convocare
-Authorization: Bearer {{loginAdmin.response.body.$.token}}
+// --------
 
 
 
-/// ---- ? ... === //
+### Test 1: lista ședințe publicate Slobozia. Așteptat 200, doar ședințe cu Status >= 2 (Convocata)
+GET {{host}}/public/primaria-slobozia/sedinte
 
-###
-POST {{host}}/api/Sedinte/13/ProcesVerbal/Genereaza
-Authorization: Bearer {{loginSecretar.response.body.$.token}}
+### Test 2: detalii Sedinta 14 (ar trebui Status=Convocata). Așteptat 200 cu ordine de zi
+GET {{host}}/public/primaria-slobozia/sedinte/14
 
+### Test 3: detalii Sedinta 13 (după UPDATE-ul de mai sus, Finalizata). Așteptat 200
+GET {{host}}/public/primaria-slobozia/sedinte/13
 
-###
-GET {{host}}/api/Sedinte/13/ProcesVerbal/Markdown
-Authorization: Bearer {{loginSecretar.response.body.$.token}}
+### Test 4: detalii ședință inexistentă. Așteptat 404
+GET {{host}}/public/primaria-slobozia/sedinte/9999
+
+### Test 5: încercare cross-tenant — Slobozia (id=2) prin slug-ul Focșani (id=5)
+###         Sedinta 14 e a Sloboziei; prin Focșani nu trebuie să fie vizibilă. Așteptat 404
+GET {{host}}/public/primaria-focsani/sedinte/14
+
+### Test 6: lista Focșani (nu are ședințe). Așteptat 200 cu []
+GET {{host}}/public/primaria-focsani/sedinte
+
+### Test 7: instituție inexistentă. Așteptat 404 (middleware)
+GET {{host}}/public/instituție-inexistentă/sedinte
 
 
 
 
-----
-###
-POST {{host}}/api/Sedinte/14/ProcesVerbal/Genereaza
-Authorization: Bearer {{loginSecretar.response.body.$.token}}
-
-###
-GET {{host}}/api/Sedinte/14/ProcesVerbal/Markdown
-Authorization: Bearer {{loginSecretar.response.body.$.token}}
+// -- // 1231231
 
 
+### Test info instituție Slobozia. Așteptat 200 cu metadate
+GET {{host}}/public/primaria-slobozia
 
-....
+### Test info Focșani. Așteptat 200
+GET {{host}}/public/primaria-focsani
 
+### Test PV Sedinta 13 (Finalizata + PV Finalizat). Așteptat 200 cu conținut
+GET {{host}}/public/primaria-slobozia/sedinte/13/procesverbal
 
-###
-POST {{host}}/api/Sedinte/14/Convocare
+### Test PV markdown Sedinta 13. Așteptat 200 text/markdown
+GET {{host}}/public/primaria-slobozia/sedinte/13/procesverbal/markdown
+
+### Test PV Sedinta 14 (PV Draft → invizibil public). Așteptat 404
+GET {{host}}/public/primaria-slobozia/sedinte/14/procesverbal
+
+### Test voturi Sedinta 13 (cu rezultate). Așteptat 200 cu 5 puncte
+GET {{host}}/public/primaria-slobozia/sedinte/13/voturi
+
+### Test voturi Sedinta 14 (puncte fără voturi încă). Așteptat 200 — 1 punct cu voturi[] gol + 1 punct fără vot deci nu apare
+GET {{host}}/public/primaria-slobozia/sedinte/14/voturi
+
+### Test convocări Sedinta 14 (din sesiunea 6: 3 convocări). Așteptat 200 cu 3 elemente + status agregat
+GET {{host}}/public/primaria-slobozia/sedinte/14/convocari
+
+### Test cross-tenant: voturile Sloboziei prin slug-ul Focșani. Așteptat 404
+GET {{host}}/public/primaria-focsani/sedinte/13/voturi
+
+### Test ștergerea fluxului autentificat (compatibilitate ConvocareController după refactor)
+GET {{host}}/api/Sedinte/14/Convocari
 Authorization: Bearer {{loginAdmin.response.body.$.token}}

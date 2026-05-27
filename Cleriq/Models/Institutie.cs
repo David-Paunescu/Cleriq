@@ -7,6 +7,9 @@ public class Institutie : EntitateDeBaza
     [MaxLength(200)]
     public string Denumire { get; set; } = "";
 
+    [MaxLength(100)]
+    public string Slug { get; set; } = "";
+
     [MaxLength(50)]
     public string Judet { get; set; } = "";
 

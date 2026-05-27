@@ -23,7 +23,7 @@ public class InstitutiiController : ControllerBase
     {
         var rezultat = await _context.Institutii
             .Select(i => new InstitutieDto(
-                i.Id, i.Denumire, i.Judet, i.CodSiruta,
+                i.Id, i.Denumire, i.Slug, i.Judet, i.CodSiruta,
                 i.Tip, i.StatusAbonament, i.FusOrar, i.CreatLa))
             .ToListAsync();
 

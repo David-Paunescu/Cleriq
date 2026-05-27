@@ -2,11 +2,33 @@
 
 public class FurnizorTenant : IFurnizorTenant
 {
-    public int InstitutieId { get; }
+    public const string CheieHttpItems = "InstitutieId";
+
+    private readonly IHttpContextAccessor _accessor;
 
     public FurnizorTenant(IHttpContextAccessor accessor)
     {
-        var claim = accessor.HttpContext?.User?.FindFirst("InstitutieId")?.Value;
-        InstitutieId = int.TryParse(claim, out var id) ? id : 0;
+        _accessor = accessor;
+    }
+
+    public int InstitutieId
+    {
+        get
+        {
+            var ctx = _accessor.HttpContext;
+
+            // 1. Priority: Items setat de SlugTenantMiddleware (rute publice cu slug)
+            if (ctx?.Items != null
+                && ctx.Items.TryGetValue(CheieHttpItems, out var item)
+                && item is int idItems
+                && idItems > 0)
+            {
+                return idItems;
+            }
+
+            // 2. Fallback: claim JWT (rute autentificate)
+            var claim = ctx?.User?.FindFirst("InstitutieId")?.Value;
+            return int.TryParse(claim, out var idClaim) ? idClaim : 0;
+        }
     }
 }

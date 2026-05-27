@@ -2,6 +2,7 @@
 using Cleriq.DTOs;
 using Cleriq.Models;
 using Cleriq.Services;
+using Cleriq.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -123,7 +124,7 @@ public class ConvocareController : ControllerBase
                 convocare.SmsDetalii = rezultat.Detalii;
             }
 
-            rezultate.Add(CalculeazaStatusGeneral(convocare));
+            rezultate.Add(convocare.StatusGeneral());
         }
 
         // Tranzitie status ședință: doar dacă măcar un consilier a fost atins cu succes
@@ -171,30 +172,10 @@ public class ConvocareController : ControllerBase
             co.SmsStatus,
             co.SmsTrimisLa,
             co.SmsDetalii,
-            CalculeazaStatusGeneral(co),
+            co.StatusGeneral(),
             co.CreatLa)).ToList();
 
         return Ok(rezultat);
     }
 
-    private static StatusConvocare CalculeazaStatusGeneral(Convocare co)
-    {
-        var emailIncercat = co.EmailStatus == StatusTrimitere.Trimisa
-                         || co.EmailStatus == StatusTrimitere.Esuata;
-        var smsIncercat = co.SmsStatus == StatusTrimitere.Trimisa
-                       || co.SmsStatus == StatusTrimitere.Esuata;
-        var emailReusit = co.EmailStatus == StatusTrimitere.Trimisa;
-        var smsReusit = co.SmsStatus == StatusTrimitere.Trimisa;
-
-        var totalIncercari = (emailIncercat ? 1 : 0) + (smsIncercat ? 1 : 0);
-        var totalReusite = (emailReusit ? 1 : 0) + (smsReusit ? 1 : 0);
-
-        if (totalIncercari == 0)
-            return StatusConvocare.FaraCoordonate;
-        if (totalReusite == totalIncercari)
-            return StatusConvocare.TotalSucces;
-        if (totalReusite == 0)
-            return StatusConvocare.Esuata;
-        return StatusConvocare.PartialSucces;
-    }
 }

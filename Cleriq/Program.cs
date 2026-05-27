@@ -1,20 +1,17 @@
 using Cleriq.Data;
+using Cleriq.Middleware;
 using Cleriq.Models;
 using Cleriq.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-//using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
 builder.Services.AddHttpContextAccessor();
@@ -23,6 +20,13 @@ builder.Services.AddScoped<IFurnizorUtilizator, FurnizorUtilizator>();
 
 builder.Services.AddScoped<IGeneratorConvocare, GeneratorConvocare>();
 builder.Services.AddScoped<IServiciuNotificare, NotificareLogger>();
+
+// Cache pentru rezolvarea tenant-ului din slug pe rutele publice.
+// SizeLimit ca centură de siguranță contra umflării (atacuri cu slug-uri random).
+builder.Services.AddMemoryCache(options =>
+{
+    options.SizeLimit = 10000;
+});
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
@@ -41,11 +45,11 @@ var cheieJwt = Encoding.UTF8.GetBytes(jwt["Key"]!);
 
 builder.Services
     .AddAuthentication(options =>
-{
-options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
+    {
+        options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
@@ -95,7 +99,6 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -105,8 +108,12 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
-
 app.UseAuthorization();
+
+// Middleware pentru rezolvarea tenant-ului din slug pe rutele publice.
+// Rulează după auth (pe rute publice nu există claim oricum) și
+// înainte de MapControllers, ca să seteze HttpContext.Items la timp.
+app.UseMiddleware<SlugTenantMiddleware>();
 
 app.MapControllers();
 
