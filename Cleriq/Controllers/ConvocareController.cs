@@ -178,4 +178,38 @@ public class ConvocareController : ControllerBase
         return Ok(rezultat);
     }
 
+    [HttpDelete("Convocare")]
+    [Authorize(Roles = "Admin,Secretar")]
+    public async Task<IActionResult> ReseteazaConvocari(int sedintaId, CancellationToken ct)
+    {
+        var sedinta = await _context.Sedinte
+            .FirstOrDefaultAsync(s => s.Id == sedintaId, ct);
+
+        if (sedinta is null)
+            return NotFound("Ședința nu există.");
+
+        // Reset valid doar din stadii incipiente (Planificata sau Convocata).
+        // Dacă ședința a început/s-a terminat/a fost anulată, reset-ul nu mai are sens.
+        if (sedinta.Status != StatusSedinta.Planificata
+            && sedinta.Status != StatusSedinta.Convocata)
+        {
+            return Conflict(
+                $"Nu se pot reseta convocările pentru o ședință cu status {sedinta.Status}.");
+        }
+
+        var convocari = await _context.Convocari
+            .Where(co => co.SedintaId == sedintaId)
+            .ToListAsync(ct);
+
+        foreach (var co in convocari)
+            _context.Convocari.Remove(co);   // devine soft-delete în SaveChanges
+
+        sedinta.ConvocareTrimisaLa = null;
+        if (sedinta.Status == StatusSedinta.Convocata)
+            sedinta.Status = StatusSedinta.Planificata;
+
+        await _context.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
 }

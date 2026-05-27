@@ -65,6 +65,72 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             .HasIndex(i => i.Slug)
             .IsUnique();
 
+        // FK Institutie cu Restrict pe toate entitățile tenant.
+        // Restrict (NU Cascade) pentru două motive:
+        //  1. SQL Server interzice multiple cascade paths spre aceeași entitate;
+        //  2. Filosofia proiectului: soft-delete peste tot, niciodată DELETE fizic pe Institutie.
+        // Protecție defensivă DB: un DELETE fizic accidental e refuzat de DB.
+
+        modelBuilder.Entity<Consilier>()
+            .HasOne(x => x.Institutie)
+            .WithMany(i => i.Consilieri)
+            .HasForeignKey(x => x.InstitutieId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Comisie>()
+            .HasOne(x => x.Institutie)
+            .WithMany(i => i.Comisii)
+            .HasForeignKey(x => x.InstitutieId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Sedinta>()
+            .HasOne(x => x.Institutie)
+            .WithMany(i => i.Sedinte)
+            .HasForeignKey(x => x.InstitutieId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ComisieMembru>()
+            .HasOne(x => x.Institutie)
+            .WithMany()
+            .HasForeignKey(x => x.InstitutieId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Mandat>()
+            .HasOne(x => x.Institutie)
+            .WithMany()
+            .HasForeignKey(x => x.InstitutieId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Prezenta>()
+            .HasOne(x => x.Institutie)
+            .WithMany()
+            .HasForeignKey(x => x.InstitutieId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Vot>()
+            .HasOne(x => x.Institutie)
+            .WithMany()
+            .HasForeignKey(x => x.InstitutieId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<PunctOrdineZi>()
+            .HasOne(x => x.Institutie)
+            .WithMany()
+            .HasForeignKey(x => x.InstitutieId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ProcesVerbal>()
+            .HasOne(x => x.Institutie)
+            .WithMany()
+            .HasForeignKey(x => x.InstitutieId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Convocare>()
+            .HasOne(x => x.Institutie)
+            .WithMany()
+            .HasForeignKey(x => x.InstitutieId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         modelBuilder.Entity<ComisieMembru>()
             .HasOne(cm => cm.Consilier)
             .WithMany(c => c.Apartenente)

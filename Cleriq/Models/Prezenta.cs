@@ -9,4 +9,5 @@ public class Prezenta : EntitateDeBaza, IEntitateCuTenant
     public int ConsilierId { get; set; }
     public Consilier Consilier { get; set; } = null!;
     public int InstitutieId { get; set; }
+    public Institutie Institutie { get; set; } = null!;
 }

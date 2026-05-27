@@ -11,6 +11,8 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+Console.OutputEncoding = System.Text.Encoding.UTF8;
+
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 

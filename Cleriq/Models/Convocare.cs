@@ -23,4 +23,5 @@ public class Convocare : EntitateDeBaza, IEntitateCuTenant
     public string? SmsDetalii { get; set; }
 
     public int InstitutieId { get; set; }
+    public Institutie Institutie { get; set; } = null!;
 }

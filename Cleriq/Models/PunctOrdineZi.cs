@@ -16,4 +16,5 @@ public class PunctOrdineZi : EntitateDeBaza, IEntitateCuTenant
     public Sedinta Sedinta { get; set; } = null!;
     public List<Vot> Voturi { get; set; } = new();
     public int InstitutieId { get; set; }
+    public Institutie Institutie { get; set; } = null!;
 }

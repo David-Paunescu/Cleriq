@@ -21,7 +21,18 @@ public class InstitutiiController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> Lista()
     {
-        var rezultat = await _context.Institutii
+        var query = _context.Institutii.AsQueryable();
+
+        // SuperAdmin vede toate instituțiile (by-pass filtru global tenant).
+        // Soft-delete rămâne aplicat — filtrul global îl combină cu cel de tenant,
+        // deci IgnoreQueryFilters() le ridică pe ambele; reaplicăm manual !EsteSters.
+        if (User.IsInRole("SuperAdmin"))
+        {
+            query = query.IgnoreQueryFilters().Where(i => !i.EsteSters);
+        }
+
+        var rezultat = await query
+            .OrderBy(i => i.Denumire)
             .Select(i => new InstitutieDto(
                 i.Id, i.Denumire, i.Slug, i.Judet, i.CodSiruta,
                 i.Tip, i.StatusAbonament, i.FusOrar, i.CreatLa))

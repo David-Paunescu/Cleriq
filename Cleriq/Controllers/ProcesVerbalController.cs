@@ -144,8 +144,8 @@ public class ProcesVerbalController : ControllerBase
         sb.AppendLine($"**Data și ora:** {dataOraLocala.ToString("dd MMMM yyyy, HH:mm", culturaRo)}");
         if (!string.IsNullOrWhiteSpace(s.Loc))
             sb.AppendLine($"**Loc:** {s.Loc}");
-        sb.AppendLine($"**Tip ședință:** {TipSedintaText(s.Tip)}");
-        sb.AppendLine($"**Mod desfășurare:** {ModDesfasurareText(s.ModDesfasurare)}");
+        sb.AppendLine($"**Tip ședință:** {s.Tip.Eticheta()}");
+        sb.AppendLine($"**Mod desfășurare:** {s.ModDesfasurare.Eticheta()}");
         sb.AppendLine();
 
         // Prezență
@@ -159,7 +159,7 @@ public class ProcesVerbalController : ControllerBase
             var status = prezenteDict.TryGetValue(c.Id, out var p) ? p.Status : StatusPrezenta.Absent;
             if (status == StatusPrezenta.Prezent || status == StatusPrezenta.OnlinePrezent)
                 prezenti++;
-            sb.AppendLine($"- {c.NumeComplet}: {StatusPrezentaText(status)}");
+            sb.AppendLine($"- {c.NumeComplet}: {status.Eticheta()}");
         }
         sb.AppendLine();
         var cvorumNecesar = (totalActivi / 2) + 1;
@@ -184,7 +184,7 @@ public class ProcesVerbalController : ControllerBase
         {
             sb.AppendLine($"### {punct.Ordine}. {punct.Titlu}");
             sb.AppendLine();
-            sb.AppendLine($"**Tip:** {TipPunctText(punct.Tip)}");
+            sb.AppendLine($"**Tip:** {punct.Tip.Eticheta()}");
             if (!string.IsNullOrWhiteSpace(punct.Descriere))
                 sb.AppendLine($"**Descriere:** {punct.Descriere}");
 
@@ -195,8 +195,8 @@ public class ProcesVerbalController : ControllerBase
                 continue;
             }
 
-            sb.AppendLine($"**Tip majoritate:** {TipMajoritateText(punct.TipMajoritate)}");
-            sb.AppendLine($"**Rezultat:** {RezultatPunctText(punct.Rezultat)}");
+            sb.AppendLine($"**Tip majoritate:** {punct.TipMajoritate.Eticheta()}");
+            sb.AppendLine($"**Rezultat:** {punct.Rezultat.Eticheta()}");
             sb.AppendLine();
 
             var pentru = punct.Voturi.Where(v => v.Optiune == OptiuneVot.Pentru)
@@ -215,58 +215,6 @@ public class ProcesVerbalController : ControllerBase
 
         return sb.ToString();
     }
-
-    private static string TipSedintaText(TipSedinta t) => t switch
-    {
-        TipSedinta.Ordinara => "Ordinară",
-        TipSedinta.Extraordinara => "Extraordinară",
-        TipSedinta.DeIndata => "De îndată",
-        _ => t.ToString()
-    };
-
-    private static string ModDesfasurareText(ModDesfasurare m) => m switch
-    {
-        ModDesfasurare.Fizic => "Fizic",
-        ModDesfasurare.Online => "Online",
-        ModDesfasurare.Hibrid => "Hibrid",
-        _ => m.ToString()
-    };
-
-    private static string StatusPrezentaText(StatusPrezenta s) => s switch
-    {
-        StatusPrezenta.Prezent => "Prezent",
-        StatusPrezenta.Absent => "Absent",
-        StatusPrezenta.AbsentMotivat => "Absent motivat",
-        StatusPrezenta.OnlinePrezent => "Online prezent",
-        _ => s.ToString()
-    };
-
-    private static string TipPunctText(TipPunct t) => t switch
-    {
-        TipPunct.ProiectHCL => "Proiect HCL",
-        TipPunct.Informare => "Informare",
-        TipPunct.Diverse => "Diverse",
-        _ => t.ToString()
-    };
-
-    private static string TipMajoritateText(TipMajoritate? t) => t switch
-    {
-        TipMajoritate.Simpla => "Simplă",
-        TipMajoritate.Absoluta => "Absolută",
-        TipMajoritate.Calificata => "Calificată",
-        null => "—",
-        _ => t.ToString()!
-    };
-
-    private static string RezultatPunctText(RezultatPunct? r) => r switch
-    {
-        RezultatPunct.Adoptat => "Adoptat",
-        RezultatPunct.Respins => "Respins",
-        RezultatPunct.Amanat => "Amânat",
-        RezultatPunct.Retras => "Retras",
-        null => "În curs (vot deschis)",
-        _ => r.ToString()!
-    };
 
     private static ProcesVerbalDto MapeazaSpreDto(ProcesVerbal pv) => new(
         pv.Id, pv.SedintaId, pv.Continut, pv.Status,

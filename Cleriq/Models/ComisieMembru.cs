@@ -10,4 +10,5 @@ public class ComisieMembru : EntitateDeBaza, IEntitateCuTenant
 
     public RolComisie Rol { get; set; } = RolComisie.Membru;
     public int InstitutieId { get; set; }
+    public Institutie Institutie { get; set; } = null!;
 }

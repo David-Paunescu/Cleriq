@@ -9,4 +9,5 @@ public class ProcesVerbal : EntitateDeBaza, IEntitateCuTenant
     public int SedintaId { get; set; }
     public Sedinta Sedinta { get; set; } = null!;
     public int InstitutieId { get; set; }
+    public Institutie Institutie { get; set; } = null!;
 }
