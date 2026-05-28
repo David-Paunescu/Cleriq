@@ -93,3 +93,9 @@ public enum StatusTrimitere
     Esuata = 2,
     FaraDestinatie = 3
 }
+
+public enum TipVot
+{
+    Nominal = 1,
+    Secret = 2
+}

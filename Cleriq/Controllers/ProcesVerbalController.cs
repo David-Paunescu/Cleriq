@@ -199,18 +199,33 @@ public class ProcesVerbalController : ControllerBase
             sb.AppendLine($"**Rezultat:** {punct.Rezultat.Eticheta()}");
             sb.AppendLine();
 
-            var pentru = punct.Voturi.Where(v => v.Optiune == OptiuneVot.Pentru)
-                .Select(v => v.Consilier.NumeComplet).OrderBy(x => x).ToList();
-            var impotriva = punct.Voturi.Where(v => v.Optiune == OptiuneVot.Impotriva)
-                .Select(v => v.Consilier.NumeComplet).OrderBy(x => x).ToList();
-            var abtinere = punct.Voturi.Where(v => v.Optiune == OptiuneVot.Abtinere)
-                .Select(v => v.Consilier.NumeComplet).OrderBy(x => x).ToList();
+            var rezumat = punct.Rezumat(punct.Voturi);
 
-            sb.AppendLine("**Voturi nominale:**");
-            sb.AppendLine($"- Pentru ({pentru.Count}): {(pentru.Any() ? string.Join(", ", pentru) : "—")}");
-            sb.AppendLine($"- Împotrivă ({impotriva.Count}): {(impotriva.Any() ? string.Join(", ", impotriva) : "—")}");
-            sb.AppendLine($"- Abțineri ({abtinere.Count}): {(abtinere.Any() ? string.Join(", ", abtinere) : "—")}");
-            sb.AppendLine();
+            if (rezumat.Secret)
+            {
+                sb.AppendLine("**Vot secret.** Conform legii, voturile individuale nu se consemnează nominal.");
+                sb.AppendLine();
+                sb.AppendLine($"- Pentru: {rezumat.Pentru}");
+                sb.AppendLine($"- Împotrivă: {rezumat.Impotriva}");
+                sb.AppendLine($"- Abțineri: {rezumat.Abtineri}");
+                sb.AppendLine($"- Total voturi exprimate: {rezumat.TotalExprimate}");
+                sb.AppendLine();
+            }
+            else
+            {
+                var pentru = rezumat.VoturiNominale.Where(v => v.Optiune == OptiuneVot.Pentru)
+                    .Select(v => v.Consilier.NumeComplet).ToList();
+                var impotriva = rezumat.VoturiNominale.Where(v => v.Optiune == OptiuneVot.Impotriva)
+                    .Select(v => v.Consilier.NumeComplet).ToList();
+                var abtinere = rezumat.VoturiNominale.Where(v => v.Optiune == OptiuneVot.Abtinere)
+                    .Select(v => v.Consilier.NumeComplet).ToList();
+
+                sb.AppendLine("**Voturi nominale:**");
+                sb.AppendLine($"- Pentru ({pentru.Count}): {(pentru.Any() ? string.Join(", ", pentru) : "—")}");
+                sb.AppendLine($"- Împotrivă ({impotriva.Count}): {(impotriva.Any() ? string.Join(", ", impotriva) : "—")}");
+                sb.AppendLine($"- Abțineri ({abtinere.Count}): {(abtinere.Any() ? string.Join(", ", abtinere) : "—")}");
+                sb.AppendLine();
+            }
         }
 
         return sb.ToString();

@@ -1,5 +1,6 @@
 ﻿using Cleriq.Data;
 using Cleriq.DTOs;
+using Cleriq.Helpers;
 using Cleriq.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +19,6 @@ public class PublicVoturiController : ControllerBase
     }
 
     // GET /public/{slug}/sedinte/{sedintaId}/voturi
-    // Grupate pe punct, ordonate cum apar pe ordinea de zi
     [HttpGet]
     public async Task<IActionResult> Lista(int sedintaId)
     {
@@ -35,13 +35,16 @@ public class PublicVoturiController : ControllerBase
             .OrderBy(p => p.Ordine)
             .ToListAsync();
 
-        var rezultat = puncte.Select(p => new PublicVoturiPunctDto(
-            p.Id, p.Ordine, p.Titlu, p.Rezultat,
-            p.Voturi
-                .OrderBy(v => v.Consilier.NumeComplet)
-                .Select(v => new PublicVotDto(v.Consilier.NumeComplet, v.Optiune))
-                .ToList()
-        )).ToList();
+        var rezultat = puncte.Select(p =>
+        {
+            var rezumat = p.Rezumat(p.Voturi);
+            return new PublicVoturiPunctDto(
+                p.Id, p.Ordine, p.Titlu, p.TipVot, p.Rezultat,
+                rezumat.Pentru, rezumat.Impotriva, rezumat.Abtineri, rezumat.TotalExprimate,
+                rezumat.VoturiNominale
+                    .Select(v => new PublicVotDto(v.Consilier.NumeComplet, v.Optiune))
+                    .ToList());
+        }).ToList();
 
         return Ok(rezultat);
     }

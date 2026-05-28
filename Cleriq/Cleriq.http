@@ -58,4 +58,188 @@ Authorization: Bearer {{loginAdmin.response.body.$.token}}
   "rol": "Secretar"
 }
 
+
+
   // -- Testele de deasupra vor fi pastrate
+
+
+
+
+  ### Creează ședință de test
+# @name creeazaSedintaTest
+POST {{host}}/api/Sedinte
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "titlu": "Ședință test vot secret",
+  "numar": "T-1",
+  "tip": 1,
+  "dataOra": "2026-06-15T10:00:00Z",
+  "loc": "Sala mare",
+  "modDesfasurare": 1
+}
+
+### Punct cu vot SECRET (tipVot = 2)
+POST {{host}}/api/Sedinte/{{creeazaSedintaTest.response.body.$.id}}/Puncte
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "ordine": 1,
+  "titlu": "Alegere viceprimar",
+  "descriere": null,
+  "tip": 1,
+  "necesitaVot": true,
+  "tipMajoritate": 1,
+  "tipVot": 2
+}
+
+### Punct cu vot NOMINAL (tipVot omis → trebuie să rezulte 1)
+POST {{host}}/api/Sedinte/{{creeazaSedintaTest.response.body.$.id}}/Puncte
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "ordine": 2,
+  "titlu": "Aprobare buget",
+  "descriere": null,
+  "tip": 1,
+  "necesitaVot": true,
+  "tipMajoritate": 1
+}
+
+### Verifică: punct 1 → tipVot 2, punct 2 → tipVot 1
+GET {{host}}/api/Sedinte/{{creeazaSedintaTest.response.body.$.id}}/Puncte
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### Curățenie: șterge ședința de test (cascadă pe puncte)
+DELETE {{host}}/api/Sedinte/{{creeazaSedintaTest.response.body.$.id}}
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+
+
+
+
+  /// -- -- -  -- - -
+
+
+  ### 1. Vezi ce consilieri activi ai (ia 2 ID-uri)
+GET {{host}}/api/Consilieri
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### 2. Creează ședință
+# @name sed
+POST {{host}}/api/Sedinte
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "titlu": "Ședință test anonimizare",
+  "numar": "T-2",
+  "tip": 1,
+  "dataOra": "2026-06-20T10:00:00Z",
+  "loc": "Sala mare",
+  "modDesfasurare": 1
+}
+
+### 3. Prezență: consilier 1 = Prezent
+POST {{host}}/api/Sedinte/{{sed.response.body.$.id}}/Prezente
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{ "consilierId": 1, "status": 1, "oraSosire": null }
+
+### 4. Prezență: consilier 3 = Prezent
+POST {{host}}/api/Sedinte/{{sed.response.body.$.id}}/Prezente
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{ "consilierId": 3, "status": 1, "oraSosire": null }
+
+### 5. Punct SECRET
+# @name pSecret
+POST {{host}}/api/Sedinte/{{sed.response.body.$.id}}/Puncte
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{ "ordine": 1, "titlu": "Alegere viceprimar", "descriere": null, "tip": 1, "necesitaVot": true, "tipMajoritate": 1, "tipVot": 2 }
+
+### 6. Punct NOMINAL
+# @name pNominal
+POST {{host}}/api/Sedinte/{{sed.response.body.$.id}}/Puncte
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{ "ordine": 2, "titlu": "Aprobare buget", "descriere": null, "tip": 1, "necesitaVot": true, "tipMajoritate": 1, "tipVot": 1 }
+
+### 7. Vot pe SECRET: consilier 1 → Pentru
+POST {{host}}/api/Sedinte/{{sed.response.body.$.id}}/Puncte/{{pSecret.response.body.$.id}}/Voturi
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{ "consilierId": 1, "optiune": 1 }
+
+### 8. Vot pe SECRET: consilier 3 → Împotrivă
+POST {{host}}/api/Sedinte/{{sed.response.body.$.id}}/Puncte/{{pSecret.response.body.$.id}}/Voturi
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{ "consilierId": 3, "optiune": 2 }
+
+### 9. Vot pe NOMINAL: consilier 1 → Pentru
+POST {{host}}/api/Sedinte/{{sed.response.body.$.id}}/Puncte/{{pNominal.response.body.$.id}}/Voturi
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{ "consilierId": 1, "optiune": 1 }
+
+### 10. Vot pe NOMINAL: consilier 3 → Pentru
+POST {{host}}/api/Sedinte/{{sed.response.body.$.id}}/Puncte/{{pNominal.response.body.$.id}}/Voturi
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{ "consilierId": 3, "optiune": 1 }
+
+### 11. INTERN voturi punct SECRET → fără nume↔opțiune
+GET {{host}}/api/Sedinte/{{sed.response.body.$.id}}/Puncte/{{pSecret.response.body.$.id}}/Voturi
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### 12. INTERN voturi punct NOMINAL → cu nume
+GET {{host}}/api/Sedinte/{{sed.response.body.$.id}}/Puncte/{{pNominal.response.body.$.id}}/Voturi
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### 13. Convocă (ca să devină publică: Status → Convocata)
+POST {{host}}/api/Sedinte/{{sed.response.body.$.id}}/Convocare
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### 14. PUBLIC voturi → secret doar tally, nominal cu nume
+GET {{host}}/public/primaria-slobozia/sedinte/{{sed.response.body.$.id}}/voturi
+
+### 15. Curățenie
+DELETE {{host}}/api/Sedinte/{{sed.response.body.$.id}}
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+
+
+// -- - - -!
+
+
+
+
+### Generează PV pe ședința 20
+POST {{host}}/api/Sedinte/20/ProcesVerbal/Genereaza
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### Vezi PV-ul (Markdown)
+GET {{host}}/api/Sedinte/20/ProcesVerbal/Markdown
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+
+
+
+
+// ..........
+
+### Detalii ședință publică 20 (verifică tipVot pe ordinea de zi)
+GET {{host}}/public/primaria-slobozia/sedinte/20

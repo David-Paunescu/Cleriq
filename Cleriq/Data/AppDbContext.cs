@@ -60,6 +60,10 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             .Property(i => i.FusOrar)
             .HasDefaultValue("Europe/Bucharest");
 
+        modelBuilder.Entity<PunctOrdineZi>()
+            .Property(p => p.TipVot)
+            .HasDefaultValue(TipVot.Nominal);
+
         // Slug: index unic GLOBAL — fără HasFilter pe soft-delete.
         modelBuilder.Entity<Institutie>()
             .HasIndex(i => i.Slug)

@@ -22,5 +22,6 @@ public record PublicPunctOrdineZiDto(
     string? Descriere,
     TipPunct Tip,
     bool NecesitaVot,
+    TipVot TipVot,
     TipMajoritate? TipMajoritate,
     RezultatPunct? Rezultat);

@@ -56,7 +56,7 @@ public class PublicSedinteController : ControllerBase
         var ordineDeZi = sedinta.Puncte
             .Select(p => new PublicPunctOrdineZiDto(
                 p.Id, p.Ordine, p.Titlu, p.Descriere, p.Tip,
-                p.NecesitaVot, p.TipMajoritate, p.Rezultat))
+                p.NecesitaVot, p.TipVot, p.TipMajoritate, p.Rezultat))
             .ToList();
 
         return Ok(new PublicSedintaDto(

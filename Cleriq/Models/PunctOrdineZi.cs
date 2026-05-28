@@ -11,6 +11,7 @@ public class PunctOrdineZi : EntitateDeBaza, IEntitateCuTenant
     public TipPunct Tip { get; set; } = TipPunct.ProiectHCL;
     public bool NecesitaVot { get; set; } = true;
     public TipMajoritate? TipMajoritate { get; set; }
+    public TipVot TipVot { get; set; } = TipVot.Nominal;
     public RezultatPunct? Rezultat { get; set; }
     public int SedintaId { get; set; }
     public Sedinta Sedinta { get; set; } = null!;

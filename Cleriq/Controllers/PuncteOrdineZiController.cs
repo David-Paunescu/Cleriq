@@ -31,7 +31,7 @@ public class PuncteOrdineZiController : ControllerBase
             .OrderBy(p => p.Ordine)
             .Select(p => new PunctOrdineZiDto(
                 p.Id, p.SedintaId, p.Ordine, p.Titlu, p.Descriere, p.Tip,
-                p.NecesitaVot, p.TipMajoritate, p.Rezultat, p.InstitutieId, p.CreatLa))
+                p.NecesitaVot, p.TipVot, p.TipMajoritate, p.Rezultat, p.InstitutieId, p.CreatLa))
             .ToListAsync();
 
         return Ok(puncte);
@@ -73,7 +73,9 @@ public class PuncteOrdineZiController : ControllerBase
             Descriere = dto.Descriere,
             Tip = dto.Tip,
             NecesitaVot = dto.NecesitaVot,
-            TipMajoritate = dto.NecesitaVot ? dto.TipMajoritate : null
+            TipMajoritate = dto.NecesitaVot ? dto.TipMajoritate : null,
+            // Vot secret are sens doar dacă punctul se votează; altfel forțăm Nominal (irelevant).
+            TipVot = dto.NecesitaVot ? (dto.TipVot ?? TipVot.Nominal) : TipVot.Nominal
             // Rezultat rămâne null — se setează doar la închiderea votului
         };
 
@@ -109,6 +111,7 @@ public class PuncteOrdineZiController : ControllerBase
         punct.Tip = dto.Tip;
         punct.NecesitaVot = dto.NecesitaVot;
         punct.TipMajoritate = dto.NecesitaVot ? dto.TipMajoritate : null;
+        punct.TipVot = dto.NecesitaVot ? (dto.TipVot ?? TipVot.Nominal) : TipVot.Nominal;
         // Rezultat NU se modifică aici
 
         await _context.SaveChangesAsync();
@@ -206,11 +209,8 @@ public class PuncteOrdineZiController : ControllerBase
     {
         return tip switch
         {
-            // Simplă: pentru ≥ primul natural > totalExprimate/2
             TipMajoritate.Simpla => CalculeazaSimpla(pentru, impotriva, abtinere),
-            // Absolută: pentru ≥ primul natural > totalÎnFuncție/2
             TipMajoritate.Absoluta => CalculeazaAbsoluta(pentru, totalInFunctie),
-            // Calificată: pentru ≥ ceil(2 × totalÎnFuncție / 3)
             TipMajoritate.Calificata => CalculeazaCalificata(pentru, totalInFunctie),
             _ => (false, 0)
         };
@@ -231,7 +231,6 @@ public class PuncteOrdineZiController : ControllerBase
 
     private static (bool, int) CalculeazaCalificata(int pentru, int totalInFunctie)
     {
-        // ceil(2n/3) = (2n + 2) / 3 cu integer division
         var prag = (2 * totalInFunctie + 2) / 3;
         return (pentru >= prag, prag);
     }
@@ -239,5 +238,5 @@ public class PuncteOrdineZiController : ControllerBase
 
     private static PunctOrdineZiDto MapeazaSpreDto(PunctOrdineZi p) => new(
         p.Id, p.SedintaId, p.Ordine, p.Titlu, p.Descriere, p.Tip,
-        p.NecesitaVot, p.TipMajoritate, p.Rezultat, p.InstitutieId, p.CreatLa);
+        p.NecesitaVot, p.TipVot, p.TipMajoritate, p.Rezultat, p.InstitutieId, p.CreatLa);
 }

@@ -4,6 +4,7 @@ using Cleriq.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Cleriq.Helpers;
 
 namespace Cleriq.Controllers;
 
@@ -22,21 +23,33 @@ public class VoturiController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> Lista(int sedintaId, int punctId)
     {
-        var punctExista = await _context.PuncteOrdineZi
-            .AnyAsync(p => p.Id == punctId && p.SedintaId == sedintaId);
-        if (!punctExista)
+        var punct = await _context.PuncteOrdineZi
+            .FirstOrDefaultAsync(p => p.Id == punctId && p.SedintaId == sedintaId);
+        if (punct is null)
             return NotFound("Punctul nu există în această ședință.");
 
         var voturi = await _context.Voturi
             .Where(v => v.PunctId == punctId)
             .Include(v => v.Consilier)
-            .OrderBy(v => v.Consilier.NumeComplet)
-            .Select(v => new VotDto(
-                v.Id, v.PunctId, v.ConsilierId, v.Consilier.NumeComplet,
-                v.Optiune, v.DataOra, v.InstitutieId))
             .ToListAsync();
 
-        return Ok(voturi);
+        var rezumat = punct.Rezumat(voturi);
+
+        var voturiNominale = rezumat.VoturiNominale
+            .Select(v => new VotDto(
+                v.Id, punctId, v.ConsilierId, v.Consilier.NumeComplet,
+                v.Optiune, v.DataOra, v.InstitutieId))
+            .ToList();
+
+        return Ok(new VoturiPunctDto(
+            punctId,
+            punct.TipVot,
+            rezumat.Pentru,
+            rezumat.Impotriva,
+            rezumat.Abtineri,
+            rezumat.TotalExprimate,
+            voturiNominale,
+            rezumat.Participanti.ToList()));
     }
 
     [HttpPost]

@@ -8,7 +8,8 @@ public record CrearePunctDto(
     string? Descriere,
     TipPunct Tip,
     bool NecesitaVot,
-    TipMajoritate? TipMajoritate);
+    TipMajoritate? TipMajoritate,
+    TipVot? TipVot);
 
 public record ActualizarePunctDto(
     int Ordine,
@@ -16,7 +17,8 @@ public record ActualizarePunctDto(
     string? Descriere,
     TipPunct Tip,
     bool NecesitaVot,
-    TipMajoritate? TipMajoritate);
+    TipMajoritate? TipMajoritate,
+    TipVot? TipVot);
 
 public record PunctOrdineZiDto(
     int Id,
@@ -26,6 +28,7 @@ public record PunctOrdineZiDto(
     string? Descriere,
     TipPunct Tip,
     bool NecesitaVot,
+    TipVot TipVot,
     TipMajoritate? TipMajoritate,
     RezultatPunct? Rezultat,
     int InstitutieId,
