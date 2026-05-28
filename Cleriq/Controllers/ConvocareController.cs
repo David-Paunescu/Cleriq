@@ -132,7 +132,10 @@ public class ConvocareController : ControllerBase
             r == StatusConvocare.TotalSucces || r == StatusConvocare.PartialSucces);
         if (aReusitMacarUna)
         {
-            sedinta.Status = StatusSedinta.Convocata;
+            // Promovăm la Convocata DOAR din Planificata — nu retrogradăm o ședință
+            // care a avansat deja (ex: InDesfasurare) dacă se retrimite convocarea.
+            if (sedinta.Status == StatusSedinta.Planificata)
+                sedinta.Status = StatusSedinta.Convocata;
             if (sedinta.ConvocareTrimisaLa is null)
                 sedinta.ConvocareTrimisaLa = acum;
         }
