@@ -42,7 +42,9 @@ public class GeneratorConvocare : IGeneratorConvocare
 
         sb.AppendLine("<h3>Detalii ședință</h3>");
         sb.AppendLine("<ul>");
-        sb.AppendLine($"<li><strong>Data și ora:</strong> {dataOraStr} UTC</li>");
+        var indicator = s.DataOra.IndicatorFusOrar(s.Institutie.FusOrar);
+        var dataOraAfisare = string.IsNullOrEmpty(indicator) ? dataOraStr : $"{dataOraStr} ({indicator})";
+        sb.AppendLine($"<li><strong>Data și ora:</strong> {HtmlEnc(dataOraAfisare)}</li>");
         if (!string.IsNullOrWhiteSpace(s.Loc))
             sb.AppendLine($"<li><strong>Loc:</strong> {HtmlEnc(s.Loc)}</li>");
         sb.AppendLine($"<li><strong>Tip ședință:</strong> {HtmlEnc(s.Tip.Eticheta())}</li>");

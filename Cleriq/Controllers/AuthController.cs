@@ -16,7 +16,7 @@ namespace Cleriq.Controllers;
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
-    private static readonly string[] RoluriPermiseLaInregistrare = { "Admin", "Secretar", "Consilier" };
+    private static readonly string[] RoluriPermiseLaInregistrare = { "Admin", "Secretar" };
 
     private readonly UserManager<Utilizator> _userManager;
     private readonly IConfiguration _config;
@@ -76,6 +76,9 @@ public class AuthController : ControllerBase
             new("InstitutieId", user.InstitutieId.ToString())
         };
         claims.AddRange(roluri.Select(r => new Claim(ClaimTypes.Role, r)));
+
+        if (user.ConsilierId.HasValue)
+            claims.Add(new Claim("ConsilierId", user.ConsilierId.Value.ToString()));
 
         var jwt = _config.GetSection("Jwt");
         var cheie = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!));

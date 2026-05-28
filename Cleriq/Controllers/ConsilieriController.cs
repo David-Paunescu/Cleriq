@@ -2,6 +2,7 @@
 using Cleriq.DTOs;
 using Cleriq.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,10 +14,12 @@ namespace Cleriq.Controllers;
 public class ConsilieriController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly UserManager<Utilizator> _userManager;
 
-    public ConsilieriController(AppDbContext context)
+    public ConsilieriController(AppDbContext context, UserManager<Utilizator> userManager)
     {
         _context = context;
+        _userManager = userManager;
     }
 
     [HttpGet]
@@ -88,6 +91,43 @@ public class ConsilieriController : ControllerBase
         await _context.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    // === Cont de acces pentru consilier (vot individual) ===
+
+    [HttpPost("{id}/Cont")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> CreeazaCont(int id, CreareContConsilierDto dto)
+    {
+        // Consilierul trebuie să existe în tenant-ul curent (filtrul global aplică).
+        var consilier = await _context.Consilieri.FirstOrDefaultAsync(c => c.Id == id);
+        if (consilier is null)
+            return NotFound("Consilierul nu există.");
+
+        // Un singur cont per consilier (verificare explicită → mesaj clar;
+        // indexul unic filtrat e plasa de siguranță la nivel DB).
+        var areContDeja = await _userManager.Users
+            .AnyAsync(u => u.ConsilierId == id);
+        if (areContDeja)
+            return Conflict("Consilierul are deja un cont de acces.");
+
+        var user = new Utilizator
+        {
+            UserName = dto.Email,
+            Email = dto.Email,
+            NumeComplet = consilier.NumeComplet,   // numele vine de la consilier, sursă unică
+            InstitutieId = _context.InstitutieIdCurenta,
+            ConsilierId = id,
+            EmailConfirmed = true
+        };
+
+        var rezultat = await _userManager.CreateAsync(user, dto.Parola);
+        if (!rezultat.Succeeded)
+            return BadRequest(rezultat.Errors);
+
+        await _userManager.AddToRoleAsync(user, "Consilier");
+
+        return Ok(new ContConsilierDto(user.Id, user.Email!, id));
     }
 
     private static ConsilierDto MapeazaSpreDto(Consilier c) => new(

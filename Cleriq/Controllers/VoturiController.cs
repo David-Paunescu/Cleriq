@@ -52,9 +52,29 @@ public class VoturiController : ControllerBase
             rezumat.Participanti.ToList()));
     }
 
+    // Vot introdus manual de secretar/admin (ex: consilier fără cont, ședință hibridă).
+    // Blocat la vot secret — vezi InregistreazaVotIntern.
     [HttpPost]
     [Authorize(Roles = "Admin,Secretar")]
-    public async Task<IActionResult> InregistreazaVot(int sedintaId, int punctId, InregistrareVotDto dto)
+    public Task<IActionResult> InregistreazaVot(int sedintaId, int punctId, InregistrareVotDto dto)
+        => InregistreazaVotIntern(sedintaId, punctId, dto.ConsilierId, dto.Optiune, esteManual: true);
+
+    // Vot individual: consilierul logat votează pentru el însuși.
+    // ConsilierId vine din claim — nu poate vota pentru altcineva. Funcționează la nominal ȘI secret.
+    [HttpPost("Self")]
+    [Authorize(Roles = "Consilier")]
+    public async Task<IActionResult> InregistreazaVotSelf(int sedintaId, int punctId, InregistrareVotSelfDto dto)
+    {
+        var claim = User.FindFirst("ConsilierId")?.Value;
+        if (!int.TryParse(claim, out var consilierId))
+            return BadRequest("Contul tău nu este legat de un consilier. Contactează administratorul.");
+
+        return await InregistreazaVotIntern(sedintaId, punctId, consilierId, dto.Optiune, esteManual: false);
+    }
+
+    // Logica comună: validări (punct deschis, consilier activ, prezent) + upsert cu restore-on-re-add.
+    private async Task<IActionResult> InregistreazaVotIntern(
+        int sedintaId, int punctId, int consilierId, OptiuneVot optiune, bool esteManual)
     {
         var punct = await _context.PuncteOrdineZi
             .FirstOrDefaultAsync(p => p.Id == punctId && p.SedintaId == sedintaId);
@@ -67,8 +87,14 @@ public class VoturiController : ControllerBase
         if (punct.Rezultat.HasValue)
             return Conflict("Votul pe acest punct este închis. Nu se mai poate modifica.");
 
+        // La vot secret, secretarul NU poate introduce voturi manual — secretul trebuie 100% secret.
+        // Singura cale e self-vote-ul consilierului.
+        if (esteManual && punct.TipVot == TipVot.Secret)
+            return Conflict(
+                "La vot secret, voturile se înregistrează exclusiv de către consilieri prin endpoint-ul propriu (.../Voturi/Self).");
+
         var consilier = await _context.Consilieri
-            .FirstOrDefaultAsync(c => c.Id == dto.ConsilierId);
+            .FirstOrDefaultAsync(c => c.Id == consilierId);
         if (consilier is null)
             return NotFound("Consilierul nu există.");
 
@@ -77,7 +103,7 @@ public class VoturiController : ControllerBase
 
         // OUG 57/2019: doar consilierii Prezenți/OnlinePrezenți pot vota.
         var prezenta = await _context.Prezente
-            .FirstOrDefaultAsync(p => p.SedintaId == sedintaId && p.ConsilierId == dto.ConsilierId);
+            .FirstOrDefaultAsync(p => p.SedintaId == sedintaId && p.ConsilierId == consilierId);
         if (prezenta is null
             || (prezenta.Status != StatusPrezenta.Prezent
                 && prezenta.Status != StatusPrezenta.OnlinePrezent))
@@ -87,7 +113,7 @@ public class VoturiController : ControllerBase
         var existent = await _context.Voturi
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(v => v.PunctId == punctId
-                                   && v.ConsilierId == dto.ConsilierId
+                                   && v.ConsilierId == consilierId
                                    && v.InstitutieId == _context.InstitutieIdCurenta);
 
         var acum = DateTime.UtcNow;
@@ -97,8 +123,8 @@ public class VoturiController : ControllerBase
             var votNou = new Vot
             {
                 PunctId = punctId,
-                ConsilierId = dto.ConsilierId,
-                Optiune = dto.Optiune,
+                ConsilierId = consilierId,
+                Optiune = optiune,
                 DataOra = acum
             };
             _context.Voturi.Add(votNou);
@@ -109,7 +135,7 @@ public class VoturiController : ControllerBase
                 votNou.Optiune, votNou.DataOra, votNou.InstitutieId));
         }
 
-        existent.Optiune = dto.Optiune;
+        existent.Optiune = optiune;
         existent.DataOra = acum;
         if (existent.EsteSters)
         {
@@ -134,6 +160,10 @@ public class VoturiController : ControllerBase
 
         if (punct.Rezultat.HasValue)
             return Conflict("Votul pe acest punct este închis.");
+
+        // La secret, adminul nu poate șterge voturi (ar putea targeta o persoană anume).
+        if (punct.TipVot == TipVot.Secret)
+            return Conflict("La vot secret, voturile nu pot fi șterse manual.");
 
         var vot = await _context.Voturi
             .FirstOrDefaultAsync(v => v.PunctId == punctId && v.ConsilierId == consilierId);

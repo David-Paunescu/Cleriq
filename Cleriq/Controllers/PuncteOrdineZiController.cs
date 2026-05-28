@@ -105,13 +105,21 @@ public class PuncteOrdineZiController : ControllerBase
         if (ordineLuata)
             return Conflict($"Există deja un punct cu ordinea {dto.Ordine} în această ședință.");
 
+        // Gardă: odată ce există voturi pe punct, tipul (nominal/secret) nu se mai poate schimba.
+        // Altfel s-ar expune voturi date cu o anumită așteptare (nominal→secret după ce secretarul
+        // le-a văzut, sau secret→nominal expunându-le pe cele date în secret).
+        var tipVotNou = dto.NecesitaVot ? (dto.TipVot ?? TipVot.Nominal) : TipVot.Nominal;
+        if (tipVotNou != punct.TipVot
+            && await _context.Voturi.AnyAsync(v => v.PunctId == punctId))
+            return Conflict("Nu se poate schimba tipul votului (nominal/secret) după ce s-au înregistrat voturi pe acest punct.");
+
         punct.Ordine = dto.Ordine;
         punct.Titlu = dto.Titlu;
         punct.Descriere = dto.Descriere;
         punct.Tip = dto.Tip;
         punct.NecesitaVot = dto.NecesitaVot;
         punct.TipMajoritate = dto.NecesitaVot ? dto.TipMajoritate : null;
-        punct.TipVot = dto.NecesitaVot ? (dto.TipVot ?? TipVot.Nominal) : TipVot.Nominal;
+        punct.TipVot = tipVotNou;
         // Rezultat NU se modifică aici
 
         await _context.SaveChangesAsync();

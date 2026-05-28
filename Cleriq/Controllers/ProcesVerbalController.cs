@@ -141,7 +141,9 @@ public class ProcesVerbalController : ControllerBase
         if (!string.IsNullOrWhiteSpace(s.Numar))
             sb.AppendLine($"**Număr ședință:** {s.Numar}");
         var dataOraLocala = s.DataOra.LaFusOrar(s.Institutie.FusOrar);
-        sb.AppendLine($"**Data și ora:** {dataOraLocala.ToString("dd MMMM yyyy, HH:mm", culturaRo)}");
+        var indicatorFus = s.DataOra.IndicatorFusOrar(s.Institutie.FusOrar);
+        var dataOraText = dataOraLocala.ToString("dd MMMM yyyy, HH:mm", culturaRo);
+        sb.AppendLine($"**Data și ora:** {(string.IsNullOrEmpty(indicatorFus) ? dataOraText : $"{dataOraText} ({indicatorFus})")}");
         if (!string.IsNullOrWhiteSpace(s.Loc))
             sb.AppendLine($"**Loc:** {s.Loc}");
         sb.AppendLine($"**Tip ședință:** {s.Tip.Eticheta()}");

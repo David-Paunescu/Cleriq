@@ -159,6 +159,12 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             .HasForeignKey(co => co.ConsilierId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        modelBuilder.Entity<Utilizator>()
+            .HasOne(u => u.Consilier)
+            .WithMany()
+            .HasForeignKey(u => u.ConsilierId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         modelBuilder.Entity<ComisieMembru>()
             .HasIndex(cm => new { cm.ComisieId, cm.ConsilierId })
             .IsUnique()
@@ -178,6 +184,11 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             .HasIndex(co => new { co.SedintaId, co.ConsilierId })
             .IsUnique()
             .HasFilter("[EsteSters] = 0");
+
+        modelBuilder.Entity<Utilizator>()
+            .HasIndex(u => u.ConsilierId)
+            .IsUnique()
+            .HasFilter("[ConsilierId] IS NOT NULL");
 
         // Filtru global automat: soft-delete + tenant
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())

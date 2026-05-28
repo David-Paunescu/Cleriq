@@ -4,6 +4,8 @@ namespace Cleriq.DTOs;
 
 public record InregistrareVotDto(int ConsilierId, OptiuneVot Optiune);
 
+public record InregistrareVotSelfDto(OptiuneVot Optiune);
+
 public record VotDto(
     int Id,
     int PunctId,

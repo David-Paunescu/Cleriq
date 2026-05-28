@@ -19,3 +19,7 @@ public record ConsilierDto(
     bool Activ,
     int InstitutieId,
     DateTime CreatLa);
+
+public record CreareContConsilierDto(string Email, string Parola);
+
+public record ContConsilierDto(int UtilizatorId, string Email, int ConsilierId);
