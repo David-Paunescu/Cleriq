@@ -6,6 +6,10 @@ public record CreareSedintaDto(
     string Titlu, string? Numar, TipSedinta Tip,
     DateTime DataOra, string? Loc, ModDesfasurare ModDesfasurare);
 
+public record ActualizareSedintaDto(
+    string Titlu, string? Numar, TipSedinta Tip,
+    DateTime DataOra, string? Loc, ModDesfasurare ModDesfasurare);
+
 public record SedintaDto(
     int Id, string Titlu, string? Numar, TipSedinta Tip, DateTime DataOra,
     string? Loc, ModDesfasurare ModDesfasurare, StatusSedinta Status,

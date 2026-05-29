@@ -49,6 +49,16 @@ public class SedinteController : ControllerBase
         return Ok(rezultat);
     }
 
+    [HttpGet("{id}")]
+    public async Task<IActionResult> Detalii(int id)
+    {
+        var sedinta = await _context.Sedinte.FirstOrDefaultAsync(s => s.Id == id);
+        if (sedinta is null)
+            return NotFound();
+
+        return Ok(MapeazaSpreDto(sedinta));
+    }
+
     [HttpDelete("{id}")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Sterge(int id)
@@ -60,6 +70,29 @@ public class SedinteController : ControllerBase
         _context.Sedinte.Remove(sedinta); // devine soft-delete în SaveChanges
         await _context.SaveChangesAsync();
         return NoContent();
+    }
+
+    [HttpPut("{id}")]
+    [Authorize(Roles = "Admin,Secretar")]
+    public async Task<IActionResult> Actualizeaza(int id, ActualizareSedintaDto dto)
+    {
+        var sedinta = await _context.Sedinte.FirstOrDefaultAsync(s => s.Id == id);
+        if (sedinta is null)
+            return NotFound("Ședința nu există.");
+
+        if (sedinta.Status != StatusSedinta.Planificata
+            && sedinta.Status != StatusSedinta.Convocata)
+            return Conflict($"Nu se poate edita o ședință cu status {sedinta.Status}.");
+
+        sedinta.Titlu = dto.Titlu;
+        sedinta.Numar = dto.Numar;
+        sedinta.Tip = dto.Tip;
+        sedinta.DataOra = dto.DataOra;
+        sedinta.Loc = dto.Loc;
+        sedinta.ModDesfasurare = dto.ModDesfasurare;
+
+        await _context.SaveChangesAsync();
+        return Ok(MapeazaSpreDto(sedinta));
     }
 
     // === Tranziții de status (RPC-style, ca la Puncte/{id}/Inchide) ===
