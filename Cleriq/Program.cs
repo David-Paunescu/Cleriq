@@ -1,4 +1,5 @@
 using Cleriq.Data;
+using Cleriq.Helpers;
 using Cleriq.Middleware;
 using Cleriq.Models;
 using Cleriq.Services;
@@ -14,6 +15,10 @@ var builder = WebApplication.CreateBuilder(args);
 Console.OutputEncoding = System.Text.Encoding.UTF8;
 
 builder.Services.AddControllers();
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = ValidareDocument.MarimeMaxima;
+});
 builder.Services.AddOpenApi();
 
 builder.Services.AddHttpContextAccessor();
@@ -22,6 +27,8 @@ builder.Services.AddScoped<IFurnizorUtilizator, FurnizorUtilizator>();
 
 builder.Services.AddScoped<IGeneratorConvocare, GeneratorConvocare>();
 builder.Services.AddScoped<IServiciuNotificare, NotificareLogger>();
+builder.Services.AddSingleton<IStocareDocumente, StocareDocumenteDisk>();
+
 builder.Services.AddHostedService<WorkerConvocari>();
 
 // Cache pentru rezolvarea tenant-ului din slug pe rutele publice.

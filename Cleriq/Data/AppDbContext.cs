@@ -135,6 +135,30 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             .HasForeignKey(x => x.InstitutieId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        modelBuilder.Entity<Document>()
+            .HasOne(x => x.Institutie)
+            .WithMany()
+            .HasForeignKey(x => x.InstitutieId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Document>()
+    .HasOne(d => d.Sedinta)
+    .WithMany(s => s.Documente)
+    .HasForeignKey(d => d.SedintaId)
+    .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Document>()
+            .HasOne(d => d.Punct)
+            .WithMany(p => p.Documente)
+            .HasForeignKey(d => d.PunctId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Document>()
+            .ToTable(t => t.HasCheckConstraint(
+                "CK_Document_ExactUnContext",
+                "(CASE WHEN [SedintaId] IS NULL THEN 0 ELSE 1 END + " +
+                " CASE WHEN [PunctId] IS NULL THEN 0 ELSE 1 END) = 1"));
+
         modelBuilder.Entity<ComisieMembru>()
             .HasOne(cm => cm.Consilier)
             .WithMany(c => c.Apartenente)
@@ -296,10 +320,12 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
                 CascadaPeColectie(ProceseVerbale.Where(pv => pv.SedintaId == s.Id), acum, userId, coada);
                 CascadaPeColectie(PuncteOrdineZi.Where(po => po.SedintaId == s.Id), acum, userId, coada);
                 CascadaPeColectie(Convocari.Where(co => co.SedintaId == s.Id), acum, userId, coada);
+                CascadaPeColectie(Documente.Where(d => d.SedintaId == s.Id), acum, userId, coada);
                 break;
 
             case PunctOrdineZi p:
                 CascadaPeColectie(Voturi.Where(v => v.PunctId == p.Id), acum, userId, coada);
+                CascadaPeColectie(Documente.Where(d => d.PunctId == p.Id), acum, userId, coada);   // NOU
                 break;
         }
     }
@@ -330,4 +356,5 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
     public DbSet<Vot> Voturi { get; set; }
     public DbSet<ProcesVerbal> ProceseVerbale { get; set; }
     public DbSet<Convocare> Convocari { get; set; }
+    public DbSet<Document> Documente { get; set; }
 }

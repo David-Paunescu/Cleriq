@@ -21,4 +21,5 @@ public class Sedinta : EntitateDeBaza, IEntitateCuTenant
     public List<Prezenta> Prezente { get; set; } = new();
     public ProcesVerbal? ProcesVerbal { get; set; }
     public List<Convocare> Convocari { get; set; } = new();
+    public List<Document> Documente { get; set; } = new();
 }

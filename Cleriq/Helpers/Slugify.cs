@@ -21,7 +21,7 @@ public static class Slugify
         "assets", "health", "status", "robots", "favicon",
         // Domain-specific pentru Cleriq (segmente de URL viitoare)
         "mol", "monitor", "transparenta", "documente", "cautare",
-        "sedinte", "voturi", "consilieri", "convocari", "procesverbal", "puncte"
+        "sedinte", "voturi", "consilieri", "convocari", "procesverbal", "puncte", "documente"
     };
 
     public const int LungimeMinima = 3;

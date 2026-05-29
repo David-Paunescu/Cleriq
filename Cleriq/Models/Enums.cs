@@ -100,3 +100,13 @@ public enum TipVot
     Nominal = 1,
     Secret = 2
 }
+
+public enum TipDocument
+{
+    ProiectHCL = 1,
+    ExpunereDeMotive = 2,
+    Aviz = 3,
+    Raport = 4,
+    Anexa = 5,
+    Altele = 6
+}
