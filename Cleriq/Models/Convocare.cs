@@ -22,6 +22,14 @@ public class Convocare : EntitateDeBaza, IEntitateCuTenant
     [MaxLength(1000)]
     public string? SmsDetalii { get; set; }
 
+    [MaxLength(500)]
+    public string? Subiect { get; set; }
+
+    public string? EmailHtml { get; set; }
+
+    [MaxLength(500)]
+    public string? SmsText { get; set; }
+
     public int InstitutieId { get; set; }
     public Institutie Institutie { get; set; } = null!;
 }

@@ -253,7 +253,9 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
                     intrare.Entity.CreatLa = acum;
                     intrare.Entity.CreatDe = userId;
 
-                    if (institutieId != 0 && intrare.Entity is IEntitateCuTenant tenantNou)
+                    if (!_tenant.EsteModSystem
+                        && institutieId != 0
+                        && intrare.Entity is IEntitateCuTenant tenantNou)
                         tenantNou.InstitutieId = institutieId;
                     break;
 

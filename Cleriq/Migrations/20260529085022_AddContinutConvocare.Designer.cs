@@ -4,6 +4,7 @@ using Cleriq.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Cleriq.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260529085022_AddContinutConvocare")]
+    partial class AddContinutConvocare
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -72,7 +75,7 @@ namespace Cleriq.Migrations
 
                     b.HasIndex("InstitutieId");
 
-                    b.ToTable("Comisii", (string)null);
+                    b.ToTable("Comisii");
                 });
 
             modelBuilder.Entity("Cleriq.Models.ComisieMembru", b =>
@@ -131,7 +134,7 @@ namespace Cleriq.Migrations
                         .IsUnique()
                         .HasFilter("[EsteSters] = 0");
 
-                    b.ToTable("ComisieMembri", (string)null);
+                    b.ToTable("ComisieMembri");
                 });
 
             modelBuilder.Entity("Cleriq.Models.Consilier", b =>
@@ -191,7 +194,7 @@ namespace Cleriq.Migrations
 
                     b.HasIndex("InstitutieId");
 
-                    b.ToTable("Consilieri", (string)null);
+                    b.ToTable("Consilieri");
                 });
 
             modelBuilder.Entity("Cleriq.Models.Convocare", b =>
@@ -278,7 +281,7 @@ namespace Cleriq.Migrations
                         .IsUnique()
                         .HasFilter("[EsteSters] = 0");
 
-                    b.ToTable("Convocari", (string)null);
+                    b.ToTable("Convocari");
                 });
 
             modelBuilder.Entity("Cleriq.Models.Institutie", b =>
@@ -356,7 +359,7 @@ namespace Cleriq.Migrations
                     b.HasIndex("Slug")
                         .IsUnique();
 
-                    b.ToTable("Institutii", (string)null);
+                    b.ToTable("Institutii");
                 });
 
             modelBuilder.Entity("Cleriq.Models.Mandat", b =>
@@ -415,7 +418,7 @@ namespace Cleriq.Migrations
 
                     b.HasIndex("InstitutieId");
 
-                    b.ToTable("Mandate", (string)null);
+                    b.ToTable("Mandate");
                 });
 
             modelBuilder.Entity("Cleriq.Models.Prezenta", b =>
@@ -477,7 +480,7 @@ namespace Cleriq.Migrations
                         .IsUnique()
                         .HasFilter("[EsteSters] = 0");
 
-                    b.ToTable("Prezente", (string)null);
+                    b.ToTable("Prezente");
                 });
 
             modelBuilder.Entity("Cleriq.Models.ProcesVerbal", b =>
@@ -539,7 +542,7 @@ namespace Cleriq.Migrations
                     b.HasIndex("SedintaId")
                         .IsUnique();
 
-                    b.ToTable("ProceseVerbale", (string)null);
+                    b.ToTable("ProceseVerbale");
                 });
 
             modelBuilder.Entity("Cleriq.Models.PunctOrdineZi", b =>
@@ -616,7 +619,7 @@ namespace Cleriq.Migrations
 
                     b.HasIndex("SedintaId");
 
-                    b.ToTable("PuncteOrdineZi", (string)null);
+                    b.ToTable("PuncteOrdineZi");
                 });
 
             modelBuilder.Entity("Cleriq.Models.Rol", b =>
@@ -718,7 +721,7 @@ namespace Cleriq.Migrations
 
                     b.HasIndex("InstitutieId");
 
-                    b.ToTable("Sedinte", (string)null);
+                    b.ToTable("Sedinte");
                 });
 
             modelBuilder.Entity("Cleriq.Models.Utilizator", b =>
@@ -863,7 +866,7 @@ namespace Cleriq.Migrations
                         .IsUnique()
                         .HasFilter("[EsteSters] = 0");
 
-                    b.ToTable("Voturi", (string)null);
+                    b.ToTable("Voturi");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<int>", b =>

@@ -22,6 +22,7 @@ builder.Services.AddScoped<IFurnizorUtilizator, FurnizorUtilizator>();
 
 builder.Services.AddScoped<IGeneratorConvocare, GeneratorConvocare>();
 builder.Services.AddScoped<IServiciuNotificare, NotificareLogger>();
+builder.Services.AddHostedService<WorkerConvocari>();
 
 // Cache pentru rezolvarea tenant-ului din slug pe rutele publice.
 // SizeLimit ca centură de siguranță contra umflării (atacuri cu slug-uri random).

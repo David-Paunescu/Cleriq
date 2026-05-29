@@ -91,7 +91,8 @@ public enum StatusTrimitere
 {
     Trimisa = 1,
     Esuata = 2,
-    FaraDestinatie = 3
+    FaraDestinatie = 3,
+    InAsteptare = 4
 }
 
 public enum TipVot

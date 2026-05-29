@@ -8,7 +8,8 @@ public enum StatusConvocare
     TotalSucces = 1,
     PartialSucces = 2,
     Esuata = 3,
-    FaraCoordonate = 4
+    FaraCoordonate = 4,
+    InCursDeTrimitere = 5
 }
 
 public record ConvocareDto(
@@ -27,8 +28,7 @@ public record ConvocareDto(
 
 public record RezultatConvocareDto(
     int TotalConsilieri,
-    int TotalSucces,
-    int PartialSucces,
-    int Esuata,
+    int TotalSucces,            
+    int InCursDeTrimitere,      
     int FaraCoordonate,
     DateTime? ConvocareTrimisaLa);

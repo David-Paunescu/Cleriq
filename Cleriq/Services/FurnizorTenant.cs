@@ -31,4 +31,6 @@ public class FurnizorTenant : IFurnizorTenant
             return int.TryParse(claim, out var idClaim) ? idClaim : 0;
         }
     }
+
+    public bool EsteModSystem => false;
 }

@@ -1,8 +1,8 @@
 ﻿using Cleriq.Data;
 using Cleriq.DTOs;
+using Cleriq.Helpers;
 using Cleriq.Models;
 using Cleriq.Services;
-using Cleriq.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -16,18 +16,19 @@ public class ConvocareController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly IGeneratorConvocare _generator;
-    private readonly IServiciuNotificare _notificare;
 
     public ConvocareController(
         AppDbContext context,
-        IGeneratorConvocare generator,
-        IServiciuNotificare notificare)
+        IGeneratorConvocare generator)
     {
         _context = context;
         _generator = generator;
-        _notificare = notificare;
     }
 
+    // POST: înregistrează intenția de convocare.
+    // Conținutul (Subiect/EmailHtml/SmsText) e generat și înghețat pe Convocare la NOU/restaurat.
+    // La re-POST pe convocare activă, conținutul stocat NU se regenerează — audit cuvânt-cu-cuvânt.
+    // Notificările NU se trimit aici. Worker-ul (BackgroundService) preia rândurile InAsteptare.
     [HttpPost("Convocare")]
     [Authorize(Roles = "Admin,Secretar")]
     public async Task<IActionResult> TrimiteConvocari(int sedintaId, CancellationToken ct)
@@ -51,7 +52,6 @@ public class ConvocareController : ControllerBase
         if (!consilieri.Any())
             return BadRequest("Nu există consilieri activi de convocat.");
 
-        // Încarcă convocările existente într-un singur query (inclusiv soft-deleted pentru restore-on-re-add)
         var convocariExistente = await _context.Convocari
             .IgnoreQueryFilters()
             .Where(co => co.SedintaId == sedintaId
@@ -64,6 +64,7 @@ public class ConvocareController : ControllerBase
         foreach (var consilier in consilieri)
         {
             var convocare = convocariExistente.FirstOrDefault(co => co.ConsilierId == consilier.Id);
+            bool esteNouOriRestaurat = false;
 
             if (convocare is null)
             {
@@ -73,10 +74,11 @@ public class ConvocareController : ControllerBase
                     ConsilierId = consilier.Id
                 };
                 _context.Convocari.Add(convocare);
+                esteNouOriRestaurat = true;
             }
             else if (convocare.EsteSters)
             {
-                // Restore + reset statusuri (vom reprocesa de la 0)
+                // Restore + reset statusuri (rundă nouă completă)
                 convocare.EsteSters = false;
                 convocare.StersLa = null;
                 convocare.StersDe = null;
@@ -86,67 +88,65 @@ public class ConvocareController : ControllerBase
                 convocare.SmsStatus = null;
                 convocare.SmsTrimisLa = null;
                 convocare.SmsDetalii = null;
+                esteNouOriRestaurat = true;
             }
 
-            // Generează conținutul o singură dată per consilier
-            var continut = _generator.Genereaza(sedinta, consilier);
+            // Conținut: îngheț la creare/restaurare. La re-POST pe convocare activă, nu atingem
+            // conținutul stocat — agenda comunicată e parte din actul de convocare oficial.
+            if (esteNouOriRestaurat)
+            {
+                var continut = _generator.Genereaza(sedinta, consilier);
+                convocare.Subiect = continut.Subiect;
+                convocare.EmailHtml = continut.EmailHtml;
+                convocare.SmsText = continut.SmsText;
+            }
 
-            // ===== Procesare Email =====
+            // ===== Canal Email =====
             if (string.IsNullOrWhiteSpace(consilier.Email))
             {
-                // Marcăm FaraDestinatie DOAR dacă nu am încercat niciodată — păstrăm istoricul
+                // FaraDestinatie DOAR dacă n-am încercat niciodată — păstrăm istoricul
+                // (Trimisa rămâne Trimisa, Esuata rămâne Esuata, InAsteptare rămâne InAsteptare).
                 if (convocare.EmailStatus is null)
                     convocare.EmailStatus = StatusTrimitere.FaraDestinatie;
             }
-            else if (convocare.EmailStatus != StatusTrimitere.Trimisa)
+            else
             {
-                // Trimitem dacă nu s-a reușit deja (idempotență per canal)
-                var rezultat = await _notificare.TrimiteEmailAsync(
-                    consilier.Email, continut.Subiect, continut.EmailHtml, ct);
-                convocare.EmailStatus = rezultat.Succes ? StatusTrimitere.Trimisa : StatusTrimitere.Esuata;
-                convocare.EmailTrimisLa = acum;
-                convocare.EmailDetalii = rezultat.Detalii;
+                // Are email — punem pe InAsteptare dacă nu a fost deja livrat.
+                // Acoperă: null, FaraDestinatie precedent (a câștigat coordonate), Esuata (retry manual), InAsteptare (idempotent).
+                if (convocare.EmailStatus != StatusTrimitere.Trimisa)
+                    convocare.EmailStatus = StatusTrimitere.InAsteptare;
             }
-            // Dacă EmailStatus era deja Trimisa → idempotență, nu facem nimic
 
-            // ===== Procesare SMS =====
+            // ===== Canal SMS =====
             if (string.IsNullOrWhiteSpace(consilier.Telefon))
             {
                 if (convocare.SmsStatus is null)
                     convocare.SmsStatus = StatusTrimitere.FaraDestinatie;
             }
-            else if (convocare.SmsStatus != StatusTrimitere.Trimisa)
+            else
             {
-                var rezultat = await _notificare.TrimiteSmsAsync(
-                    consilier.Telefon, continut.SmsText, ct);
-                convocare.SmsStatus = rezultat.Succes ? StatusTrimitere.Trimisa : StatusTrimitere.Esuata;
-                convocare.SmsTrimisLa = acum;
-                convocare.SmsDetalii = rezultat.Detalii;
+                if (convocare.SmsStatus != StatusTrimitere.Trimisa)
+                    convocare.SmsStatus = StatusTrimitere.InAsteptare;
             }
 
             rezultate.Add(convocare.StatusGeneral());
         }
 
-        // Tranzitie status ședință: doar dacă măcar un consilier a fost atins cu succes
-        var aReusitMacarUna = rezultate.Any(r =>
-            r == StatusConvocare.TotalSucces || r == StatusConvocare.PartialSucces);
-        if (aReusitMacarUna)
-        {
-            // Promovăm la Convocata DOAR din Planificata — nu retrogradăm o ședință
-            // care a avansat deja (ex: InDesfasurare) dacă se retrimite convocarea.
-            if (sedinta.Status == StatusSedinta.Planificata)
-                sedinta.Status = StatusSedinta.Convocata;
-            if (sedinta.ConvocareTrimisaLa is null)
-                sedinta.ConvocareTrimisaLa = acum;
-        }
+        // Tranziție status ședință: convocarea ca act administrativ.
+        // Necondiționat — chiar și pe ZERO consilieri cu coordonate, actul e emis oficial
+        // (problema „cum dă seama secretarul telefonic" e administrativă, nu de software).
+        // Niciodată retrogradăm o ședință care a avansat dincolo de Planificata.
+        if (sedinta.Status == StatusSedinta.Planificata)
+            sedinta.Status = StatusSedinta.Convocata;
+        if (sedinta.ConvocareTrimisaLa is null)
+            sedinta.ConvocareTrimisaLa = acum;
 
         await _context.SaveChangesAsync(ct);
 
         return Ok(new RezultatConvocareDto(
             TotalConsilieri: rezultate.Count,
             TotalSucces: rezultate.Count(r => r == StatusConvocare.TotalSucces),
-            PartialSucces: rezultate.Count(r => r == StatusConvocare.PartialSucces),
-            Esuata: rezultate.Count(r => r == StatusConvocare.Esuata),
+            InCursDeTrimitere: rezultate.Count(r => r == StatusConvocare.InCursDeTrimitere),
             FaraCoordonate: rezultate.Count(r => r == StatusConvocare.FaraCoordonate),
             ConvocareTrimisaLa: sedinta.ConvocareTrimisaLa));
     }
@@ -191,8 +191,6 @@ public class ConvocareController : ControllerBase
         if (sedinta is null)
             return NotFound("Ședința nu există.");
 
-        // Reset valid doar din stadii incipiente (Planificata sau Convocata).
-        // Dacă ședința a început/s-a terminat/a fost anulată, reset-ul nu mai are sens.
         if (sedinta.Status != StatusSedinta.Planificata
             && sedinta.Status != StatusSedinta.Convocata)
         {
@@ -205,7 +203,7 @@ public class ConvocareController : ControllerBase
             .ToListAsync(ct);
 
         foreach (var co in convocari)
-            _context.Convocari.Remove(co);   // devine soft-delete în SaveChanges
+            _context.Convocari.Remove(co);
 
         sedinta.ConvocareTrimisaLa = null;
         if (sedinta.Status == StatusSedinta.Convocata)
@@ -214,5 +212,4 @@ public class ConvocareController : ControllerBase
         await _context.SaveChangesAsync(ct);
         return NoContent();
     }
-
 }

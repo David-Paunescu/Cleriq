@@ -11,22 +11,23 @@ public static class ExtensiiConvocare
     /// </summary>
     public static StatusConvocare StatusGeneral(this Convocare co)
     {
-        var emailIncercat = co.EmailStatus == StatusTrimitere.Trimisa
-                         || co.EmailStatus == StatusTrimitere.Esuata;
-        var smsIncercat = co.SmsStatus == StatusTrimitere.Trimisa
-                       || co.SmsStatus == StatusTrimitere.Esuata;
-        var emailReusit = co.EmailStatus == StatusTrimitere.Trimisa;
-        var smsReusit = co.SmsStatus == StatusTrimitere.Trimisa;
+        // Canal "activ" = canal cu destinație fizică (status setat și diferit de FaraDestinatie).
+        // null = tranzitoriu (cazul de mijloc în controller); FaraDestinatie = consilier fără coordonate.
+        var statusuriActive = new[] { co.EmailStatus, co.SmsStatus }
+            .Where(s => s.HasValue && s.Value != StatusTrimitere.FaraDestinatie)
+            .Select(s => s!.Value)
+            .ToList();
 
-        var totalIncercari = (emailIncercat ? 1 : 0) + (smsIncercat ? 1 : 0);
-        var totalReusite = (emailReusit ? 1 : 0) + (smsReusit ? 1 : 0);
-
-        if (totalIncercari == 0)
+        if (statusuriActive.Count == 0)
             return StatusConvocare.FaraCoordonate;
-        if (totalReusite == totalIncercari)
-            return StatusConvocare.TotalSucces;
-        if (totalReusite == 0)
-            return StatusConvocare.Esuata;
+
+        if (statusuriActive.Contains(StatusTrimitere.InAsteptare))
+            return StatusConvocare.InCursDeTrimitere;
+
+        // Toate canalele active sunt fie Trimisa, fie Esuata
+        var reusite = statusuriActive.Count(s => s == StatusTrimitere.Trimisa);
+        if (reusite == statusuriActive.Count) return StatusConvocare.TotalSucces;
+        if (reusite == 0) return StatusConvocare.Esuata;
         return StatusConvocare.PartialSucces;
     }
 }
