@@ -1,5 +1,6 @@
 ﻿using Cleriq.Data;
 using Cleriq.DTOs;
+using Cleriq.Helpers;
 using Cleriq.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -46,11 +47,15 @@ public class ConsilieriController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Creeaza(CreareConsilierDto dto)
     {
+        var (telefonNormalizat, eroare) = NormalizeazaTelefon(dto.Telefon);
+        if (eroare is not null)
+            return BadRequest(eroare);
+
         var consilier = new Consilier
         {
             NumeComplet = dto.NumeComplet,
             Email = dto.Email,
-            Telefon = dto.Telefon,
+            Telefon = telefonNormalizat,
             Activ = true
             // InstitutieId se setează automat în SaveChanges din tokenul Adminului
         };
@@ -69,9 +74,13 @@ public class ConsilieriController : ControllerBase
         if (consilier is null)
             return NotFound();
 
+        var (telefonNormalizat, eroare) = NormalizeazaTelefon(dto.Telefon);
+        if (eroare is not null)
+            return BadRequest(eroare);
+
         consilier.NumeComplet = dto.NumeComplet;
         consilier.Email = dto.Email;
-        consilier.Telefon = dto.Telefon;
+        consilier.Telefon = telefonNormalizat;
         consilier.Activ = dto.Activ;
 
         await _context.SaveChangesAsync();
@@ -99,13 +108,10 @@ public class ConsilieriController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> CreeazaCont(int id, CreareContConsilierDto dto)
     {
-        // Consilierul trebuie să existe în tenant-ul curent (filtrul global aplică).
         var consilier = await _context.Consilieri.FirstOrDefaultAsync(c => c.Id == id);
         if (consilier is null)
             return NotFound("Consilierul nu există.");
 
-        // Un singur cont per consilier (verificare explicită → mesaj clar;
-        // indexul unic filtrat e plasa de siguranță la nivel DB).
         var areContDeja = await _userManager.Users
             .AnyAsync(u => u.ConsilierId == id);
         if (areContDeja)
@@ -115,7 +121,7 @@ public class ConsilieriController : ControllerBase
         {
             UserName = dto.Email,
             Email = dto.Email,
-            NumeComplet = consilier.NumeComplet,   // numele vine de la consilier, sursă unică
+            NumeComplet = consilier.NumeComplet,
             InstitutieId = _context.InstitutieIdCurenta,
             ConsilierId = id,
             EmailConfirmed = true
@@ -128,6 +134,19 @@ public class ConsilieriController : ControllerBase
         await _userManager.AddToRoleAsync(user, "Consilier");
 
         return Ok(new ContConsilierDto(user.Id, user.Email!, id));
+    }
+
+    // === Helper privat: normalizare telefon ===
+    private static (string? Normalizat, string? Eroare) NormalizeazaTelefon(string? input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return (null, null);
+
+        var normalizat = Telefon.Normalizeaza(input);
+        if (normalizat is null)
+            return (null, "Format telefon invalid. Folosește format național (0720123456) sau internațional (+40720123456, 0040720123456).");
+
+        return (normalizat, null);
     }
 
     private static ConsilierDto MapeazaSpreDto(Consilier c) => new(
