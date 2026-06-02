@@ -37,7 +37,18 @@ builder.Services.AddScoped<IFurnizorUtilizator, FurnizorUtilizator>();
 
 builder.Services.AddScoped<IGeneratorConvocare, GeneratorConvocare>();
 builder.Services.AddScoped<NotificareLogger>();
-builder.Services.AddScoped<IServiciuNotificare, NotificareSmtp>();
+builder.Services.AddScoped<IServiciuNotificareEmail, NotificareSmtp>();
+
+var twilioConfigurat = !string.IsNullOrWhiteSpace(builder.Configuration["Twilio:AccountSid"]);
+if (twilioConfigurat)
+{
+    builder.Services.AddSingleton<IServiciuNotificareSms, NotificareTwilio>();
+}
+else
+{
+    builder.Services.AddSingleton<IServiciuNotificareSms, NotificareLogger>();
+}
+
 builder.Services.AddSingleton<IStocareDocumente, StocareDocumenteDisk>();
 
 builder.Services.AddHostedService<WorkerConvocari>();

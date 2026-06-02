@@ -14,16 +14,16 @@ public class SmtpController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly ICriptareSecreta _criptare;
-    private readonly IServiciuNotificare _notificare;
+    private readonly IServiciuNotificareEmail _email;
 
     public SmtpController(
         AppDbContext context,
         ICriptareSecreta criptare,
-        IServiciuNotificare notificare)
+        IServiciuNotificareEmail email)
     {
         _context = context;
         _criptare = criptare;
-        _notificare = notificare;
+        _email = email;
     }
 
     [HttpGet]
@@ -79,7 +79,7 @@ public class SmtpController : ControllerBase
 
         try
         {
-            await using var conexiune = await _notificare.DeschideConexiuneEmailAsync(institutieId, ct);
+            await using var conexiune = await _email.DeschideConexiuneEmailAsync(institutieId, ct);
             var rez = await conexiune.TrimiteAsync(
                 dto.EmailDestinatar.Trim(),
                 "Test SMTP — Cleriq",

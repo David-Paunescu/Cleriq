@@ -62,7 +62,8 @@ public class WorkerConvocari : BackgroundService
 
         var options = sp.GetRequiredService<DbContextOptions<AppDbContext>>();
         var furnizorUtilizator = sp.GetRequiredService<IFurnizorUtilizator>();
-        var notificare = sp.GetRequiredService<IServiciuNotificare>();
+        var email = sp.GetRequiredService<IServiciuNotificareEmail>();
+        var sms = sp.GetRequiredService<IServiciuNotificareSms>();
 
         using var ctx = new AppDbContext(options, new FurnizorTenantSystem(), furnizorUtilizator);
 
@@ -80,15 +81,12 @@ public class WorkerConvocari : BackgroundService
 
         _logger.LogInformation("Procesez {Count} convocare(s).", convocari.Count);
 
-        // Grupare per instituție: pool-ul SMTP refolosește o singură conexiune pentru toate
-        // emailurile aceleiași instituții. Fiecare instituție are config SMTP propriu, deci
-        // grupurile nu se pot uni.
         var grupuri = convocari.GroupBy(co => co.InstitutieId);
 
         foreach (var grup in grupuri)
         {
             if (ct.IsCancellationRequested) break;
-            await ProcesseazaGrupInstitutieAsync(ctx, grup.Key, grup.ToList(), notificare, ct);
+            await ProcesseazaGrupInstitutieAsync(ctx, grup.Key, grup.ToList(), email, sms, ct);
         }
     }
 
@@ -96,10 +94,10 @@ public class WorkerConvocari : BackgroundService
         AppDbContext ctx,
         int institutieId,
         List<Convocare> convocari,
-        IServiciuNotificare notificare,
+        IServiciuNotificareEmail email,
+        IServiciuNotificareSms sms,
         CancellationToken ct)
     {
-        // Verificăm dacă măcar o convocare are nevoie de email (altfel nu deschidem conexiune SMTP degeaba).
         bool ariNevoiedEmail = convocari.Any(co => co.EmailStatus == StatusTrimitere.InAsteptare);
 
         IConexiuneEmail? conexiune = null;
@@ -109,7 +107,7 @@ public class WorkerConvocari : BackgroundService
         {
             try
             {
-                conexiune = await notificare.DeschideConexiuneEmailAsync(institutieId, ct);
+                conexiune = await email.DeschideConexiuneEmailAsync(institutieId, ct);
             }
             catch (Exception ex)
             {
@@ -128,7 +126,7 @@ public class WorkerConvocari : BackgroundService
 
                 try
                 {
-                    await ProcesseazaUnaAsync(ctx, co, conexiune, eroareConexiune, notificare, ct);
+                    await ProcesseazaUnaAsync(ctx, co, conexiune, eroareConexiune, sms, ct);
                 }
                 catch (DbUpdateConcurrencyException ex)
                 {
@@ -145,7 +143,6 @@ public class WorkerConvocari : BackgroundService
         }
         finally
         {
-            // Conexiunea SMTP se închide curat ÎNAINTE de a trece la următoarea instituție.
             if (conexiune is not null)
                 await conexiune.DisposeAsync();
         }
@@ -156,7 +153,7 @@ public class WorkerConvocari : BackgroundService
         Convocare co,
         IConexiuneEmail? conexiune,
         string? eroareConexiune,
-        IServiciuNotificare notificare,
+        IServiciuNotificareSms sms,
         CancellationToken ct)
     {
         var consilier = await ctx.Consilieri
@@ -165,7 +162,6 @@ public class WorkerConvocari : BackgroundService
 
         var acum = DateTime.UtcNow;
 
-        // ===== Caz special: consilier inexistent =====
         if (consilier is null)
         {
             const string detalii = "Consilier inexistent în DB la momentul trimiterii.";
@@ -190,7 +186,6 @@ public class WorkerConvocari : BackgroundService
             return;
         }
 
-        // ===== Canal Email =====
         if (co.EmailStatus == StatusTrimitere.InAsteptare)
         {
             if (string.IsNullOrWhiteSpace(consilier.Email))
@@ -204,7 +199,6 @@ public class WorkerConvocari : BackgroundService
             }
             else if (conexiune is null)
             {
-                // Conexiunea SMTP n-a putut fi deschisă pentru această instituție.
                 var detalii = eroareConexiune ?? "Conexiune SMTP indisponibilă.";
                 ctx.IncercariTrimitere.Add(CreeazaIncercare(
                     co, CanalNotificare.Email, StatusIncercare.Esuata, consilier.Email, detalii));
@@ -230,7 +224,6 @@ public class WorkerConvocari : BackgroundService
             }
         }
 
-        // ===== Canal SMS =====
         if (co.SmsStatus == StatusTrimitere.InAsteptare)
         {
             if (string.IsNullOrWhiteSpace(consilier.Telefon))
@@ -244,7 +237,7 @@ public class WorkerConvocari : BackgroundService
             }
             else
             {
-                var rez = await notificare.TrimiteSmsAsync(
+                var rez = await sms.TrimiteAsync(
                     co.InstitutieId,
                     consilier.Telefon,
                     co.SmsText ?? string.Empty,

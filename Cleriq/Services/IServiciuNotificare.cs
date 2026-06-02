@@ -11,13 +11,16 @@ public interface IConexiuneEmail : IAsyncDisposable
         CancellationToken ct = default);
 }
 
-public interface IServiciuNotificare
+public interface IServiciuNotificareEmail
 {
     Task<IConexiuneEmail> DeschideConexiuneEmailAsync(
         int institutieId,
         CancellationToken ct = default);
+}
 
-    Task<RezultatTrimitere> TrimiteSmsAsync(
+public interface IServiciuNotificareSms
+{
+    Task<RezultatTrimitere> TrimiteAsync(
         int institutieId,
         string telefonDestinatar,
         string continut,

@@ -61,3 +61,75 @@ Authorization: Bearer {{loginAdmin.response.body.$.token}}
 
 
   // -- Testele de deasupra vor fi pastrate
+
+### Test SMTP după refactor
+POST {{host}}/api/Institutii/Smtp/Test
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "emailDestinatar": "test@inbox.mailtrap.io"
+}
+
+
+
+//// ----- ppppp
+
+
+
+### Login Admin (canonic din Cleriq.http)
+# rulează loginAdmin
+
+### Creează ședință de test
+POST {{host}}/api/Sedinte
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "titlu": "Test SMS — Pasul 2 smoke",
+  "tip": 1,
+  "dataOra": "2026-07-15T10:00:00Z",
+  "modDesfasurare": 1
+}
+
+
+
+### Convocare
+POST {{host}}/api/Sedinte/36/Convocare
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+
+
+
+  ///////////
+
+
+
+### Pun numărul meu pe Ion Popescu pentru test Twilio
+PUT {{host}}/api/Consilieri/1
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "numeComplet": "Ion Popescu",
+  "email": "ion.popescu@slobozia.ro",
+  "telefon": "+40766292820",
+  "activ": true
+}
+
+
+### Ședință nouă pentru test Twilio real
+POST {{host}}/api/Sedinte
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "titlu": "Test SMS — Twilio real",
+  "tip": 1,
+  "dataOra": "2026-07-20T10:00:00Z",
+  "modDesfasurare": 1
+}
+
+### Convocare pe ședința 37
+POST {{host}}/api/Sedinte/37/Convocare
+Authorization: Bearer {{loginAdmin.response.body.$.token}}

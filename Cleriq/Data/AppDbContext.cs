@@ -62,11 +62,13 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
 
         modelBuilder.Entity<Institutie>()
             .Property(i => i.SmtpSecuritate)
-            .HasDefaultValue(SmtpSecuritate.Auto);
+            .HasDefaultValue(SmtpSecuritate.Auto)
+            .HasSentinel(SmtpSecuritate.Auto);
 
         modelBuilder.Entity<PunctOrdineZi>()
             .Property(p => p.TipVot)
-            .HasDefaultValue(TipVot.Nominal);
+            .HasDefaultValue(TipVot.Nominal)
+            .HasSentinel(TipVot.Nominal);
 
         // Slug: index unic GLOBAL — fără HasFilter pe soft-delete.
         modelBuilder.Entity<Institutie>()

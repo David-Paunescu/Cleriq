@@ -1,6 +1,6 @@
 ﻿namespace Cleriq.Services;
 
-public class NotificareLogger : IServiciuNotificare
+public class NotificareLogger : IServiciuNotificareEmail, IServiciuNotificareSms
 {
     private readonly ILogger<NotificareLogger> _logger;
 
@@ -18,7 +18,7 @@ public class NotificareLogger : IServiciuNotificare
         return Task.FromResult<IConexiuneEmail>(new ConexiuneEmailLogger(_logger, institutieId));
     }
 
-    public Task<RezultatTrimitere> TrimiteSmsAsync(
+    public Task<RezultatTrimitere> TrimiteAsync(
         int institutieId, string telefonDestinatar, string continut, CancellationToken ct = default)
     {
         _logger.LogInformation(

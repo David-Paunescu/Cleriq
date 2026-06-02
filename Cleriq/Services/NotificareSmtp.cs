@@ -7,23 +7,20 @@ using MimeKit;
 
 namespace Cleriq.Services;
 
-public class NotificareSmtp : IServiciuNotificare
+public class NotificareSmtp : IServiciuNotificareEmail
 {
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly IServiciuNotificare _fallback;
     private readonly ICriptareSecreta _criptare;
     private readonly ILogger<NotificareSmtp> _logger;
     private readonly int _timeoutSecunde;
 
     public NotificareSmtp(
         IServiceScopeFactory scopeFactory,
-        NotificareLogger fallback,
         ICriptareSecreta criptare,
         ILogger<NotificareSmtp> logger,
         IConfiguration config)
     {
         _scopeFactory = scopeFactory;
-        _fallback = fallback;
         _criptare = criptare;
         _logger = logger;
         _timeoutSecunde = Math.Max(5, config.GetValue<int>("Smtp:TimeoutSecunde", 30));
@@ -53,10 +50,6 @@ public class NotificareSmtp : IServiciuNotificare
 
         return new ConexiuneSmtp(client, config.EmailFrom, config.NumeFrom, _logger);
     }
-
-    public Task<RezultatTrimitere> TrimiteSmsAsync(
-        int institutieId, string telefonDestinatar, string continut, CancellationToken ct = default)
-        => _fallback.TrimiteSmsAsync(institutieId, telefonDestinatar, continut, ct);
 
     private async Task<ConfigSmtpDecriptat> CitesteConfigAsync(int institutieId, CancellationToken ct)
     {
