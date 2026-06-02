@@ -4,6 +4,7 @@ using Cleriq.Middleware;
 using Cleriq.Models;
 using Cleriq.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -15,6 +16,15 @@ var builder = WebApplication.CreateBuilder(args);
 Console.OutputEncoding = System.Text.Encoding.UTF8;
 
 builder.Services.AddControllers();
+
+builder.Services
+    .AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(
+        Path.Combine(builder.Environment.ContentRootPath, "Data", "DataProtectionKeys")))
+    .SetApplicationName("Cleriq");
+
+builder.Services.AddSingleton<ICriptareSecreta, CriptareDataProtection>();
+
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
 {
     options.MultipartBodyLengthLimit = ValidareDocument.MarimeMaxima;
@@ -26,7 +36,8 @@ builder.Services.AddScoped<IFurnizorTenant, FurnizorTenant>();
 builder.Services.AddScoped<IFurnizorUtilizator, FurnizorUtilizator>();
 
 builder.Services.AddScoped<IGeneratorConvocare, GeneratorConvocare>();
-builder.Services.AddScoped<IServiciuNotificare, NotificareLogger>();
+builder.Services.AddScoped<NotificareLogger>();
+builder.Services.AddScoped<IServiciuNotificare, NotificareSmtp>();
 builder.Services.AddSingleton<IStocareDocumente, StocareDocumenteDisk>();
 
 builder.Services.AddHostedService<WorkerConvocari>();

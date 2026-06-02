@@ -67,7 +67,10 @@ public class SedinteController : ControllerBase
         if (sedinta is null)
             return NotFound();
 
-        _context.Sedinte.Remove(sedinta); // devine soft-delete în SaveChanges
+        if (sedinta.Status == StatusSedinta.Finalizata)
+            return Conflict("O ședință finalizată nu poate fi ștearsă (cerință de transparență și audit legal).");
+
+        _context.Sedinte.Remove(sedinta);
         await _context.SaveChangesAsync();
         return NoContent();
     }

@@ -365,3 +365,4 @@ FodyWeavers.xsd
 # Documente stocate local (nu intră în repo)
 Cleriq/bin/**/Data/Documente/
 Cleriq/Data/Documente/
+Cleriq/Data/DataProtectionKeys/

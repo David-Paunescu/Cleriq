@@ -60,6 +60,10 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             .Property(i => i.FusOrar)
             .HasDefaultValue("Europe/Bucharest");
 
+        modelBuilder.Entity<Institutie>()
+            .Property(i => i.SmtpSecuritate)
+            .HasDefaultValue(SmtpSecuritate.Auto);
+
         modelBuilder.Entity<PunctOrdineZi>()
             .Property(p => p.TipVot)
             .HasDefaultValue(TipVot.Nominal);

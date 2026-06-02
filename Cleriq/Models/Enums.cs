@@ -122,3 +122,10 @@ public enum StatusIncercare
     Trimisa = 1,
     Esuata = 2
 }
+
+public enum SmtpSecuritate
+{
+    Auto = 1,        // MailKit decide automat (recomandat)
+    StartTls = 2,    // Port 587 typical (Gmail, Office 365, Mailtrap)
+    SslDirect = 3    // Port 465 typical (SSL de la conectare)
+}

@@ -80,30 +80,84 @@ public class WorkerConvocari : BackgroundService
 
         _logger.LogInformation("Procesez {Count} convocare(s).", convocari.Count);
 
-        foreach (var co in convocari)
+        // Grupare per instituție: pool-ul SMTP refolosește o singură conexiune pentru toate
+        // emailurile aceleiași instituții. Fiecare instituție are config SMTP propriu, deci
+        // grupurile nu se pot uni.
+        var grupuri = convocari.GroupBy(co => co.InstitutieId);
+
+        foreach (var grup in grupuri)
         {
             if (ct.IsCancellationRequested) break;
+            await ProcesseazaGrupInstitutieAsync(ctx, grup.Key, grup.ToList(), notificare, ct);
+        }
+    }
 
+    private async Task ProcesseazaGrupInstitutieAsync(
+        AppDbContext ctx,
+        int institutieId,
+        List<Convocare> convocari,
+        IServiciuNotificare notificare,
+        CancellationToken ct)
+    {
+        // Verificăm dacă măcar o convocare are nevoie de email (altfel nu deschidem conexiune SMTP degeaba).
+        bool ariNevoiedEmail = convocari.Any(co => co.EmailStatus == StatusTrimitere.InAsteptare);
+
+        IConexiuneEmail? conexiune = null;
+        string? eroareConexiune = null;
+
+        if (ariNevoiedEmail)
+        {
             try
             {
-                await ProcesseazaUnaAsync(ctx, co, notificare, ct);
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                _logger.LogWarning(ex,
-                    "Conflict de concurență pe convocarea {Id}, skip.", co.Id);
-                ctx.Entry(co).State = EntityState.Detached;
+                conexiune = await notificare.DeschideConexiuneEmailAsync(institutieId, ct);
             }
             catch (Exception ex)
             {
+                eroareConexiune = $"Conexiune SMTP eșuată: {ex.Message}";
                 _logger.LogError(ex,
-                    "Eroare la procesarea convocării {Id}.", co.Id);
+                    "Eșec deschidere conexiune SMTP pentru instituția {Id}. Toate emailurile din grup vor fi marcate eșuate.",
+                    institutieId);
             }
+        }
+
+        try
+        {
+            foreach (var co in convocari)
+            {
+                if (ct.IsCancellationRequested) break;
+
+                try
+                {
+                    await ProcesseazaUnaAsync(ctx, co, conexiune, eroareConexiune, notificare, ct);
+                }
+                catch (DbUpdateConcurrencyException ex)
+                {
+                    _logger.LogWarning(ex,
+                        "Conflict de concurență pe convocarea {Id}, skip.", co.Id);
+                    ctx.Entry(co).State = EntityState.Detached;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex,
+                        "Eroare la procesarea convocării {Id}.", co.Id);
+                }
+            }
+        }
+        finally
+        {
+            // Conexiunea SMTP se închide curat ÎNAINTE de a trece la următoarea instituție.
+            if (conexiune is not null)
+                await conexiune.DisposeAsync();
         }
     }
 
     private async Task ProcesseazaUnaAsync(
-        AppDbContext ctx, Convocare co, IServiciuNotificare notificare, CancellationToken ct)
+        AppDbContext ctx,
+        Convocare co,
+        IConexiuneEmail? conexiune,
+        string? eroareConexiune,
+        IServiciuNotificare notificare,
+        CancellationToken ct)
     {
         var consilier = await ctx.Consilieri
             .IgnoreQueryFilters()
@@ -112,7 +166,6 @@ public class WorkerConvocari : BackgroundService
         var acum = DateTime.UtcNow;
 
         // ===== Caz special: consilier inexistent =====
-        // Loghez câte o încercare eșuată pe FIECARE canal aflat în InAsteptare.
         if (consilier is null)
         {
             const string detalii = "Consilier inexistent în DB la momentul trimiterii.";
@@ -142,18 +195,26 @@ public class WorkerConvocari : BackgroundService
         {
             if (string.IsNullOrWhiteSpace(consilier.Email))
             {
-                // Destinație pierdută între POST și worker.
                 const string detalii = "Destinație email lipsă la momentul trimiterii.";
                 ctx.IncercariTrimitere.Add(CreeazaIncercare(
                     co, CanalNotificare.Email, StatusIncercare.Esuata, null, detalii));
-
+                co.EmailStatus = StatusTrimitere.Esuata;
+                co.EmailDetalii = detalii;
+                co.EmailTrimisLa = acum;
+            }
+            else if (conexiune is null)
+            {
+                // Conexiunea SMTP n-a putut fi deschisă pentru această instituție.
+                var detalii = eroareConexiune ?? "Conexiune SMTP indisponibilă.";
+                ctx.IncercariTrimitere.Add(CreeazaIncercare(
+                    co, CanalNotificare.Email, StatusIncercare.Esuata, consilier.Email, detalii));
                 co.EmailStatus = StatusTrimitere.Esuata;
                 co.EmailDetalii = detalii;
                 co.EmailTrimisLa = acum;
             }
             else
             {
-                var rez = await notificare.TrimiteEmailAsync(
+                var rez = await conexiune.TrimiteAsync(
                     consilier.Email,
                     co.Subiect ?? string.Empty,
                     co.EmailHtml ?? string.Empty,
@@ -177,7 +238,6 @@ public class WorkerConvocari : BackgroundService
                 const string detalii = "Destinație telefon lipsă la momentul trimiterii.";
                 ctx.IncercariTrimitere.Add(CreeazaIncercare(
                     co, CanalNotificare.Sms, StatusIncercare.Esuata, null, detalii));
-
                 co.SmsStatus = StatusTrimitere.Esuata;
                 co.SmsDetalii = detalii;
                 co.SmsTrimisLa = acum;
@@ -185,6 +245,7 @@ public class WorkerConvocari : BackgroundService
             else
             {
                 var rez = await notificare.TrimiteSmsAsync(
+                    co.InstitutieId,
                     consilier.Telefon,
                     co.SmsText ?? string.Empty,
                     ct);
@@ -199,12 +260,9 @@ public class WorkerConvocari : BackgroundService
             }
         }
 
-        // Dual-write atomic: încercări noi + actualizare flat pe Convocare → o singură tranzacție.
         await ctx.SaveChangesAsync(ct);
     }
 
-    // Helper: în mod system (FurnizorTenantSystem), AplicaAuditSiSoftDelete NU populează
-    // automat InstitutieId, deci îl setez manual din convocarea părinte.
     private static IncercareTrimitere CreeazaIncercare(
         Convocare co,
         CanalNotificare canal,

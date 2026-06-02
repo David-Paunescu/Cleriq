@@ -105,20 +105,20 @@ public class ConvocareController : ControllerBase
             // ===== Canal Email =====
             if (string.IsNullOrWhiteSpace(consilier.Email))
             {
-                // FaraDestinatie DOAR dacă n-am încercat niciodată — păstrăm istoricul
-                // (Trimisa rămâne Trimisa, Esuata rămâne Esuata, InAsteptare rămâne InAsteptare).
                 if (convocare.EmailStatus is null)
                     convocare.EmailStatus = StatusTrimitere.FaraDestinatie;
             }
             else
             {
-                // Are email — punem pe InAsteptare dacă nu a fost deja livrat.
-                // Acoperă: null, FaraDestinatie precedent (a câștigat coordonate), Esuata (retry manual), InAsteptare (idempotent).
-                if (convocare.EmailStatus != StatusTrimitere.Trimisa)
+                if (convocare.EmailStatus != StatusTrimitere.Trimisa
+                    && convocare.EmailStatus != StatusTrimitere.InAsteptare)
+                {
                     convocare.EmailStatus = StatusTrimitere.InAsteptare;
+                    convocare.EmailTrimisLa = null;
+                    convocare.EmailDetalii = null;
+                }
             }
 
-            // ===== Canal SMS =====
             if (string.IsNullOrWhiteSpace(consilier.Telefon))
             {
                 if (convocare.SmsStatus is null)
@@ -126,8 +126,13 @@ public class ConvocareController : ControllerBase
             }
             else
             {
-                if (convocare.SmsStatus != StatusTrimitere.Trimisa)
+                if (convocare.SmsStatus != StatusTrimitere.Trimisa
+                    && convocare.SmsStatus != StatusTrimitere.InAsteptare)
+                {
                     convocare.SmsStatus = StatusTrimitere.InAsteptare;
+                    convocare.SmsTrimisLa = null;
+                    convocare.SmsDetalii = null;
+                }
             }
 
             rezultate.Add(convocare.StatusGeneral());
@@ -234,8 +239,13 @@ public class ConvocareController : ControllerBase
         }
         else
         {
-            if (convocare.EmailStatus != StatusTrimitere.Trimisa)
+            if (convocare.EmailStatus != StatusTrimitere.Trimisa
+                && convocare.EmailStatus != StatusTrimitere.InAsteptare)
+            {
                 convocare.EmailStatus = StatusTrimitere.InAsteptare;
+                convocare.EmailTrimisLa = null;
+                convocare.EmailDetalii = null;
+            }
         }
 
         if (string.IsNullOrWhiteSpace(consilier.Telefon))
@@ -245,8 +255,13 @@ public class ConvocareController : ControllerBase
         }
         else
         {
-            if (convocare.SmsStatus != StatusTrimitere.Trimisa)
+            if (convocare.SmsStatus != StatusTrimitere.Trimisa
+                && convocare.SmsStatus != StatusTrimitere.InAsteptare)
+            {
                 convocare.SmsStatus = StatusTrimitere.InAsteptare;
+                convocare.SmsTrimisLa = null;
+                convocare.SmsDetalii = null;
+            }
         }
 
         await _context.SaveChangesAsync(ct);
