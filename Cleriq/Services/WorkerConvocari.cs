@@ -111,18 +111,26 @@ public class WorkerConvocari : BackgroundService
 
         var acum = DateTime.UtcNow;
 
+        // ===== Caz special: consilier inexistent =====
+        // Loghez câte o încercare eșuată pe FIECARE canal aflat în InAsteptare.
         if (consilier is null)
         {
+            const string detalii = "Consilier inexistent în DB la momentul trimiterii.";
+
             if (co.EmailStatus == StatusTrimitere.InAsteptare)
             {
+                ctx.IncercariTrimitere.Add(CreeazaIncercare(
+                    co, CanalNotificare.Email, StatusIncercare.Esuata, null, detalii));
                 co.EmailStatus = StatusTrimitere.Esuata;
-                co.EmailDetalii = "Consilier inexistent în DB la momentul trimiterii.";
+                co.EmailDetalii = detalii;
                 co.EmailTrimisLa = acum;
             }
             if (co.SmsStatus == StatusTrimitere.InAsteptare)
             {
+                ctx.IncercariTrimitere.Add(CreeazaIncercare(
+                    co, CanalNotificare.Sms, StatusIncercare.Esuata, null, detalii));
                 co.SmsStatus = StatusTrimitere.Esuata;
-                co.SmsDetalii = "Consilier inexistent în DB la momentul trimiterii.";
+                co.SmsDetalii = detalii;
                 co.SmsTrimisLa = acum;
             }
             await ctx.SaveChangesAsync(ct);
@@ -134,9 +142,13 @@ public class WorkerConvocari : BackgroundService
         {
             if (string.IsNullOrWhiteSpace(consilier.Email))
             {
-                // Consilierul și-a șters email-ul între POST și worker.
+                // Destinație pierdută între POST și worker.
+                const string detalii = "Destinație email lipsă la momentul trimiterii.";
+                ctx.IncercariTrimitere.Add(CreeazaIncercare(
+                    co, CanalNotificare.Email, StatusIncercare.Esuata, null, detalii));
+
                 co.EmailStatus = StatusTrimitere.Esuata;
-                co.EmailDetalii = "Destinație email lipsă la momentul trimiterii.";
+                co.EmailDetalii = detalii;
                 co.EmailTrimisLa = acum;
             }
             else
@@ -146,6 +158,11 @@ public class WorkerConvocari : BackgroundService
                     co.Subiect ?? string.Empty,
                     co.EmailHtml ?? string.Empty,
                     ct);
+
+                var statusIncercare = rez.Succes ? StatusIncercare.Trimisa : StatusIncercare.Esuata;
+                ctx.IncercariTrimitere.Add(CreeazaIncercare(
+                    co, CanalNotificare.Email, statusIncercare, consilier.Email, rez.Detalii));
+
                 co.EmailStatus = rez.Succes ? StatusTrimitere.Trimisa : StatusTrimitere.Esuata;
                 co.EmailDetalii = rez.Detalii;
                 co.EmailTrimisLa = acum;
@@ -157,8 +174,12 @@ public class WorkerConvocari : BackgroundService
         {
             if (string.IsNullOrWhiteSpace(consilier.Telefon))
             {
+                const string detalii = "Destinație telefon lipsă la momentul trimiterii.";
+                ctx.IncercariTrimitere.Add(CreeazaIncercare(
+                    co, CanalNotificare.Sms, StatusIncercare.Esuata, null, detalii));
+
                 co.SmsStatus = StatusTrimitere.Esuata;
-                co.SmsDetalii = "Destinație telefon lipsă la momentul trimiterii.";
+                co.SmsDetalii = detalii;
                 co.SmsTrimisLa = acum;
             }
             else
@@ -167,12 +188,38 @@ public class WorkerConvocari : BackgroundService
                     consilier.Telefon,
                     co.SmsText ?? string.Empty,
                     ct);
+
+                var statusIncercare = rez.Succes ? StatusIncercare.Trimisa : StatusIncercare.Esuata;
+                ctx.IncercariTrimitere.Add(CreeazaIncercare(
+                    co, CanalNotificare.Sms, statusIncercare, consilier.Telefon, rez.Detalii));
+
                 co.SmsStatus = rez.Succes ? StatusTrimitere.Trimisa : StatusTrimitere.Esuata;
                 co.SmsDetalii = rez.Detalii;
                 co.SmsTrimisLa = acum;
             }
         }
 
+        // Dual-write atomic: încercări noi + actualizare flat pe Convocare → o singură tranzacție.
         await ctx.SaveChangesAsync(ct);
+    }
+
+    // Helper: în mod system (FurnizorTenantSystem), AplicaAuditSiSoftDelete NU populează
+    // automat InstitutieId, deci îl setez manual din convocarea părinte.
+    private static IncercareTrimitere CreeazaIncercare(
+        Convocare co,
+        CanalNotificare canal,
+        StatusIncercare status,
+        string? destinatar,
+        string? detalii)
+    {
+        return new IncercareTrimitere
+        {
+            ConvocareId = co.Id,
+            InstitutieId = co.InstitutieId,
+            Canal = canal,
+            Status = status,
+            Destinatar = destinatar,
+            Detalii = detalii
+        };
     }
 }

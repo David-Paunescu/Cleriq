@@ -182,6 +182,90 @@ public class ConvocareController : ControllerBase
         return Ok(rezultat);
     }
 
+    [HttpGet("Convocari/{convocareId}/Incercari")]
+    public async Task<IActionResult> ListaIncercari(
+    int sedintaId, int convocareId, [FromQuery] CanalNotificare? canal, CancellationToken ct)
+    {
+        var convocareExista = await _context.Convocari
+            .AnyAsync(co => co.Id == convocareId && co.SedintaId == sedintaId, ct);
+        if (!convocareExista)
+            return NotFound("Convocarea nu există în această ședință.");
+
+        var query = _context.IncercariTrimitere
+            .Where(i => i.ConvocareId == convocareId);
+
+        if (canal.HasValue)
+            query = query.Where(i => i.Canal == canal.Value);
+
+        var rezultat = await query
+            .OrderBy(i => i.Canal)
+            .ThenBy(i => i.CreatLa)
+            .Select(i => new IncercareTrimitereDto(
+                i.Id, i.Canal, i.Status, i.Destinatar, i.Detalii, i.CreatLa))
+            .ToListAsync(ct);
+
+        return Ok(rezultat);
+    }
+
+    [HttpPost("Convocari/{convocareId}/Retry")]
+    [Authorize(Roles = "Admin,Secretar")]
+    public async Task<IActionResult> RetryConvocare(
+    int sedintaId, int convocareId, CancellationToken ct)
+    {
+        var convocare = await _context.Convocari
+            .Include(co => co.Consilier)
+            .Include(co => co.Sedinta)
+            .FirstOrDefaultAsync(co => co.Id == convocareId && co.SedintaId == sedintaId, ct);
+
+        if (convocare is null)
+            return NotFound("Convocarea nu există în această ședință.");
+
+        if (convocare.Sedinta.Status == StatusSedinta.Finalizata
+            || convocare.Sedinta.Status == StatusSedinta.Anulata)
+            return Conflict(
+                $"Nu se poate retransmite o convocare pentru o ședință cu status {convocare.Sedinta.Status}.");
+
+        var consilier = convocare.Consilier;
+
+        if (string.IsNullOrWhiteSpace(consilier.Email))
+        {
+            if (convocare.EmailStatus is null)
+                convocare.EmailStatus = StatusTrimitere.FaraDestinatie;
+        }
+        else
+        {
+            if (convocare.EmailStatus != StatusTrimitere.Trimisa)
+                convocare.EmailStatus = StatusTrimitere.InAsteptare;
+        }
+
+        if (string.IsNullOrWhiteSpace(consilier.Telefon))
+        {
+            if (convocare.SmsStatus is null)
+                convocare.SmsStatus = StatusTrimitere.FaraDestinatie;
+        }
+        else
+        {
+            if (convocare.SmsStatus != StatusTrimitere.Trimisa)
+                convocare.SmsStatus = StatusTrimitere.InAsteptare;
+        }
+
+        await _context.SaveChangesAsync(ct);
+
+        return Ok(new ConvocareDto(
+            convocare.Id,
+            convocare.SedintaId,
+            convocare.ConsilierId,
+            convocare.Consilier.NumeComplet,
+            convocare.EmailStatus,
+            convocare.EmailTrimisLa,
+            convocare.EmailDetalii,
+            convocare.SmsStatus,
+            convocare.SmsTrimisLa,
+            convocare.SmsDetalii,
+            convocare.StatusGeneral(),
+            convocare.CreatLa));
+    }
+
     [HttpDelete("Convocare")]
     [Authorize(Roles = "Admin,Secretar")]
     public async Task<IActionResult> ReseteazaConvocari(int sedintaId, CancellationToken ct)

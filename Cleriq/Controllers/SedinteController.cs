@@ -147,5 +147,5 @@ public class SedinteController : ControllerBase
 
     private static SedintaDto MapeazaSpreDto(Sedinta s) => new(
         s.Id, s.Titlu, s.Numar, s.Tip, s.DataOra,
-        s.Loc, s.ModDesfasurare, s.Status, s.InstitutieId, s.CreatLa);
+        s.Loc, s.ModDesfasurare, s.Status, s.InstitutieId, s.CreatLa, s.ConvocareTrimisaLa);
 }

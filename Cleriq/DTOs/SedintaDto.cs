@@ -13,4 +13,4 @@ public record ActualizareSedintaDto(
 public record SedintaDto(
     int Id, string Titlu, string? Numar, TipSedinta Tip, DateTime DataOra,
     string? Loc, ModDesfasurare ModDesfasurare, StatusSedinta Status,
-    int InstitutieId, DateTime CreatLa);
+    int InstitutieId, DateTime CreatLa, DateTime? ConvocareTrimisaLa);

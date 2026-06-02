@@ -30,6 +30,8 @@ public class Convocare : EntitateDeBaza, IEntitateCuTenant
     [MaxLength(500)]
     public string? SmsText { get; set; }
 
+    public List<IncercareTrimitere> Incercari { get; set; } = new();
+
     public int InstitutieId { get; set; }
     public Institutie Institutie { get; set; } = null!;
 }

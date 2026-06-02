@@ -141,11 +141,26 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             .HasForeignKey(x => x.InstitutieId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        modelBuilder.Entity<IncercareTrimitere>()
+            .HasOne(x => x.Institutie)
+            .WithMany()
+            .HasForeignKey(x => x.InstitutieId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<IncercareTrimitere>()
+            .HasOne(i => i.Convocare)
+            .WithMany(co => co.Incercari)
+            .HasForeignKey(i => i.ConvocareId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<IncercareTrimitere>()
+            .HasIndex(i => new { i.ConvocareId, i.Canal, i.CreatLa });
+
         modelBuilder.Entity<Document>()
-    .HasOne(d => d.Sedinta)
-    .WithMany(s => s.Documente)
-    .HasForeignKey(d => d.SedintaId)
-    .OnDelete(DeleteBehavior.Restrict);
+            .HasOne(d => d.Sedinta)
+            .WithMany(s => s.Documente)
+            .HasForeignKey(d => d.SedintaId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Document>()
             .HasOne(d => d.Punct)
@@ -357,4 +372,5 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
     public DbSet<ProcesVerbal> ProceseVerbale { get; set; }
     public DbSet<Convocare> Convocari { get; set; }
     public DbSet<Document> Documente { get; set; }
+    public DbSet<IncercareTrimitere> IncercariTrimitere { get; set; }
 }

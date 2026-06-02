@@ -2,10 +2,7 @@
 
 public class Vot : EntitateDeBaza, IEntitateCuTenant
 {
-    // TODO (Faza 2): Pentru vot individual, ConsilierId va fi setat din
-    // user-ul logat (după adăugare ConsilierId? pe Utilizator).
-    // Pentru vot secret, când PunctOrdineZi.TipVot==Secret,
-    // GET-urile la voturi vor anonimiza ConsilierId/NumeCompletConsilier.
+
     public OptiuneVot Optiune { get; set; }
     public DateTime DataOra { get; set; }
     public int PunctId { get; set; }

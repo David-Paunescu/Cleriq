@@ -110,3 +110,15 @@ public enum TipDocument
     Anexa = 5,
     Altele = 6
 }
+
+public enum CanalNotificare
+{
+    Email = 1,
+    Sms = 2
+}
+
+public enum StatusIncercare
+{
+    Trimisa = 1,
+    Esuata = 2
+}
