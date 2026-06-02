@@ -34,9 +34,10 @@ public class ConvocareController : ControllerBase
     public async Task<IActionResult> TrimiteConvocari(int sedintaId, CancellationToken ct)
     {
         var sedinta = await _context.Sedinte
-            .Include(s => s.Institutie)
-            .Include(s => s.Puncte.OrderBy(p => p.Ordine))
-            .FirstOrDefaultAsync(s => s.Id == sedintaId, ct);
+                    .Include(s => s.Institutie)
+                    .Include(s => s.Documente)
+                    .Include(s => s.Puncte.OrderBy(p => p.Ordine))
+                    .FirstOrDefaultAsync(s => s.Id == sedintaId, ct);
 
         if (sedinta is null)
             return NotFound("Ședința nu există.");

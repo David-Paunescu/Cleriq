@@ -55,4 +55,15 @@ public static class ExtensiiEnumuri
         null => "În curs (vot deschis)",
         _ => r.ToString()!
     };
+
+    public static string Eticheta(this TipDocument t) => t switch
+    {
+        TipDocument.ProiectHCL => "Proiect HCL",
+        TipDocument.ExpunereDeMotive => "Expunere de motive",
+        TipDocument.Aviz => "Aviz",
+        TipDocument.Raport => "Raport",
+        TipDocument.Anexa => "Anexă",
+        TipDocument.Altele => "Alt document",
+        _ => t.ToString()
+    };
 }

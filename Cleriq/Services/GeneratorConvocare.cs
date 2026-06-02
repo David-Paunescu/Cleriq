@@ -10,6 +10,13 @@ public class GeneratorConvocare : IGeneratorConvocare
 {
     private static readonly CultureInfo CulturaRo = new("ro-RO");
 
+    private readonly string _urlBaza;
+
+    public GeneratorConvocare(IConfiguration config)
+    {
+        _urlBaza = config["Portal:UrlBaza"]?.TrimEnd('/') ?? "";
+    }
+
     public ContinutConvocare Genereaza(Sedinta sedinta, Consilier consilier)
     {
         var subiect = GenereazaSubiect(sedinta);
@@ -25,7 +32,7 @@ public class GeneratorConvocare : IGeneratorConvocare
         return $"Convocare ședință {s.Tip.Eticheta().ToLower()} — {s.Institutie.Denumire} — {dataStr}";
     }
 
-    private static string GenereazaEmail(Sedinta s, Consilier c)
+    private string GenereazaEmail(Sedinta s, Consilier c)
     {
         var dataLocala = s.DataOra.LaFusOrar(s.Institutie.FusOrar);
         var dataOraStr = dataLocala.ToString("dddd, d MMMM yyyy, HH:mm", CulturaRo);
@@ -66,6 +73,23 @@ public class GeneratorConvocare : IGeneratorConvocare
                 sb.AppendLine($"<li>{HtmlEnc(p.Titlu)} <em>({HtmlEnc(p.Tip.Eticheta())})</em></li>");
             }
             sb.AppendLine("</ol>");
+        }
+
+        var docPublice = s.Documente
+            .Where(d => d.EstePublic)
+            .OrderBy(d => d.Ordine).ThenBy(d => d.CreatLa)
+            .ToList();
+
+        if (docPublice.Any())
+        {
+            sb.AppendLine("<h3>Documente atașate</h3>");
+            sb.AppendLine("<ul>");
+            foreach (var d in docPublice)
+            {
+                var url = $"{_urlBaza}/public/{s.Institutie.Slug}/documente/{d.Id}";
+                sb.AppendLine($"<li><a href=\"{HtmlEnc(url)}\">{HtmlEnc(d.Denumire)}</a></li>");
+            }
+            sb.AppendLine("</ul>");
         }
 
         sb.AppendLine("<p style=\"margin-top: 24px;\">Vă mulțumim,<br/>Secretariatul Consiliului Local</p>");

@@ -16,10 +16,12 @@ namespace Cleriq.Controllers;
 public class ProcesVerbalController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly IConfiguration _config;
 
-    public ProcesVerbalController(AppDbContext context)
+    public ProcesVerbalController(AppDbContext context, IConfiguration config)
     {
         _context = context;
+        _config = config;
     }
 
     [HttpGet]
@@ -51,6 +53,9 @@ public class ProcesVerbalController : ControllerBase
     {
         var sedinta = await _context.Sedinte
             .Include(s => s.Institutie)
+            .Include(s => s.Documente)
+            .Include(s => s.Puncte.OrderBy(p => p.Ordine))
+                .ThenInclude(p => p.Documente)
             .Include(s => s.Puncte.OrderBy(p => p.Ordine))
                 .ThenInclude(p => p.Voturi)
                     .ThenInclude(v => v.Consilier)
@@ -71,7 +76,8 @@ public class ProcesVerbalController : ControllerBase
             .OrderBy(c => c.NumeComplet)
             .ToListAsync();
 
-        var continut = GenereazaContinut(sedinta, consilieriActivi);
+        var urlBaza = _config["Portal:UrlBaza"]?.TrimEnd('/') ?? "";
+        var continut = GenereazaContinut(sedinta, consilieriActivi, urlBaza);
         var acum = DateTime.UtcNow;
 
         if (pv is null)
@@ -130,7 +136,7 @@ public class ProcesVerbalController : ControllerBase
 
     // ============= Generator Markdown =============
 
-    private static string GenereazaContinut(Sedinta s, List<Consilier> consilieriActivi)
+    private static string GenereazaContinut(Sedinta s, List<Consilier> consilieriActivi, string urlBaza)
     {
         var sb = new StringBuilder();
         var culturaRo = new CultureInfo("ro-RO");
@@ -182,6 +188,22 @@ public class ProcesVerbalController : ControllerBase
             return sb.ToString();
         }
 
+        var docSedinta = s.Documente
+            .Where(d => d.EstePublic)
+            .OrderBy(d => d.Ordine).ThenBy(d => d.CreatLa)
+            .ToList();
+
+                if (docSedinta.Any())
+                {
+                    sb.AppendLine("## Documente atașate ședinței");
+                    sb.AppendLine();
+                    foreach (var d in docSedinta)
+                    {
+                        sb.AppendLine($"- [{d.Denumire}]({urlBaza}/public/{s.Institutie.Slug}/documente/{d.Id}) ({d.TipDocument.Eticheta()})");
+                    }
+                    sb.AppendLine();
+                }
+
         foreach (var punct in s.Puncte)
         {
             sb.AppendLine($"### {punct.Ordine}. {punct.Titlu}");
@@ -189,6 +211,7 @@ public class ProcesVerbalController : ControllerBase
             sb.AppendLine($"**Tip:** {punct.Tip.Eticheta()}");
             if (!string.IsNullOrWhiteSpace(punct.Descriere))
                 sb.AppendLine($"**Descriere:** {punct.Descriere}");
+
 
             if (!punct.NecesitaVot)
             {
@@ -200,6 +223,21 @@ public class ProcesVerbalController : ControllerBase
             sb.AppendLine($"**Tip majoritate:** {punct.TipMajoritate.Eticheta()}");
             sb.AppendLine($"**Rezultat:** {punct.Rezultat.Eticheta()}");
             sb.AppendLine();
+
+            var docPunct = punct.Documente
+                .Where(d => d.EstePublic)
+                .OrderBy(d => d.Ordine).ThenBy(d => d.CreatLa)
+                .ToList();
+
+                        if (docPunct.Any())
+                        {
+                            sb.AppendLine();
+                            sb.AppendLine("**Documente:**");
+                            foreach (var d in docPunct)
+                            {
+                                sb.AppendLine($"- [{d.Denumire}]({urlBaza}/public/{s.Institutie.Slug}/documente/{d.Id}) ({d.TipDocument.Eticheta()})");
+                            }
+                        }
 
             var rezumat = punct.Rezumat(punct.Voturi);
 
