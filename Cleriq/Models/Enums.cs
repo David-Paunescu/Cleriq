@@ -125,7 +125,15 @@ public enum StatusIncercare
 
 public enum SmtpSecuritate
 {
-    Auto = 1,        // MailKit decide automat (recomandat)
-    StartTls = 2,    // Port 587 typical (Gmail, Office 365, Mailtrap)
-    SslDirect = 3    // Port 465 typical (SSL de la conectare)
+    Auto = 1,
+    StartTls = 2,
+    SslDirect = 3
+}
+
+public enum StatusTranscriere
+{
+    InAsteptare = 1,
+    InProces = 2,
+    Finalizata = 3,
+    Esuata = 4
 }

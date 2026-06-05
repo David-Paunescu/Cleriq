@@ -51,6 +51,8 @@ else
 
 builder.Services.AddSingleton<IStocareDocumente, StocareDocumenteDisk>();
 
+builder.Services.AddSingleton<IStocareAudio, StocareAudioDisk>();
+
 builder.Services.AddHostedService<WorkerConvocari>();
 
 // Cache pentru rezolvarea tenant-ului din slug pe rutele publice.

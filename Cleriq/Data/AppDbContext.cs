@@ -153,6 +153,18 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             .HasForeignKey(x => x.InstitutieId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        modelBuilder.Entity<Transcriere>()
+            .HasOne(x => x.Institutie)
+            .WithMany()
+            .HasForeignKey(x => x.InstitutieId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Transcriere>()
+            .HasOne(t => t.Sedinta)
+            .WithOne(s => s.Transcriere)
+            .HasForeignKey<Transcriere>(t => t.SedintaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         modelBuilder.Entity<IncercareTrimitere>()
             .HasOne(i => i.Convocare)
             .WithMany(co => co.Incercari)
@@ -234,6 +246,11 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             .HasIndex(u => u.ConsilierId)
             .IsUnique()
             .HasFilter("[ConsilierId] IS NOT NULL");
+
+        modelBuilder.Entity<Transcriere>()
+            .HasIndex(t => t.SedintaId)
+            .IsUnique()
+            .HasFilter("[EsteSters] = 0");
 
         // Filtru global automat: soft-delete + tenant
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
@@ -342,6 +359,7 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
                 CascadaPeColectie(PuncteOrdineZi.Where(po => po.SedintaId == s.Id), acum, userId, coada);
                 CascadaPeColectie(Convocari.Where(co => co.SedintaId == s.Id), acum, userId, coada);
                 CascadaPeColectie(Documente.Where(d => d.SedintaId == s.Id), acum, userId, coada);
+                CascadaPeColectie(Transcrieri.Where(t => t.SedintaId == s.Id), acum, userId, coada);
                 break;
 
             case PunctOrdineZi p:
@@ -379,4 +397,5 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
     public DbSet<Convocare> Convocari { get; set; }
     public DbSet<Document> Documente { get; set; }
     public DbSet<IncercareTrimitere> IncercariTrimitere { get; set; }
+    public DbSet<Transcriere> Transcrieri { get; set; }
 }

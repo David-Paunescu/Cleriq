@@ -366,3 +366,4 @@ FodyWeavers.xsd
 Cleriq/bin/**/Data/Documente/
 Cleriq/Data/Documente/
 Cleriq/Data/DataProtectionKeys/
+Cleriq/Data/Audio/

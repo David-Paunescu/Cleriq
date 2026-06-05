@@ -61,3 +61,25 @@ Authorization: Bearer {{loginAdmin.response.body.$.token}}
 
 
   // -- Testele de deasupra vor fi pastrate
+
+
+
+
+### TEST-T1. Creare ședință pentru testare transcriere
+# @name creareSedintaTest
+POST {{host}}/api/Sedinte
+Content-Type: application/json
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+{
+  "titlu": "Ședință test transcriere",
+  "numar": "TEST-T1",
+  "tip": 1,
+  "dataOra": "2026-06-15T17:00:00Z",
+  "loc": "Sala de consiliu",
+  "modDesfasurare": 1
+}
+
+### TEST-T2. GET transcriere inițial (NU există încă)
+GET {{host}}/api/Sedinte/39/Transcriere
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
