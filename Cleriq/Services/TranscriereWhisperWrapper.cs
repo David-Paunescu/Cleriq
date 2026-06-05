@@ -99,6 +99,55 @@ public class TranscriereWhisperWrapper : IServiciuTranscriere
         }
     }
 
+    public async Task<RezultatVerificareTranscriere> VerificaAsync(CancellationToken ct = default)
+    {
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(TimeSpan.FromSeconds(10));
+
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        try
+        {
+            using var response = await _http.GetAsync("/", cts.Token);
+            stopwatch.Stop();
+
+            var latenta = (int)stopwatch.ElapsedMilliseconds;
+            var detalii = $"HTTP {(int)response.StatusCode} {response.StatusCode}";
+
+            return new RezultatVerificareTranscriere(
+                Succes: response.IsSuccessStatusCode,
+                LatentaMs: latenta,
+                Detalii: detalii);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // Cancellation explicit din afară (shutdown), propagăm.
+            throw;
+        }
+        catch (OperationCanceledException)
+        {
+            stopwatch.Stop();
+            return new RezultatVerificareTranscriere(
+                false, (int)stopwatch.ElapsedMilliseconds,
+                "Timeout: wrapper-ul nu a răspuns în 10 secunde.");
+        }
+        catch (HttpRequestException ex)
+        {
+            stopwatch.Stop();
+            return new RezultatVerificareTranscriere(
+                false, (int)stopwatch.ElapsedMilliseconds,
+                $"Network: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+            _logger.LogError(ex, "Eroare neașteptată la verificarea wrapper-ului Whisper.");
+            return new RezultatVerificareTranscriere(
+                false, (int)stopwatch.ElapsedMilliseconds,
+                $"{ex.GetType().Name}: {ex.Message}");
+        }
+    }
+
     private static int? ExtrageDurataDinJson(string json)
     {
         try

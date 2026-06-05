@@ -25,3 +25,8 @@ public record TranscriereContinutDto(
     string? ContinutEditat);
 
 public record EditareTranscriereDto(string ContinutEditat);
+
+public record RezultatVerificareTranscriereDto(
+    bool Succes,
+    int? LatentaMs,
+    string? Detalii);

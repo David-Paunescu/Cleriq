@@ -27,7 +27,7 @@ builder.Services.AddSingleton<ICriptareSecreta, CriptareDataProtection>();
 
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
 {
-    options.MultipartBodyLengthLimit = ValidareDocument.MarimeMaxima;
+    options.MultipartBodyLengthLimit = ValidareAudio.MarimeMaxima;
 });
 builder.Services.AddOpenApi();
 
@@ -52,6 +52,29 @@ else
 builder.Services.AddSingleton<IStocareDocumente, StocareDocumenteDisk>();
 
 builder.Services.AddSingleton<IStocareAudio, StocareAudioDisk>();
+
+builder.Services.AddScoped<IGeneratorPromptTranscriere, GeneratorPromptTranscriere>();
+
+var whisperConfigurat = !string.IsNullOrWhiteSpace(builder.Configuration["Whisper:UrlBaza"]);
+if (whisperConfigurat)
+{
+    builder.Services
+        .AddHttpClient<IServiciuTranscriere, TranscriereWhisperWrapper>(client =>
+        {
+            client.BaseAddress = new Uri(builder.Configuration["Whisper:UrlBaza"]!);
+
+            var apiKey = builder.Configuration["Whisper:ApiKey"];
+            if (!string.IsNullOrWhiteSpace(apiKey))
+                client.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+
+            var timeoutOre = builder.Configuration.GetValue<int>("Whisper:TimeoutOre", 6);
+            client.Timeout = TimeSpan.FromHours(Math.Max(1, timeoutOre));
+        })
+        .SetHandlerLifetime(TimeSpan.FromHours(6));
+
+    builder.Services.AddHostedService<WorkerTranscrieri>();
+}
 
 builder.Services.AddHostedService<WorkerConvocari>();
 
@@ -131,6 +154,13 @@ using (var scope = app.Services.CreateScope())
                 await userManager.AddToRoleAsync(superAdmin, "SuperAdmin");
         }
     }
+}
+
+if (!whisperConfigurat)
+{
+    app.Logger.LogWarning(
+        "Whisper:UrlBaza nu este configurat. WorkerTranscrieri NU rulează. " +
+        "Setează Whisper:UrlBaza în user-secrets sau env vars pentru a-l activa.");
 }
 
 if (app.Environment.IsDevelopment())

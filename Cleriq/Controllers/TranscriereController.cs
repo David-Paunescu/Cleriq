@@ -16,11 +16,16 @@ public class TranscriereController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly IStocareAudio _stocare;
+    private readonly string _modelFolosit;
 
-    public TranscriereController(AppDbContext context, IStocareAudio stocare)
+    public TranscriereController(
+        AppDbContext context,
+        IStocareAudio stocare,
+        IConfiguration config)
     {
         _context = context;
         _stocare = stocare;
+        _modelFolosit = config["Whisper:ModelFolosit"] ?? "large-v2";
     }
 
     [HttpGet]
@@ -125,7 +130,7 @@ public class TranscriereController : ControllerBase
                 Status = StatusTranscriere.InAsteptare,
                 CaleStocareAudio = stocat.Cheie,
                 DimensiuneAudio = stocat.Marime,
-                ModelFolosit = "large-v2"  // TODO Turn 3: din config Whisper:ModelFolosit
+                ModelFolosit = _modelFolosit
             };
             _context.Transcrieri.Add(transcriere);
         }
@@ -147,7 +152,7 @@ public class TranscriereController : ControllerBase
             existenta.NumarIncercari = 0;
             existenta.UrmatoareaIncercareDupa = null;
             existenta.UltimaEroare = null;
-            existenta.ModelFolosit = "large-v2";
+            existenta.ModelFolosit = _modelFolosit;
             transcriere = existenta;
         }
 

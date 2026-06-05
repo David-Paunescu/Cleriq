@@ -98,12 +98,12 @@ public class WorkerConvocari : BackgroundService
         IServiciuNotificareSms sms,
         CancellationToken ct)
     {
-        bool ariNevoiedEmail = convocari.Any(co => co.EmailStatus == StatusTrimitere.InAsteptare);
+        bool areNevoieDeEmail = convocari.Any(co => co.EmailStatus == StatusTrimitere.InAsteptare);
 
         IConexiuneEmail? conexiune = null;
         string? eroareConexiune = null;
 
-        if (ariNevoiedEmail)
+        if (areNevoieDeEmail)
         {
             try
             {

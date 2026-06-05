@@ -7,6 +7,11 @@ public record RezultatTranscriere(
     int? DurataAudioSecunde,
     string? Detalii);
 
+public record RezultatVerificareTranscriere(
+    bool Succes,
+    int LatentaMs,
+    string? Detalii);
+
 public interface IServiciuTranscriere
 {
     Task<RezultatTranscriere> TrimiteAsync(
@@ -14,4 +19,6 @@ public interface IServiciuTranscriere
         string numeFisier,
         string prompt,
         CancellationToken ct = default);
+
+    Task<RezultatVerificareTranscriere> VerificaAsync(CancellationToken ct = default);
 }
