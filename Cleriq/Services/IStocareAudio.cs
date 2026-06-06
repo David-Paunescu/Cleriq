@@ -13,4 +13,6 @@ public interface IStocareAudio
     Task<Stream> DeschideAsync(string cheie, CancellationToken ct = default);
 
     Task StergeAsync(string cheie, CancellationToken ct = default);
+
+    IAsyncEnumerable<FisierFizicEnumerat> EnumereazaToateAsync(CancellationToken ct = default);
 }

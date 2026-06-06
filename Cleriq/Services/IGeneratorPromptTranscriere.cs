@@ -2,7 +2,9 @@
 
 namespace Cleriq.Services;
 
+public record ContinutTranscriere(string Prompt, string Hotwords);
+
 public interface IGeneratorPromptTranscriere
 {
-    string Genereaza(Sedinta sedinta, IEnumerable<Consilier> consilieri);
+    ContinutTranscriere Genereaza(Sedinta sedinta, IEnumerable<Consilier> consilieri);
 }

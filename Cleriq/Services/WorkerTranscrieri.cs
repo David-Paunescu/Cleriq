@@ -173,7 +173,7 @@ public class WorkerTranscrieri : BackgroundService
                 transcriere.SedintaId, consilieri.Count);
         }
 
-        var prompt = generatorPrompt.Genereaza(transcriere.Sedinta, consilieri);
+        var continut = generatorPrompt.Genereaza(transcriere.Sedinta, consilieri);
 
         // Deschidere audio. FileNotFound = non-retriable (fișierul a fost șters/mutat).
         Stream audioStream;
@@ -197,7 +197,7 @@ public class WorkerTranscrieri : BackgroundService
             await using (audioStream)
             {
                 rezultat = await serviciuTranscriere.TrimiteAsync(
-                    audioStream, numeFisier, prompt, ct);
+                    audioStream, numeFisier, continut, ct);
             }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -227,7 +227,8 @@ public class WorkerTranscrieri : BackgroundService
             transcriere.Status = StatusTranscriere.Finalizata;
             transcriere.ContinutBrut = rezultat.ContinutJson;
             transcriere.DurataAudioSecunde = rezultat.DurataAudioSecunde;
-            transcriere.PromptFolosit = prompt;
+            transcriere.PromptFolosit = continut.Prompt;
+            transcriere.HotwordsFolosite = continut.Hotwords;
             transcriere.DataPrimireBrut = DateTime.UtcNow;
             transcriere.UltimaEroare = null;
             transcriere.UrmatoareaIncercareDupa = null;

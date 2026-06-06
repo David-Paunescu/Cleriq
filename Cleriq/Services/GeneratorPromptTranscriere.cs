@@ -4,7 +4,7 @@ namespace Cleriq.Services;
 
 public class GeneratorPromptTranscriere : IGeneratorPromptTranscriere
 {
-    public string Genereaza(Sedinta sedinta, IEnumerable<Consilier> consilieri)
+    public ContinutTranscriere Genereaza(Sedinta sedinta, IEnumerable<Consilier> consilieri)
     {
         var nume = consilieri
             .Select(c => c.NumeComplet.Trim())
@@ -13,9 +13,16 @@ public class GeneratorPromptTranscriere : IGeneratorPromptTranscriere
             .ToList();
 
         if (nume.Count == 0)
-            return $"Ședință a Consiliului Local al instituției {sedinta.Institutie.Denumire}.";
+        {
+            var promptGol = $"Ședință a Consiliului Local al instituției {sedinta.Institutie.Denumire}.";
+            return new ContinutTranscriere(promptGol, "");
+        }
 
-        var listaNume = string.Join(", ", nume);
-        return $"Ședință a Consiliului Local al instituției {sedinta.Institutie.Denumire}. Consilieri prezenți: {listaNume}.";
+        var listaPrompt = string.Join(", ", nume);
+        var prompt = $"Ședință a Consiliului Local al instituției {sedinta.Institutie.Denumire}. Consilieri prezenți: {listaPrompt}.";
+
+        var hotwords = string.Join(",", nume);
+
+        return new ContinutTranscriere(prompt, hotwords);
     }
 }

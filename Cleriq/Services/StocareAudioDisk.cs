@@ -99,4 +99,28 @@ public class StocareAudioDisk : IStocareAudio
 
         return combinata;
     }
+
+    public async IAsyncEnumerable<FisierFizicEnumerat> EnumereazaToateAsync(
+    [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+    {
+        foreach (var caleAbsoluta in Directory.EnumerateFiles(
+            _caleRoot, "*", SearchOption.AllDirectories))
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var info = new FileInfo(caleAbsoluta);
+            if (!info.Exists) continue;
+
+            var cheieRelativa = Path.GetRelativePath(_caleRoot, caleAbsoluta)
+                                    .Replace('\\', '/');
+
+            var dataMod = info.LastWriteTimeUtc > info.CreationTimeUtc
+                ? info.LastWriteTimeUtc
+                : info.CreationTimeUtc;
+
+            yield return new FisierFizicEnumerat(cheieRelativa, info.Length, dataMod);
+
+            await Task.Yield();
+        }
+    }
 }

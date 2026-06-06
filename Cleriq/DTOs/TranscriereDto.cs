@@ -29,4 +29,7 @@ public record EditareTranscriereDto(string ContinutEditat);
 public record RezultatVerificareTranscriereDto(
     bool Succes,
     int? LatentaMs,
+    string? Status,
+    string? Device,
+    string? ComputeType,
     string? Detalii);

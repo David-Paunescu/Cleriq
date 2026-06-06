@@ -17,14 +17,14 @@ public class TranscriereWhisperWrapper : IServiciuTranscriere
     }
 
     public async Task<RezultatTranscriere> TrimiteAsync(
-        Stream audio, string numeFisier, string prompt, CancellationToken ct = default)
+        Stream audio, string numeFisier, ContinutTranscriere continut, CancellationToken ct = default)
     {
         var url = "/asr?task=transcribe"
             + "&language=ro"
             + "&diarize=true"
-            + "&word_timestamps=true"
             + "&output=json"
-            + $"&initial_prompt={Uri.EscapeDataString(prompt)}";
+            + $"&initial_prompt={Uri.EscapeDataString(continut.Prompt)}"
+            + $"&hotwords={Uri.EscapeDataString(continut.Hotwords)}";
 
         try
         {
@@ -34,8 +34,8 @@ public class TranscriereWhisperWrapper : IServiciuTranscriere
             content.Add(streamContent, "audio_file", numeFisier);
 
             _logger.LogInformation(
-                "Trimit audio la wrapper Whisper: nume={Nume}, lungime_prompt={Lungime}",
-                numeFisier, prompt.Length);
+                "Trimit audio la wrapper Whisper: nume={Nume}, lungime_prompt={LungimePrompt}, lungime_hotwords={LungimeHotwords}",
+                numeFisier, continut.Prompt.Length, continut.Hotwords.Length);
 
             using var response = await _http.PostAsync(url, content, ct);
 
@@ -76,7 +76,6 @@ public class TranscriereWhisperWrapper : IServiciuTranscriere
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            // Cancellation explicit, propagăm
             throw;
         }
         catch (TaskCanceledException ex)
@@ -112,16 +111,51 @@ public class TranscriereWhisperWrapper : IServiciuTranscriere
             stopwatch.Stop();
 
             var latenta = (int)stopwatch.ElapsedMilliseconds;
-            var detalii = $"HTTP {(int)response.StatusCode} {response.StatusCode}";
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return new RezultatVerificareTranscriere(
+                    Succes: false,
+                    LatentaMs: latenta,
+                    Status: null, Device: null, ComputeType: null,
+                    Detalii: $"HTTP {(int)response.StatusCode} {response.StatusCode}");
+            }
+
+            var corp = await response.Content.ReadAsStringAsync(cts.Token);
+            string? status = null, device = null, computeType = null;
+
+            try
+            {
+                using var doc = JsonDocument.Parse(corp);
+                if (doc.RootElement.ValueKind == JsonValueKind.Object)
+                {
+                    if (doc.RootElement.TryGetProperty("status", out var s) && s.ValueKind == JsonValueKind.String)
+                        status = s.GetString();
+                    if (doc.RootElement.TryGetProperty("device", out var d) && d.ValueKind == JsonValueKind.String)
+                        device = d.GetString();
+                    if (doc.RootElement.TryGetProperty("compute_type", out var ct2) && ct2.ValueKind == JsonValueKind.String)
+                        computeType = ct2.GetString();
+                }
+            }
+            catch (JsonException)
+            {
+                return new RezultatVerificareTranscriere(
+                    Succes: true,
+                    LatentaMs: latenta,
+                    Status: null, Device: null, ComputeType: null,
+                    Detalii: "HTTP 200, dar corpul nu e JSON structurat.");
+            }
 
             return new RezultatVerificareTranscriere(
-                Succes: response.IsSuccessStatusCode,
+                Succes: true,
                 LatentaMs: latenta,
-                Detalii: detalii);
+                Status: status,
+                Device: device,
+                ComputeType: computeType,
+                Detalii: $"HTTP 200, status='{status}', device='{device}', compute_type='{computeType}'");
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            // Cancellation explicit din afară (shutdown), propagăm.
             throw;
         }
         catch (OperationCanceledException)
@@ -129,6 +163,7 @@ public class TranscriereWhisperWrapper : IServiciuTranscriere
             stopwatch.Stop();
             return new RezultatVerificareTranscriere(
                 false, (int)stopwatch.ElapsedMilliseconds,
+                null, null, null,
                 "Timeout: wrapper-ul nu a răspuns în 10 secunde.");
         }
         catch (HttpRequestException ex)
@@ -136,6 +171,7 @@ public class TranscriereWhisperWrapper : IServiciuTranscriere
             stopwatch.Stop();
             return new RezultatVerificareTranscriere(
                 false, (int)stopwatch.ElapsedMilliseconds,
+                null, null, null,
                 $"Network: {ex.Message}");
         }
         catch (Exception ex)
@@ -144,6 +180,7 @@ public class TranscriereWhisperWrapper : IServiciuTranscriere
             _logger.LogError(ex, "Eroare neașteptată la verificarea wrapper-ului Whisper.");
             return new RezultatVerificareTranscriere(
                 false, (int)stopwatch.ElapsedMilliseconds,
+                null, null, null,
                 $"{ex.GetType().Name}: {ex.Message}");
         }
     }
@@ -153,8 +190,11 @@ public class TranscriereWhisperWrapper : IServiciuTranscriere
         try
         {
             using var doc = JsonDocument.Parse(json);
-            if (!doc.RootElement.TryGetProperty("segments", out var segments))
+
+            if (!doc.RootElement.TryGetProperty("text", out var segments)
+                && !doc.RootElement.TryGetProperty("segments", out segments))
                 return null;
+
             if (segments.ValueKind != JsonValueKind.Array)
                 return null;
 

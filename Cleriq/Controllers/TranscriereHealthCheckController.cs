@@ -18,12 +18,12 @@ public class TranscriereHealthCheckController : ControllerBase
         var serviciu = sp.GetService<IServiciuTranscriere>();
         if (serviciu is null)
             return Ok(new RezultatVerificareTranscriereDto(
-                false, null,
+                false, null, null, null, null,
                 "Whisper:UrlBaza nu este configurat în acest mediu. " +
                 "Worker-ul de transcriere nu rulează."));
 
         var rez = await serviciu.VerificaAsync(ct);
         return Ok(new RezultatVerificareTranscriereDto(
-            rez.Succes, rez.LatentaMs, rez.Detalii));
+            rez.Succes, rez.LatentaMs, rez.Status, rez.Device, rez.ComputeType, rez.Detalii));
     }
 }

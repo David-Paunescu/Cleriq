@@ -149,6 +149,7 @@ public class TranscriereController : ControllerBase
             existenta.DataPrimireBrut = null;
             existenta.DataUltimeiEditari = null;
             existenta.PromptFolosit = null;
+            existenta.HotwordsFolosite = null;
             existenta.NumarIncercari = 0;
             existenta.UrmatoareaIncercareDupa = null;
             existenta.UltimaEroare = null;
