@@ -4,6 +4,13 @@ namespace Cleriq.Services;
 
 public class GeneratorPromptTranscriere : IGeneratorPromptTranscriere
 {
+    private readonly bool _hotwordsEnabled;
+
+    public GeneratorPromptTranscriere(IConfiguration config)
+    {
+        _hotwordsEnabled = config.GetValue<bool>("Whisper:HotwordsEnabled", true);
+    }
+
     public ContinutTranscriere Genereaza(Sedinta sedinta, IEnumerable<Consilier> consilieri)
     {
         var nume = consilieri
@@ -21,7 +28,7 @@ public class GeneratorPromptTranscriere : IGeneratorPromptTranscriere
         var listaPrompt = string.Join(", ", nume);
         var prompt = $"Ședință a Consiliului Local al instituției {sedinta.Institutie.Denumire}. Consilieri prezenți: {listaPrompt}.";
 
-        var hotwords = string.Join(",", nume);
+        var hotwords = _hotwordsEnabled ? string.Join(",", nume) : "";
 
         return new ContinutTranscriere(prompt, hotwords);
     }

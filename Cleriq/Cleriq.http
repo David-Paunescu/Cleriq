@@ -85,3 +85,23 @@ Authorization: Bearer {{loginAdminConstantaTest.response.body.$.token}}
 ###
 GET {{host}}/api/Sedinte/42/Transcriere/Continut
 Authorization: Bearer {{loginAdminConstantaTest.response.body.$.token}}
+
+
+
+// !! !!!!!!!!!!!!!!!!!
+
+###
+GET https://localhost:7006/api/Transcriere/HealthCheck
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+
+
+
+### Retry transcriere
+POST {{host}}/api/Sedinte/42/Transcriere/Retry
+Authorization: Bearer {{loginAdminConstantaTest.response.body.$.token}}
+
+
+### DELETE transcriere coruptă (47 bytes)
+DELETE {{host}}/api/Sedinte/42/Transcriere
+Authorization: Bearer {{loginAdminConstantaTest.response.body.$.token}}
