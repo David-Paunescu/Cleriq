@@ -7,7 +7,7 @@ namespace Cleriq.Controllers;
 
 [ApiController]
 [Route("api/Transcriere/HealthCheck")]
-[Authorize(Roles = "Admin")]
+[Authorize(Roles = "Admin,SuperAdmin")]
 public class TranscriereHealthCheckController : ControllerBase
 {
     [HttpGet]

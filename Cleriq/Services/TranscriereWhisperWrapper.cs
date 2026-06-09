@@ -22,7 +22,7 @@ public class TranscriereWhisperWrapper : IServiciuTranscriere
         var url = "/asr?task=transcribe"
             + "&language=ro"
             + "&diarize=true"
-            + "&output=json"
+            + "&output_format=json"
             + $"&initial_prompt={Uri.EscapeDataString(continut.Prompt)}"
             + $"&hotwords={Uri.EscapeDataString(continut.Hotwords)}";
 

@@ -61,3 +61,27 @@ Authorization: Bearer {{loginAdmin.response.body.$.token}}
 
 
   // -- Testele de deasupra vor fi pastrate
+
+### Login Admin Constanța Test
+# @name loginAdminConstantaTest
+POST {{host}}/api/Auth/login
+Content-Type: application/json
+
+{
+  "email": "admin.constanta.test@cleriq.ro",
+  "parola": "AdminConstanta1!"
+}
+
+
+### HealthCheck Whisper (test baseline post Pas 5)
+GET {{host}}/api/Transcriere/HealthCheck
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+
+### DELETE transcriere curentă (pregătire test v3)
+DELETE {{host}}/api/Sedinte/42/Transcriere
+Authorization: Bearer {{loginAdminConstantaTest.response.body.$.token}}
+
+###
+GET {{host}}/api/Sedinte/42/Transcriere/Continut
+Authorization: Bearer {{loginAdminConstantaTest.response.body.$.token}}
