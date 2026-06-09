@@ -21,25 +21,23 @@ public class TranscriereWhisperWrapper : IServiciuTranscriere
     {
         var hotwordsTrimise = !string.IsNullOrWhiteSpace(continut.Hotwords);
 
-        var url = "/asr?task=transcribe"
-            + "&language=ro"
-            + "&diarize=true"
-            + "&output=json"
-            + $"&initial_prompt={Uri.EscapeDataString(continut.Prompt)}";
-
-        if (hotwordsTrimise)
-            url += $"&hotwords={Uri.EscapeDataString(continut.Hotwords)}";
+        var url = "/asr?enable_diarization=true&output=json";
 
         try
         {
             using var content = new MultipartFormDataContent();
+
+            content.Add(new StringContent("transcribe"), "task");
+            content.Add(new StringContent("ro"), "language");
+            content.Add(new StringContent(continut.Prompt), "initial_prompt");
+
             var streamContent = new StreamContent(audio, bufferSize: 81920);
             streamContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
             content.Add(streamContent, "audio_file", numeFisier);
 
             _logger.LogInformation(
-                            "Trimit audio la wrapper Whisper: nume={Nume}, lungime_prompt={LungimePrompt}, hotwords_trimise={HotwordsTrimise}, lungime_hotwords={LungimeHotwords}",
-                            numeFisier, continut.Prompt.Length, hotwordsTrimise, continut.Hotwords.Length);
+                "Trimit audio la wrapper Whisper: nume={Nume}, lungime_prompt={LungimePrompt}, hotwords_trimise={HotwordsTrimise}",
+                numeFisier, continut.Prompt.Length, hotwordsTrimise);
 
             using var response = await _http.PostAsync(url, content, ct);
 
