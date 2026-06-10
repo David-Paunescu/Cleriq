@@ -1,7 +1,7 @@
 ﻿using System.Text.RegularExpressions;
 using Cleriq.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace Cleriq.Middleware;
 
@@ -9,6 +9,9 @@ public class SlugTenantMiddleware
 {
     public const string CheieItems = "InstitutieId";
     private const string PrefixRutePublice = "/public/";
+
+    // Negative caching: id 0 nu e niciodată o instituție reală → sentinel sigur.
+    private const string SentinelNegativ = "0";
 
     // TTL diferențiat: hit pozitiv durabil, hit negativ se auto-vindecă rapid
     private static readonly TimeSpan TtlPozitiv = TimeSpan.FromMinutes(10);
@@ -20,12 +23,17 @@ public class SlugTenantMiddleware
         RegexOptions.Compiled);
 
     private readonly RequestDelegate _next;
-    private readonly IMemoryCache _cache;
+    private readonly IDistributedCache _cache;
+    private readonly ILogger<SlugTenantMiddleware> _logger;
 
-    public SlugTenantMiddleware(RequestDelegate next, IMemoryCache cache)
+    public SlugTenantMiddleware(
+        RequestDelegate next,
+        IDistributedCache cache,
+        ILogger<SlugTenantMiddleware> logger)
     {
         _next = next;
         _cache = cache;
+        _logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext context, AppDbContext db)
@@ -39,7 +47,6 @@ public class SlugTenantMiddleware
             return;
         }
 
-        // Extrage slug: /public/{slug}/...
         var segmente = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
         if (segmente.Length < 2)
         {
@@ -49,43 +56,90 @@ public class SlugTenantMiddleware
 
         var slug = segmente[1];
 
-        // 1. Pre-validare format → 404 fast path (zero DB, zero cache writes)
+        // Pre-validare format → 404 fast path (zero Redis, zero DB)
         if (!FormatSlugValid.IsMatch(slug))
         {
             context.Response.StatusCode = StatusCodes.Status404NotFound;
             return;
         }
 
-        // 2. Cache-aside cu TTL diferențiat
         var cheieCache = $"tenant:slug:{slug}";
-        if (!_cache.TryGetValue(cheieCache, out int? institutieId))
+        var ct = context.RequestAborted;
+
+        // Cache-aside pe Redis. Un eșec Redis NU doboară portalul public:
+        // logăm warning și degradăm grațios la lookup direct în DB.
+        int? institutieId = null;
+        var rezolvatDinCache = false;
+
+        var valoareCache = await CitesteDinCacheAsync(cheieCache, slug, ct);
+        if (valoareCache is not null)
         {
-            // Cache miss → DB. IgnoreQueryFilters pentru că InstitutieIdCurenta=0 aici
-            // (niciun tenant rezolvat încă). Filtru manual pe EsteSters pentru
-            // decizia 3 — slug-urile soft-deleted nu rezolvă.
+            if (valoareCache == SentinelNegativ)
+            {
+                rezolvatDinCache = true;            // hit negativ: slug inexistent
+            }
+            else if (int.TryParse(valoareCache, out var idCache))
+            {
+                institutieId = idCache;
+                rezolvatDinCache = true;
+            }
+            // Valoare coruptă (neparsabilă) → tratăm ca miss și mergem la DB.
+        }
+
+        if (!rezolvatDinCache)
+        {
+            // IgnoreQueryFilters: InstitutieIdCurenta=0 aici (niciun tenant rezolvat încă).
+            // Filtru manual pe EsteSters — slug-urile soft-deleted nu rezolvă (slug-uri „arse").
             institutieId = await db.Institutii
                 .IgnoreQueryFilters()
                 .Where(i => i.Slug == slug && !i.EsteSters)
                 .Select(i => (int?)i.Id)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(ct);
 
-            var ttl = institutieId.HasValue ? TtlPozitiv : TtlNegativ;
-            _cache.Set(cheieCache, institutieId, new MemoryCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = ttl,
-                Size = 1
-            });
+            await ScrieInCacheAsync(cheieCache, institutieId, slug, ct);
         }
 
-        // 3. Inexistent → 404
         if (institutieId is null)
         {
             context.Response.StatusCode = StatusCodes.Status404NotFound;
             return;
         }
 
-        // 4. Setează tenant-ul pentru request și continuă pipeline-ul
         context.Items[CheieItems] = institutieId.Value;
         await _next(context);
+    }
+
+    private async Task<string?> CitesteDinCacheAsync(string cheie, string slug, CancellationToken ct)
+    {
+        try
+        {
+            return await _cache.GetStringAsync(cheie, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex,
+                "Redis indisponibil la citirea slug-ului {Slug}; continui cu DB.", slug);
+            return null;
+        }
+    }
+
+    private async Task ScrieInCacheAsync(string cheie, int? institutieId, string slug, CancellationToken ct)
+    {
+        try
+        {
+            await _cache.SetStringAsync(
+                cheie,
+                institutieId?.ToString() ?? SentinelNegativ,
+                new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = institutieId.HasValue ? TtlPozitiv : TtlNegativ
+                },
+                ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex,
+                "Redis indisponibil la scrierea slug-ului {Slug}; cache sărit.", slug);
+        }
     }
 }

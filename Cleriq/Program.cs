@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
+using StackExchange.Redis;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,12 +20,21 @@ Console.OutputEncoding = System.Text.Encoding.UTF8;
 // înainte de prima generare, altfel aruncă excepție.
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
+// Redis: dependență de infrastructură obligatorie, ca SQL Server (NU opțională ca Twilio).
+// Fail-fast: dacă Redis nu răspunde la pornire, aplicația se oprește cu eroare clară —
+// aici vor sta cheile Data Protection, deci aplicația nu poate funcționa corect fără el.
+var redisConnectionString = builder.Configuration.GetConnectionString("Redis")
+    ?? throw new InvalidOperationException("ConnectionStrings:Redis lipsește din configurare.");
+var redis = ConnectionMultiplexer.Connect(redisConnectionString);
+builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
+
 builder.Services.AddControllers();
 
+// Cheile Data Protection în Redis: partajate între instanțe, supraviețuiesc redeploy-ului.
+// Lista NU are TTL — la producție politica de evicție trebuie să fie volatile-* (vezi nota deploy).
 builder.Services
     .AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(
-        Path.Combine(builder.Environment.ContentRootPath, "Data", "DataProtectionKeys")))
+    .PersistKeysToStackExchangeRedis(redis, "cleriq:dataprotection-keys")
     .SetApplicationName("Cleriq");
 
 builder.Services.AddSingleton<ICriptareSecreta, CriptareDataProtection>();
@@ -83,11 +93,13 @@ if (whisperConfigurat)
 
 builder.Services.AddHostedService<WorkerConvocari>();
 
-// Cache pentru rezolvarea tenant-ului din slug pe rutele publice.
-// SizeLimit ca centură de siguranță contra umflării (atacuri cu slug-uri random).
-builder.Services.AddMemoryCache(options =>
+// Cache distribuit (Redis) pentru rezolvarea tenant-ului din slug pe rutele publice.
+// Partajat între instanțe; supraviețuiește restartului aplicației.
+// InstanceName prefixează toate cheile — namespacing curat în Redis.
+builder.Services.AddStackExchangeRedisCache(options =>
 {
-    options.SizeLimit = 10000;
+    options.ConnectionMultiplexerFactory = () => Task.FromResult<IConnectionMultiplexer>(redis);
+    options.InstanceName = "cleriq:";
 });
 
 builder.Services.AddDbContext<AppDbContext>(options =>
