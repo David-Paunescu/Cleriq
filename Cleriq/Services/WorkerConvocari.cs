@@ -6,16 +6,22 @@ namespace Cleriq.Services;
 
 public class WorkerConvocari : BackgroundService
 {
+    // Acoperă confortabil procesarea unui item: email (timeout 30s) + SMS (~30s) + SaveChanges.
+    private static readonly TimeSpan DurataLacat = TimeSpan.FromMinutes(3);
+
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly ILacatDistribuit _lacat;
     private readonly ILogger<WorkerConvocari> _logger;
     private readonly TimeSpan _intervalPolling;
 
     public WorkerConvocari(
         IServiceScopeFactory scopeFactory,
+        ILacatDistribuit lacat,
         ILogger<WorkerConvocari> logger,
         IConfiguration config)
     {
         _scopeFactory = scopeFactory;
+        _lacat = lacat;
         _logger = logger;
         var secunde = config.GetValue<int>("Worker:IntervalSecunde", 10);
         _intervalPolling = TimeSpan.FromSeconds(Math.Max(1, secunde));
@@ -124,8 +130,33 @@ public class WorkerConvocari : BackgroundService
             {
                 if (ct.IsCancellationRequested) break;
 
+                // Lacăt per convocare: o singură instanță procesează item-ul.
+                // null = deținut de altă instanță (sau Redis indisponibil) → skip,
+                // rămâne InAsteptare și e preluat la o tură viitoare.
+                await using var lacat = await _lacat.IncearcaBlocareAsync(
+                    $"convocare:{co.Id}", DurataLacat);
+
+                if (lacat is null)
+                {
+                    _logger.LogInformation(
+                        "Convocarea {Id} e blocată de altă instanță (sau Redis indisponibil); skip.",
+                        co.Id);
+                    continue;
+                }
+
                 try
                 {
+                    // Stare proaspătă SUB lacăt: altă instanță poate să fi procesat convocarea
+                    // între SELECT-ul turei și dobândirea lacătului. Fără reload am retrimite
+                    // emailul pe baza statusului stale — RowVersion ar proteja doar DB-ul,
+                    // nu mesajul deja plecat.
+                    await ctx.Entry(co).ReloadAsync(ct);
+
+                    if (co.EsteSters
+                        || (co.EmailStatus != StatusTrimitere.InAsteptare
+                            && co.SmsStatus != StatusTrimitere.InAsteptare))
+                        continue;
+
                     await ProcesseazaUnaAsync(ctx, co, conexiune, eroareConexiune, sms, ct);
                 }
                 catch (DbUpdateConcurrencyException ex)

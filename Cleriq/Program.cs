@@ -102,6 +102,8 @@ builder.Services.AddStackExchangeRedisCache(options =>
     options.InstanceName = "cleriq:";
 });
 
+builder.Services.AddSingleton<ILacatDistribuit, LacatDistribuitRedis>();
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
 

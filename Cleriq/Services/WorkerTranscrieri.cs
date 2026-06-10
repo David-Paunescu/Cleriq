@@ -36,13 +36,14 @@ public class WorkerTranscrieri : BackgroundService
             "WorkerTranscrieri pornit. Interval polling: {Interval}s.",
             _intervalPolling.TotalSeconds);
 
-        try { await CuratareOrfaniAsync(stoppingToken); }
-        catch (Exception ex) { _logger.LogError(ex, "Eroare la curățarea orfanilor InProces la pornire."); }
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
+                // Periodic, nu doar la pornire: în multi-instance, crash-ul instanței A
+                // trebuie observat de instanța B fără restart.
+                await CuratareOrfaniAsync(stoppingToken);
                 // Drain: procesează cât timp există tasks (sequential, constraint VRAM)
                 while (await ProcessareTuraAsync(stoppingToken)) { }
             }
