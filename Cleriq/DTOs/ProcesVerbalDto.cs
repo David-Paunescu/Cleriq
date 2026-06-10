@@ -12,4 +12,7 @@ public record ProcesVerbalDto(
     DateTime? DataGenerare,
     DateTime? DataFinalizare,
     int InstitutieId,
-    DateTime CreatLa);
+    DateTime CreatLa,
+    string? NumeFisierSemnat,
+    long? MarimeSemnat,
+    DateTime? DataIncarcareSemnat);

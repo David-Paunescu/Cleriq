@@ -3,4 +3,5 @@
 public record PublicProcesVerbalDto(
     int SedintaId,
     string? Continut,
-    DateTime? DataFinalizare);   // momentul publicării oficiale
+    DateTime? DataFinalizare,
+    bool EsteSemnat);   // true = există PDF semnat încărcat; portalul poate afișa badge

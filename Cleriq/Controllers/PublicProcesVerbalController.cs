@@ -1,10 +1,10 @@
 ﻿using Cleriq.Data;
 using Cleriq.DTOs;
+using Cleriq.Helpers;
 using Cleriq.Models;
+using Cleriq.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Cleriq.Helpers;
-using Cleriq.Services;
 
 namespace Cleriq.Controllers;
 
@@ -14,13 +14,19 @@ public class PublicProcesVerbalController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly IGeneratorPdfProcesVerbal _generatorPdf;
+    private readonly IStocareDocumente _stocare;
+    private readonly ILogger<PublicProcesVerbalController> _logger;
 
     public PublicProcesVerbalController(
         AppDbContext context,
-        IGeneratorPdfProcesVerbal generatorPdf)
+        IGeneratorPdfProcesVerbal generatorPdf,
+        IStocareDocumente stocare,
+        ILogger<PublicProcesVerbalController> logger)
     {
         _context = context;
         _generatorPdf = generatorPdf;
+        _stocare = stocare;
+        _logger = logger;
     }
 
     // GET /public/{slug}/sedinte/{sedintaId}/procesverbal
@@ -31,7 +37,8 @@ public class PublicProcesVerbalController : ControllerBase
         if (pv is null) return NotFound();
 
         return Ok(new PublicProcesVerbalDto(
-            pv.SedintaId, pv.Continut, pv.DataFinalizare));
+            pv.SedintaId, pv.Continut, pv.DataFinalizare,
+            !string.IsNullOrEmpty(pv.CaleStocareSemnat)));
     }
 
     // GET /public/{slug}/sedinte/{sedintaId}/procesverbal/markdown
@@ -45,26 +52,43 @@ public class PublicProcesVerbalController : ControllerBase
     }
 
     // GET /public/{slug}/sedinte/{sedintaId}/procesverbal/pdf
-    // Aceleași reguli de vizibilitate ca JSON/Markdown: doar PV Finalizat + ședință publicabilă.
-    // Notă viitor (Nivel 1 semnătură): aici se va servi PDF-ul semnat dacă există.
+    // Varianta SEMNATĂ (act oficial) are prioritate. Nume canonic, NU numele
+    // fișierului încărcat de secretar (nu scurgem denumiri interne).
+    // Dacă fișierul semnat lipsește de pe disk (integritate ruptă): warning în log
+    // + degradare grațioasă la PDF-ul generat — cetățeanul primește mereu un PDF.
     [HttpGet("pdf")]
-    public async Task<IActionResult> ObtinePdf(int sedintaId)
+    public async Task<IActionResult> ObtinePdf(int sedintaId, CancellationToken ct)
     {
         var pv = await ObtinePvPublic(sedintaId);
         if (pv is null) return NotFound();
 
-        var institutie = await _context.Institutii.FirstOrDefaultAsync();
+        var institutie = await _context.Institutii.FirstOrDefaultAsync(ct);
         if (institutie is null) return NotFound();
 
         // Ședința există garantat (verificat în ObtinePvPublic) — luăm doar data.
         var dataOra = await _context.Sedinte
             .Where(s => s.Id == sedintaId)
             .Select(s => s.DataOra)
-            .FirstAsync();
+            .FirstAsync(ct);
+        var dataLocala = dataOra.LaFusOrar(institutie.FusOrar);
+
+        if (!string.IsNullOrEmpty(pv.CaleStocareSemnat))
+        {
+            try
+            {
+                var stream = await _stocare.DeschideAsync(pv.CaleStocareSemnat, ct);
+                return File(stream, "application/pdf",
+                    $"proces-verbal-{dataLocala:yyyy-MM-dd}-semnat.pdf");
+            }
+            catch (FileNotFoundException)
+            {
+                _logger.LogWarning(
+                    "PV semnat lipsă pe disk pentru sedinta {SedintaId} (cheie={Cheie}). Servesc PDF generat.",
+                    sedintaId, pv.CaleStocareSemnat);
+            }
+        }
 
         var pdf = _generatorPdf.Genereaza(pv, institutie);
-
-        var dataLocala = dataOra.LaFusOrar(institutie.FusOrar);
         return File(pdf, "application/pdf", $"proces-verbal-{dataLocala:yyyy-MM-dd}.pdf");
     }
 

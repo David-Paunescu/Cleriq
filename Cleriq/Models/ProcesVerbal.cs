@@ -1,4 +1,6 @@
-﻿namespace Cleriq.Models;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Cleriq.Models;
 
 public class ProcesVerbal : EntitateDeBaza, IEntitateCuTenant
 {
@@ -6,6 +8,23 @@ public class ProcesVerbal : EntitateDeBaza, IEntitateCuTenant
     public StatusProcesVerbal Status { get; set; } = StatusProcesVerbal.Draft;
     public DateTime? DataGenerare { get; set; }
     public DateTime? DataFinalizare { get; set; }
+
+    // Varianta semnată (Nivel 1 semnătură): PDF semnat extern (PAdES cu token sau
+    // scan al originalului semnat pe hârtie), încărcat de Admin/Secretar.
+    // Fișierul fizic stă în ACEEAȘI stocare ca documentele (IStocareDocumente).
+    [MaxLength(500)]
+    public string? CaleStocareSemnat { get; set; }
+
+    [MaxLength(255)]
+    public string? NumeFisierSemnat { get; set; }
+
+    public long? MarimeSemnat { get; set; }
+
+    [MaxLength(64)]
+    public string? HashSha256Semnat { get; set; }
+
+    public DateTime? DataIncarcareSemnat { get; set; }
+
     public int SedintaId { get; set; }
     public Sedinta Sedinta { get; set; } = null!;
     public int InstitutieId { get; set; }

@@ -252,8 +252,23 @@ public class MentenantaController : ControllerBase
             })
             .ToListAsync(ct);
 
+        // PV-urile semnate trăiesc în ACEEAȘI stocare fizică (IStocareDocumente),
+        // dar sunt referențiate din ProceseVerbale.CaleStocareSemnat, nu din Documente.
+        // Fără includerea lor aici, scanerul le-ar clasifica FaraRandInDb și le-ar ȘTERGE.
+        var pvSemnateDb = await _context.ProceseVerbale
+            .IgnoreQueryFilters()
+            .Where(p => p.CaleStocareSemnat != null)
+            .Select(p => new
+            {
+                CaleStocare = p.CaleStocareSemnat!,
+                p.EsteSters,
+                p.StersLa,
+                p.InstitutieId
+            })
+            .ToListAsync(ct);
+
         // Dicționar pentru lookup O(1): cheie → metadate DB
-        var dictDb = documenteDb.ToDictionary(d => d.CaleStocare);
+        var dictDb = documenteDb.Concat(pvSemnateDb).ToDictionary(d => d.CaleStocare);
 
         // 2. Enumerăm fișierele fizice și clasificăm
         var orfani = new List<FisierOrfanDto>();
