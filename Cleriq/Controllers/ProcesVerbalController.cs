@@ -2,6 +2,7 @@
 using Cleriq.DTOs;
 using Cleriq.Helpers;
 using Cleriq.Models;
+using Cleriq.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -17,11 +18,16 @@ public class ProcesVerbalController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly IConfiguration _config;
+    private readonly IGeneratorPdfProcesVerbal _generatorPdf;
 
-    public ProcesVerbalController(AppDbContext context, IConfiguration config)
+    public ProcesVerbalController(
+        AppDbContext context,
+        IConfiguration config,
+        IGeneratorPdfProcesVerbal generatorPdf)
     {
         _context = context;
         _config = config;
+        _generatorPdf = generatorPdf;
     }
 
     [HttpGet]
@@ -45,6 +51,28 @@ public class ProcesVerbalController : ControllerBase
         if (pv is null)
             return NotFound();
         return Content(pv.Continut ?? "", "text/markdown; charset=utf-8");
+    }
+
+    // PDF generat on-the-fly din Continut (Markdown). Draft → watermark DRAFT.
+    // Accesibil pe orice status — secretarul vrea preview și pe Draft.
+    [HttpGet("Pdf")]
+    public async Task<IActionResult> ObtinePdf(int sedintaId)
+    {
+        var sedinta = await _context.Sedinte
+            .Include(s => s.Institutie)
+            .FirstOrDefaultAsync(s => s.Id == sedintaId);
+        if (sedinta is null)
+            return NotFound("Ședința nu există.");
+
+        var pv = await _context.ProceseVerbale
+            .FirstOrDefaultAsync(p => p.SedintaId == sedintaId);
+        if (pv is null)
+            return NotFound("Nu există proces verbal pentru această ședință.");
+
+        var pdf = _generatorPdf.Genereaza(pv, sedinta.Institutie);
+
+        var dataLocala = sedinta.DataOra.LaFusOrar(sedinta.Institutie.FusOrar);
+        return File(pdf, "application/pdf", $"proces-verbal-{dataLocala:yyyy-MM-dd}.pdf");
     }
 
     [HttpPost("Genereaza")]

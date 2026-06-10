@@ -15,6 +15,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 Console.OutputEncoding = System.Text.Encoding.UTF8;
 
+// QuestPDF Community License — gratuit sub 1M USD venit anual. Obligatoriu setat
+// înainte de prima generare, altfel aruncă excepție.
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
 builder.Services.AddControllers();
 
 builder.Services
@@ -36,6 +40,7 @@ builder.Services.AddScoped<IFurnizorTenant, FurnizorTenant>();
 builder.Services.AddScoped<IFurnizorUtilizator, FurnizorUtilizator>();
 
 builder.Services.AddScoped<IGeneratorConvocare, GeneratorConvocare>();
+builder.Services.AddScoped<IGeneratorPdfProcesVerbal, GeneratorPdfProcesVerbal>();
 builder.Services.AddScoped<NotificareLogger>();
 builder.Services.AddScoped<IServiciuNotificareEmail, NotificareSmtp>();
 

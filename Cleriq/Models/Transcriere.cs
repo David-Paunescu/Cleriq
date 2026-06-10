@@ -26,8 +26,6 @@ public class Transcriere : EntitateDeBaza, IEntitateCuTenant
     public string ModelFolosit { get; set; } = "large-v2";
     public string? PromptFolosit { get; set; }
 
-    public string? HotwordsFolosite { get; set; }
-
     // Retry tracking (sub-decizia 5E, deja pregătit în schemă)
     public int NumarIncercari { get; set; }
     public DateTime? UrmatoareaIncercareDupa { get; set; }

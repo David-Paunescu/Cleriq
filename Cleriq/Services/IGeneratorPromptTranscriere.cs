@@ -2,7 +2,7 @@
 
 namespace Cleriq.Services;
 
-public record ContinutTranscriere(string Prompt, string Hotwords);
+public record ContinutTranscriere(string Prompt);
 
 public interface IGeneratorPromptTranscriere
 {

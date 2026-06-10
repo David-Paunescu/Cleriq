@@ -228,7 +228,6 @@ public class WorkerTranscrieri : BackgroundService
             transcriere.ContinutBrut = rezultat.ContinutJson;
             transcriere.DurataAudioSecunde = rezultat.DurataAudioSecunde;
             transcriere.PromptFolosit = continut.Prompt;
-            transcriere.HotwordsFolosite = continut.Hotwords;
             transcriere.DataPrimireBrut = DateTime.UtcNow;
             transcriere.UltimaEroare = null;
             transcriere.UrmatoareaIncercareDupa = null;
