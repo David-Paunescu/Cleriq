@@ -64,13 +64,13 @@ public static class ExtensiiTeste
     }
 
     public static async Task<int> CreeazaConsilierAsync(
-        this HttpClient clientAdmin, string numeComplet)
+            this HttpClient clientAdmin, string numeComplet, string? email = null, string? telefon = null)
     {
         var raspuns = await clientAdmin.PostAsJsonAsync("/api/Consilieri", new
         {
             numeComplet,
-            email = (string?)null,
-            telefon = (string?)null
+            email,
+            telefon
         });
         await AsigurareSucces(raspuns, "Creare consilier");
 
@@ -93,6 +93,50 @@ public static class ExtensiiTeste
         await AsigurareSucces(raspuns, "Creare ședință");
         var corp = await raspuns.Content.ReadFromJsonAsync<JsonElement>();
         return corp.GetProperty("id").GetInt32();
+    }
+
+    public static async Task<JsonElement> TrimiteConvocariAsync(
+        this HttpClient clientAdmin, int sedintaId)
+    {
+        var raspuns = await clientAdmin.PostAsync($"/api/Sedinte/{sedintaId}/Convocare", null);
+        await AsigurareSucces(raspuns, "Trimitere convocări");
+        return await raspuns.Content.ReadFromJsonAsync<JsonElement>();
+    }
+
+    public static async Task<JsonElement> ListaConvocariAsync(
+        this HttpClient clientAdmin, int sedintaId)
+        => await clientAdmin.GetFromJsonAsync<JsonElement>($"/api/Sedinte/{sedintaId}/Convocari");
+
+    public static async Task TranziteazaSedintaAsync(
+        this HttpClient clientAdmin, int sedintaId, string actiune)
+    {
+        var raspuns = await clientAdmin.PostAsync($"/api/Sedinte/{sedintaId}/{actiune}", null);
+        await AsigurareSucces(raspuns, $"Tranziție ședință: {actiune}");
+    }
+
+    public static async Task<JsonElement> GenereazaProcesVerbalAsync(
+        this HttpClient clientAdmin, int sedintaId)
+    {
+        var raspuns = await clientAdmin.PostAsync($"/api/Sedinte/{sedintaId}/ProcesVerbal/Genereaza", null);
+        await AsigurareSucces(raspuns, "Generare proces verbal");
+        return await raspuns.Content.ReadFromJsonAsync<JsonElement>();
+    }
+
+    public static async Task FinalizeazaProcesVerbalAsync(
+        this HttpClient clientAdmin, int sedintaId)
+    {
+        var raspuns = await clientAdmin.PostAsync($"/api/Sedinte/{sedintaId}/ProcesVerbal/Finalizeaza", null);
+        await AsigurareSucces(raspuns, "Finalizare proces verbal");
+    }
+
+    public static async Task<HttpResponseMessage> IncarcaPvSemnatAsync(
+        this HttpClient clientAdmin, int sedintaId, byte[] continut, string numeFisier)
+    {
+        using var form = new MultipartFormDataContent();
+        var parte = new ByteArrayContent(continut);
+        parte.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+        form.Add(parte, "fisier", numeFisier);
+        return await clientAdmin.PostAsync($"/api/Sedinte/{sedintaId}/ProcesVerbal/Semnat", form);
     }
 
     public static async Task SeteazaPrezentaAsync(
