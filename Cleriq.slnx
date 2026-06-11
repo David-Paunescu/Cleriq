@@ -1,3 +1,4 @@
 <Solution>
+  <Project Path="Cleriq.Tests/Cleriq.Tests.csproj" Id="38bfb444-e8d8-4460-a4a2-312cec652a43" />
   <Project Path="Cleriq/Cleriq.csproj" />
 </Solution>
