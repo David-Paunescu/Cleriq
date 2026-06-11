@@ -1,6 +1,7 @@
 ﻿using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Cleriq.Models;
 
 namespace Cleriq.Tests.Infrastructura;
 
@@ -75,6 +76,79 @@ public static class ExtensiiTeste
 
         var corp = await raspuns.Content.ReadFromJsonAsync<JsonElement>();
         return corp.GetProperty("id").GetInt32();
+    }
+
+    public static async Task<int> CreeazaSedintaAsync(
+        this HttpClient clientAdmin, string titlu = "Ședință Test")
+    {
+        var raspuns = await clientAdmin.PostAsJsonAsync("/api/Sedinte", new
+        {
+            titlu,
+            numar = (string?)null,
+            tip = TipSedinta.Ordinara,
+            dataOra = DateTime.UtcNow.AddDays(7),
+            loc = "Sala Test",
+            modDesfasurare = ModDesfasurare.Fizic
+        });
+        await AsigurareSucces(raspuns, "Creare ședință");
+        var corp = await raspuns.Content.ReadFromJsonAsync<JsonElement>();
+        return corp.GetProperty("id").GetInt32();
+    }
+
+    public static async Task SeteazaPrezentaAsync(
+        this HttpClient clientAdmin, int sedintaId, int consilierId, StatusPrezenta status)
+    {
+        var raspuns = await clientAdmin.PostAsJsonAsync($"/api/Sedinte/{sedintaId}/Prezente",
+            new { consilierId, status, oraSosire = (DateTime?)null });
+        await AsigurareSucces(raspuns, "Setare prezență");
+    }
+
+    public static async Task<int> CreeazaPunctAsync(
+        this HttpClient clientAdmin, int sedintaId, TipMajoritate tipMajoritate,
+        int ordine = 1, TipVot? tipVot = null)
+    {
+        var raspuns = await clientAdmin.PostAsJsonAsync($"/api/Sedinte/{sedintaId}/Puncte", new
+        {
+            ordine,
+            titlu = $"Punct {ordine}",
+            descriere = (string?)null,
+            tip = TipPunct.ProiectHCL,
+            necesitaVot = true,
+            tipMajoritate,
+            tipVot
+        });
+        await AsigurareSucces(raspuns, "Creare punct");
+        var corp = await raspuns.Content.ReadFromJsonAsync<JsonElement>();
+        return corp.GetProperty("id").GetInt32();
+    }
+
+    public static async Task VoteazaAsync(
+        this HttpClient clientAdmin, int sedintaId, int punctId, int consilierId, OptiuneVot optiune)
+    {
+        var raspuns = await clientAdmin.PostAsJsonAsync(
+            $"/api/Sedinte/{sedintaId}/Puncte/{punctId}/Voturi",
+            new { consilierId, optiune });
+        await AsigurareSucces(raspuns, "Înregistrare vot");
+    }
+
+    public static async Task<JsonElement> InchideVotAsync(
+        this HttpClient clientAdmin, int sedintaId, int punctId)
+    {
+        var raspuns = await clientAdmin.PostAsync(
+            $"/api/Sedinte/{sedintaId}/Puncte/{punctId}/Inchide", null);
+        await AsigurareSucces(raspuns, "Închidere vot");
+        return await raspuns.Content.ReadFromJsonAsync<JsonElement>();
+    }
+
+    public static async Task<HttpClient> ClientConsilierAsync(
+        this CleriqWebApplicationFactory factory, HttpClient clientAdmin, int consilierId)
+    {
+        var email = $"consilier.{Guid.NewGuid():N}@cleriq-test.ro";
+        const string parola = "ConsilierTest1!";
+        var raspuns = await clientAdmin.PostAsJsonAsync(
+            $"/api/Consilieri/{consilierId}/Cont", new { email, parola });
+        await AsigurareSucces(raspuns, "Creare cont consilier");
+        return await factory.ClientAutentificatAsync(email, parola);
     }
 
     private static async Task AsigurareSucces(HttpResponseMessage raspuns, string operatiune)
