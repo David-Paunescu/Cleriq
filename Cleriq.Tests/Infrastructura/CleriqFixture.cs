@@ -16,6 +16,7 @@ public class CleriqFixture : IAsyncLifetime
     {
         await ReseteazaBazaDeDateAsync();
         await GolesteRedisDeTestAsync();
+        StergeStocareaDeTest();
 
         // Abia ACUM pornim host-ul (primul acces la Services îl construiește):
         // seed-ul din Program.cs (roluri + SuperAdmin) are nevoie de DB-ul deja migrat.
@@ -35,6 +36,18 @@ public class CleriqFixture : IAsyncLifetime
 
         await db.Database.EnsureDeletedAsync();
         await db.Database.MigrateAsync();
+    }
+
+    // Stocarea pe disk se resetează ca DB-ul: fiecare rulare pornește ermetic,
+    // altfel fișierele rulărilor anterioare ar apărea ca orfani FaraRandInDb.
+    private static void StergeStocareaDeTest()
+    {
+        foreach (var root in new[] { ConfigTest.CaleRootDocumente, ConfigTest.CaleRootAudio })
+        {
+            var cale = Path.Combine(AppContext.BaseDirectory, root);
+            if (Directory.Exists(cale))
+                Directory.Delete(cale, recursive: true);
+        }
     }
 
     // Golește EXCLUSIV indexul 15 (test). NICIODATĂ index 0 sau FlushAll —

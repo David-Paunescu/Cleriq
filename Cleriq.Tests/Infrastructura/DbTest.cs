@@ -47,6 +47,80 @@ public static class DbTest
         await ctx.SaveChangesAsync();
     }
 
+    public static async Task SeteazaStatusTranscriereAsync(
+        int transcriereId,
+        StatusTranscriere status,
+        string? continutBrut = null)
+    {
+        await using var ctx = CreeazaContext();
+        var transcriere = await ctx.Transcrieri
+            .IgnoreQueryFilters()
+            .FirstAsync(t => t.Id == transcriereId);
+
+        transcriere.Status = status;
+
+        if (status == StatusTranscriere.Esuata)
+        {
+            transcriere.NumarIncercari = 3;
+            transcriere.UltimaEroare = "Aranjat direct în DB de test.";
+            transcriere.UrmatoareaIncercareDupa = null;
+        }
+        else if (status == StatusTranscriere.Finalizata)
+        {
+            transcriere.ContinutBrut = continutBrut ?? """{"text": []}""";
+            transcriere.DataPrimireBrut = DateTime.UtcNow;
+            transcriere.UltimaEroare = null;
+        }
+
+        await ctx.SaveChangesAsync();
+    }
+
+    public static async Task<string?> CitesteCaleStocareSemnatAsync(int sedintaId)
+    {
+        await using var ctx = CreeazaContext();
+        return await ctx.ProceseVerbale
+            .IgnoreQueryFilters()
+            .Where(p => p.SedintaId == sedintaId)
+            .Select(p => p.CaleStocareSemnat)
+            .FirstOrDefaultAsync();
+    }
+
+    public static async Task<string> CitesteCaleStocareDocumentAsync(int documentId)
+    {
+        await using var ctx = CreeazaContext();
+        return await ctx.Documente
+            .IgnoreQueryFilters()
+            .Where(d => d.Id == documentId)
+            .Select(d => d.CaleStocare)
+            .FirstAsync();
+    }
+
+    public static async Task<string> CitesteCaleStocareAudioAsync(int sedintaId)
+    {
+        await using var ctx = CreeazaContext();
+        return await ctx.Transcrieri
+            .IgnoreQueryFilters()
+            .Where(t => t.SedintaId == sedintaId)
+            .Select(t => t.CaleStocareAudio)
+            .FirstAsync();
+    }
+
+    public static async Task SeteazaStersLaDocumentAsync(int documentId, DateTime stersLa)
+    {
+        await using var ctx = CreeazaContext();
+        var doc = await ctx.Documente.IgnoreQueryFilters().FirstAsync(d => d.Id == documentId);
+        doc.StersLa = stersLa;
+        await ctx.SaveChangesAsync();
+    }
+
+    public static async Task SeteazaStersLaTranscriereAsync(int transcriereId, DateTime stersLa)
+    {
+        await using var ctx = CreeazaContext();
+        var transcriere = await ctx.Transcrieri.IgnoreQueryFilters().FirstAsync(t => t.Id == transcriereId);
+        transcriere.StersLa = stersLa;
+        await ctx.SaveChangesAsync();
+    }
+
     private sealed class FurnizorUtilizatorNul : IFurnizorUtilizator
     {
         public int? UserId => null;

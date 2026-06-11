@@ -17,4 +17,7 @@ public static class ConfigTest
 
     public const string SuperAdminEmail = "superadmin.test@cleriq.ro";
     public const string SuperAdminParola = "SuperAdminTest1!";
+
+    public const string CaleRootDocumente = "TestData/Documente";
+    public const string CaleRootAudio = "TestData/Audio";
 }

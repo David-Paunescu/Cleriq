@@ -24,8 +24,8 @@ public class CleriqWebApplicationFactory : WebApplicationFactory<Program>
         Environment.SetEnvironmentVariable("SuperAdmin__Email", ConfigTest.SuperAdminEmail);
         Environment.SetEnvironmentVariable("SuperAdmin__Parola", ConfigTest.SuperAdminParola);
 
-        Environment.SetEnvironmentVariable("DirectorDocumente__CaleRoot", "TestData/Documente");
-        Environment.SetEnvironmentVariable("DirectorAudio__CaleRoot", "TestData/Audio");
+        Environment.SetEnvironmentVariable("DirectorDocumente__CaleRoot", ConfigTest.CaleRootDocumente);
+        Environment.SetEnvironmentVariable("DirectorAudio__CaleRoot", ConfigTest.CaleRootAudio);
 
         Environment.SetEnvironmentVariable("Whisper__UrlBaza", null);
         Environment.SetEnvironmentVariable("Twilio__AccountSid", null);

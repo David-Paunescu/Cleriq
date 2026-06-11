@@ -139,6 +139,43 @@ public static class ExtensiiTeste
         return await clientAdmin.PostAsync($"/api/Sedinte/{sedintaId}/ProcesVerbal/Semnat", form);
     }
 
+    public static async Task<HttpResponseMessage> IncarcaAudioAsync(
+        this HttpClient clientAdmin, int sedintaId, byte[] continut, string numeFisier)
+    {
+        using var form = new MultipartFormDataContent();
+        var parte = new ByteArrayContent(continut);
+        parte.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+        form.Add(parte, "fisier", numeFisier);
+        return await clientAdmin.PostAsync($"/api/Sedinte/{sedintaId}/Transcriere", form);
+    }
+
+    public static async Task<JsonElement> IncarcaDocumentAsync(
+        this HttpClient clientAdmin, byte[] continut, string numeFisier, string denumire,
+        int? sedintaId = null, int? punctId = null)
+    {
+        using var form = new MultipartFormDataContent();
+        var parte = new ByteArrayContent(continut);
+        parte.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+        form.Add(parte, "fisier", numeFisier);
+        form.Add(new StringContent(denumire), "denumire");
+        form.Add(new StringContent(((int)TipDocument.Anexa).ToString()), "tipDocument");
+        form.Add(new StringContent("0"), "ordine");
+        if (sedintaId.HasValue) form.Add(new StringContent(sedintaId.Value.ToString()), "sedintaId");
+        if (punctId.HasValue) form.Add(new StringContent(punctId.Value.ToString()), "punctId");
+
+        var raspuns = await clientAdmin.PostAsync("/api/Documente", form);
+        await AsigurareSucces(raspuns, "Încărcare document");
+        return await raspuns.Content.ReadFromJsonAsync<JsonElement>();
+    }
+
+    public static async Task SeteazaVizibilitateDocumentAsync(
+        this HttpClient clientAdmin, int documentId, bool estePublic)
+    {
+        var raspuns = await clientAdmin.PutAsJsonAsync(
+            $"/api/Documente/{documentId}/Vizibilitate", new { estePublic });
+        await AsigurareSucces(raspuns, "Setare vizibilitate document");
+    }
+
     public static async Task SeteazaPrezentaAsync(
         this HttpClient clientAdmin, int sedintaId, int consilierId, StatusPrezenta status)
     {
