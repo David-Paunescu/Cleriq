@@ -27,7 +27,7 @@ public class Transcriere : EntitateDeBaza, IEntitateCuTenant
     public string? PromptFolosit { get; set; }
 
     // Retry tracking (sub-decizia 5E, deja pregătit în schemă)
-    public int NumarIncercari { get; set; }
+    public int NumarEsecuri { get; set; }
     public DateTime? UrmatoareaIncercareDupa { get; set; }
     [MaxLength(1000)]
     public string? UltimaEroare { get; set; }

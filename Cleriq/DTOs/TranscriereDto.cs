@@ -11,7 +11,7 @@ public record TranscriereDto(
     long DimensiuneAudio,
     int? DurataAudioSecunde,
     string ModelFolosit,
-    int NumarIncercari,
+    int NumarEsecuri,
     DateTime? UrmatoareaIncercareDupa,
     string? UltimaEroare,
     int InstitutieId,

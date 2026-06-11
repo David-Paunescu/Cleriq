@@ -35,7 +35,7 @@ public class TesteTranscriere
             var dto = await upload.Content.ReadFromJsonAsync<JsonElement>();
             Assert.Equal((int)StatusTranscriere.InAsteptare, dto.GetProperty("status").GetInt32());
             Assert.Equal((long)bytes.Length, dto.GetProperty("dimensiuneAudio").GetInt64());
-            Assert.Equal(0, dto.GetProperty("numarIncercari").GetInt32());
+            Assert.Equal(0, dto.GetProperty("numarEsecuri").GetInt32());
 
             var audio = await admin.GetAsync($"/api/Sedinte/{sedintaId}/Transcriere/Audio");
             Assert.Equal(HttpStatusCode.OK, audio.StatusCode);
@@ -97,7 +97,7 @@ public class TesteTranscriere
             var dto = await reupload.Content.ReadFromJsonAsync<JsonElement>();
             Assert.Equal(id, dto.GetProperty("id").GetInt32());
             Assert.Equal((int)StatusTranscriere.InAsteptare, dto.GetProperty("status").GetInt32());
-            Assert.Equal(0, dto.GetProperty("numarIncercari").GetInt32());
+            Assert.Equal(0, dto.GetProperty("numarEsecuri").GetInt32());
             Assert.Equal(JsonValueKind.Null, dto.GetProperty("ultimaEroare").ValueKind);
             Assert.Equal((long)bytesV2.Length, dto.GetProperty("dimensiuneAudio").GetInt64());
 
@@ -153,7 +153,7 @@ public class TesteTranscriere
 
             var dto = await retry.Content.ReadFromJsonAsync<JsonElement>();
             Assert.Equal((int)StatusTranscriere.InAsteptare, dto.GetProperty("status").GetInt32());
-            Assert.Equal(0, dto.GetProperty("numarIncercari").GetInt32());
+            Assert.Equal(0, dto.GetProperty("numarEsecuri").GetInt32());
             Assert.Equal(JsonValueKind.Null, dto.GetProperty("ultimaEroare").ValueKind);
             Assert.Equal(JsonValueKind.Null, dto.GetProperty("urmatoareaIncercareDupa").ValueKind);
         }

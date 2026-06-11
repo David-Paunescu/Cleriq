@@ -127,7 +127,7 @@ public class WorkerTranscrieri : BackgroundService
         _logger.LogInformation(
             "Procesare transcriere {Id} (sedinta {SedintaId}, încercarea {Incercare}/{Max}).",
             transcriere.Id, transcriere.SedintaId,
-            transcriere.NumarIncercari + 1, NumarMaximIncercari);
+            transcriere.NumarEsecuri + 1, NumarMaximIncercari);
 
         // Claim: InAsteptare → InProces. ModificatLa se setează automat prin audit.
         transcriere.Status = StatusTranscriere.InProces;
@@ -258,26 +258,26 @@ public class WorkerTranscrieri : BackgroundService
         string? detalii,
         CancellationToken ct)
     {
-        transcriere.NumarIncercari++;
+        transcriere.NumarEsecuri++;
         transcriere.UltimaEroare = detalii;
 
-        if (!retriable || transcriere.NumarIncercari >= NumarMaximIncercari)
+        if (!retriable || transcriere.NumarEsecuri >= NumarMaximIncercari)
         {
             transcriere.Status = StatusTranscriere.Esuata;
             transcriere.UrmatoareaIncercareDupa = null;
             _logger.LogWarning(
                 "Transcriere {Id} marcată Esuata definitiv (retriable={Retriable}, încercări={Incercari}).",
-                transcriere.Id, retriable, transcriere.NumarIncercari);
+                transcriere.Id, retriable, transcriere.NumarEsecuri);
         }
         else
         {
-            var idxBackoff = Math.Min(transcriere.NumarIncercari - 1, BackoffDurations.Length - 1);
+            var idxBackoff = Math.Min(transcriere.NumarEsecuri - 1, BackoffDurations.Length - 1);
             transcriere.Status = StatusTranscriere.InAsteptare;
             transcriere.UrmatoareaIncercareDupa = DateTime.UtcNow + BackoffDurations[idxBackoff];
             _logger.LogInformation(
                 "Transcriere {Id} reprogramată după {Backoff} (încercarea {Incercare}/{Max}).",
                 transcriere.Id, BackoffDurations[idxBackoff],
-                transcriere.NumarIncercari, NumarMaximIncercari);
+                transcriere.NumarEsecuri, NumarMaximIncercari);
         }
 
         await ctx.SaveChangesAsync(ct);

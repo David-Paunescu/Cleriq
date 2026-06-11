@@ -61,7 +61,7 @@ public static class DbTest
 
         if (status == StatusTranscriere.Esuata)
         {
-            transcriere.NumarIncercari = 3;
+            transcriere.NumarEsecuri = 3;
             transcriere.UltimaEroare = "Aranjat direct în DB de test.";
             transcriere.UrmatoareaIncercareDupa = null;
         }

@@ -149,7 +149,7 @@ public class TranscriereController : ControllerBase
             existenta.DataPrimireBrut = null;
             existenta.DataUltimeiEditari = null;
             existenta.PromptFolosit = null;
-            existenta.NumarIncercari = 0;
+            existenta.NumarEsecuri = 0;
             existenta.UrmatoareaIncercareDupa = null;
             existenta.UltimaEroare = null;
             existenta.ModelFolosit = _modelFolosit;
@@ -207,7 +207,7 @@ public class TranscriereController : ControllerBase
                 $"Retry e posibil doar la status Esuata (curent: {t.Status}).");
 
         t.Status = StatusTranscriere.InAsteptare;
-        t.NumarIncercari = 0;
+        t.NumarEsecuri = 0;
         t.UrmatoareaIncercareDupa = null;
         t.UltimaEroare = null;
 
@@ -234,6 +234,6 @@ public class TranscriereController : ControllerBase
         t.Id, t.SedintaId, t.Status,
         t.DataPrimireBrut, t.DataUltimeiEditari,
         t.DimensiuneAudio, t.DurataAudioSecunde,
-        t.ModelFolosit, t.NumarIncercari, t.UrmatoareaIncercareDupa,
+        t.ModelFolosit, t.NumarEsecuri, t.UrmatoareaIncercareDupa,
         t.UltimaEroare, t.InstitutieId, t.CreatLa);
 }
