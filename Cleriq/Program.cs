@@ -30,6 +30,21 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
 
 builder.Services.AddControllers();
 
+builder.Services.AddCors(options =>
+{
+    var origini = builder.Configuration
+        .GetSection("Cors:OriginiPermise")
+        .Get<string[]>() ?? Array.Empty<string>();
+
+    options.AddDefaultPolicy(policy =>
+    {
+        if (origini.Length > 0)
+            policy.WithOrigins(origini)
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+    });
+});
+
 // Cheile Data Protection în Redis: partajate între instanțe, supraviețuiesc redeploy-ului.
 // Lista NU are TTL — la producție politica de evicție trebuie să fie volatile-* (vezi nota deploy).
 builder.Services
@@ -144,35 +159,18 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<Rol>>();
-    foreach (var rol in new[] { "SuperAdmin", "Admin", "Secretar", "Consilier" })
+    if (app.Environment.IsProduction())
     {
-        if (!await roleManager.RoleExistsAsync(rol))
-            await roleManager.CreateAsync(new Rol { Name = rol });
+        app.Logger.LogInformation("Production: aplic migrațiile pendinte...");
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await db.Database.MigrateAsync();
+        app.Logger.LogInformation("Migrațiile au fost aplicate.");
     }
 
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<Utilizator>>();
-    var emailSuperAdmin = app.Configuration["SuperAdmin:Email"];
-    var parolaSuperAdmin = app.Configuration["SuperAdmin:Parola"];
+    await SeedComun.RuleazaAsync(scope.ServiceProvider, app.Configuration, app.Logger);
 
-    if (!string.IsNullOrWhiteSpace(emailSuperAdmin) && !string.IsNullOrWhiteSpace(parolaSuperAdmin))
-    {
-        if (await userManager.FindByEmailAsync(emailSuperAdmin) is null)
-        {
-            var superAdmin = new Utilizator
-            {
-                UserName = emailSuperAdmin,
-                Email = emailSuperAdmin,
-                NumeComplet = "Super Admin",
-                InstitutieId = 0,
-                EmailConfirmed = true
-            };
-
-            var rezultat = await userManager.CreateAsync(superAdmin, parolaSuperAdmin);
-            if (rezultat.Succeeded)
-                await userManager.AddToRoleAsync(superAdmin, "SuperAdmin");
-        }
-    }
+    if (app.Environment.IsDevelopment())
+        await SeedDevelopment.RuleazaAsync(scope.ServiceProvider, app.Logger);
 }
 
 if (!whisperConfigurat)
@@ -189,6 +187,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors();
 
 app.UseAuthentication();
 app.UseAuthorization();
