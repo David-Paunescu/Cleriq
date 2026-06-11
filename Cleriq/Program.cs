@@ -11,6 +11,7 @@ using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using StackExchange.Redis;
 using System.Text;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,6 +43,39 @@ builder.Services.AddCors(options =>
             policy.WithOrigins(origini)
                   .AllowAnyHeader()
                   .AllowAnyMethod();
+    });
+});
+
+builder.Services.AddRateLimiter(options =>
+{
+    var requesturi = Math.Max(1,
+        builder.Configuration.GetValue<int>("RateLimiting:PublicRequesturiPeFereastra", 100));
+    var fereastraSecunde = Math.Max(1,
+        builder.Configuration.GetValue<int>("RateLimiting:PublicFereastraSecunde", 10));
+
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.OnRejected = (context, ct) =>
+    {
+        context.HttpContext.Response.Headers.RetryAfter = fereastraSecunde.ToString();
+        return ValueTask.CompletedTask;
+    };
+
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+    {
+        var esteRutaPublica = httpContext.Request.Path
+            .StartsWithSegments("/public", StringComparison.OrdinalIgnoreCase);
+
+        if (!esteRutaPublica)
+            return RateLimitPartition.GetNoLimiter("interna");
+
+        return RateLimitPartition.GetFixedWindowLimiter("publica", _ =>
+            new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = requesturi,
+                Window = TimeSpan.FromSeconds(fereastraSecunde),
+                QueueLimit = 0
+            });
     });
 });
 
@@ -188,6 +222,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors();
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();

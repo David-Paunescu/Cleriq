@@ -20,4 +20,7 @@ public static class ConfigTest
 
     public const string CaleRootDocumente = "TestData/Documente";
     public const string CaleRootAudio = "TestData/Audio";
+
+    public const int RateLimitPublicRequesturi = 30;
+    public const int RateLimitPublicFereastraSecunde = 2;
 }
