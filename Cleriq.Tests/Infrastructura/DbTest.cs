@@ -2,6 +2,8 @@
 using Cleriq.Models;
 using Cleriq.Services;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Cleriq.Tests.Infrastructura;
 
@@ -120,6 +122,29 @@ public static class DbTest
         transcriere.StersLa = stersLa;
         await ctx.SaveChangesAsync();
     }
+
+    public static async Task SeteazaRefreshTokenFolositLaAsync(string refreshToken, DateTime folositLa)
+    {
+        await using var ctx = CreeazaContext();
+        var rt = await ctx.RefreshTokens
+            .FirstAsync(r => r.TokenHash == HashRefreshToken(refreshToken));
+        rt.FolositLa = folositLa;
+        await ctx.SaveChangesAsync();
+    }
+
+    public static async Task SeteazaRefreshTokenExpiraLaAsync(string refreshToken, DateTime expiraLa)
+    {
+        await using var ctx = CreeazaContext();
+        var rt = await ctx.RefreshTokens
+            .FirstAsync(r => r.TokenHash == HashRefreshToken(refreshToken));
+        rt.ExpiraLa = expiraLa;
+        await ctx.SaveChangesAsync();
+    }
+
+    // Oglindește hash-ul din ServiciuRefreshTokens — pin de contract: o schimbare
+    // de algoritm ar invalida toate tokenurile emise deja în producție.
+    private static string HashRefreshToken(string token)
+        => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token))).ToLowerInvariant();
 
     private sealed class FurnizorUtilizatorNul : IFurnizorUtilizator
     {

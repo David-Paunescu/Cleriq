@@ -5,6 +5,7 @@ export interface CerereLogin {
 
 export interface RaspunsLogin {
   token: string;
+  refreshToken: string;
 }
 
 export interface UtilizatorCurent {

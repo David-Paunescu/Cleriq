@@ -97,7 +97,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IFurnizorTenant, FurnizorTenant>();
 builder.Services.AddScoped<IFurnizorUtilizator, FurnizorUtilizator>();
-
+builder.Services.AddScoped<IServiciuRefreshTokens, ServiciuRefreshTokens>();
 builder.Services.AddScoped<IGeneratorConvocare, GeneratorConvocare>();
 builder.Services.AddScoped<IGeneratorPdfProcesVerbal, GeneratorPdfProcesVerbal>();
 builder.Services.AddScoped<NotificareLogger>();
@@ -185,7 +185,8 @@ builder.Services
             ValidateIssuerSigningKey = true,
             ValidIssuer = jwt["Issuer"],
             ValidAudience = jwt["Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(cheieJwt)
+            IssuerSigningKey = new SymmetricSecurityKey(cheieJwt),
+            ClockSkew = TimeSpan.Zero
         };
     });
 

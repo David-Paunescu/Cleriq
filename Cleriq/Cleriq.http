@@ -76,3 +76,25 @@ Content-Type: application/json
 ### HealthCheck Whisper (test baseline post Pas 5)
 GET {{host}}/api/Transcriere/HealthCheck
 Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+
+
+////////////////
+
+
+### Refresh (rulează întâi loginAdmin)
+# @name refreshAdmin
+POST {{host}}/api/Auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{loginAdmin.response.body.$.refreshToken}}"
+}
+
+### Logout
+POST {{host}}/api/Auth/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshAdmin.response.body.$.refreshToken}}"
+}

@@ -252,6 +252,19 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             .IsUnique()
             .HasFilter("[EsteSters] = 0");
 
+        modelBuilder.Entity<RefreshToken>()
+            .HasIndex(rt => rt.TokenHash)
+            .IsUnique();
+
+        modelBuilder.Entity<RefreshToken>()
+            .HasIndex(rt => rt.Familie);
+
+        modelBuilder.Entity<RefreshToken>()
+            .HasOne(rt => rt.Utilizator)
+            .WithMany()
+            .HasForeignKey(rt => rt.UtilizatorId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         // Filtru global automat: soft-delete + tenant
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
@@ -398,4 +411,5 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
     public DbSet<Document> Documente { get; set; }
     public DbSet<IncercareTrimitere> IncercariTrimitere { get; set; }
     public DbSet<Transcriere> Transcrieri { get; set; }
+    public DbSet<RefreshToken> RefreshTokens { get; set; }
 }

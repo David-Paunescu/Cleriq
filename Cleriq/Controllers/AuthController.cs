@@ -21,15 +21,18 @@ public class AuthController : ControllerBase
     private readonly UserManager<Utilizator> _userManager;
     private readonly IConfiguration _config;
     private readonly IFurnizorTenant _furnizorTenant;
+    private readonly IServiciuRefreshTokens _refreshTokens;
 
     public AuthController(
         UserManager<Utilizator> userManager,
         IConfiguration config,
-        IFurnizorTenant furnizorTenant)
+        IFurnizorTenant furnizorTenant,
+        IServiciuRefreshTokens refreshTokens)
     {
         _userManager = userManager;
         _config = config;
         _furnizorTenant = furnizorTenant;
+        _refreshTokens = refreshTokens;
     }
 
     [HttpPost("register")]
@@ -66,6 +69,39 @@ public class AuthController : ControllerBase
         if (user is null || !await _userManager.CheckPasswordAsync(user, dto.Parola))
             return Unauthorized("Email sau parolă greșite.");
 
+        var token = await GenereazaJwtAsync(user);
+        var refreshToken = await _refreshTokens.EmiteLaLoginAsync(user.Id);
+
+        return Ok(new { token, refreshToken });
+    }
+
+    // Anonim intenționat: access token-ul poate fi deja expirat la apel; posesia
+    // refresh token-ului (512 biți) e autentificarea. Claims regenerate din DB.
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh(RefreshDto dto)
+    {
+        var rezultat = await _refreshTokens.ValideazaSiRotesteAsync(dto.RefreshToken);
+        if (!rezultat.Succes)
+            return Unauthorized("Refresh token invalid, folosit sau expirat.");
+
+        var user = await _userManager.FindByIdAsync(rezultat.UtilizatorId.ToString());
+        if (user is null)
+            return Unauthorized("Utilizatorul nu mai există.");
+
+        var token = await GenereazaJwtAsync(user);
+        return Ok(new { token, refreshToken = rezultat.TokenNou });
+    }
+
+    // 204 mereu, indiferent de validitatea tokenului — idempotent, fără scurgere de informație.
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout(RefreshDto dto)
+    {
+        await _refreshTokens.RevocaAsync(dto.RefreshToken);
+        return NoContent();
+    }
+
+    private async Task<string> GenereazaJwtAsync(Utilizator user)
+    {
         var roluri = await _userManager.GetRolesAsync(user);
 
         var claims = new List<Claim>
@@ -91,6 +127,6 @@ public class AuthController : ControllerBase
             expires: DateTime.UtcNow.AddMinutes(int.Parse(jwt["ExpireMinutes"]!)),
             signingCredentials: credentiale);
 
-        return Ok(new { token = new JwtSecurityTokenHandler().WriteToken(token) });
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }
