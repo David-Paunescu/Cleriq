@@ -1,0 +1,40 @@
+.shell {
+  height: 100vh;
+  height: 100dvh;
+}
+
+.shell-sidenav {
+  width: 240px;
+}
+
+.shell-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+
+  .titlu {
+    margin-left: 8px;
+    font-weight: 500;
+  }
+}
+
+.spacer {
+  flex: 1;
+}
+
+.nume-utilizator {
+  margin-left: 4px;
+}
+
+.shell-pagina {
+  padding: 24px;
+}
+
+@media (max-width: 599px) {
+  .shell-pagina {
+    padding: 16px;
+  }
+  .nume-utilizator {
+    display: none;
+  }
+}

@@ -1,0 +1,41 @@
+<h2 mat-dialog-title>Cont de acces — {{ date.consilier.numeComplet }}</h2>
+
+<form [formGroup]="form" (ngSubmit)="creeaza()">
+  <mat-dialog-content class="continut">
+    <p class="descriere">
+      Contul permite consilierului să se autentifice în aplicație și să voteze individual.
+    </p>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Email de autentificare</mat-label>
+      <input matInput type="email" formControlName="email" autocomplete="off" />
+      @if (form.controls.email.hasError('required')) {
+        <mat-error>Emailul este obligatoriu.</mat-error>
+      } @else if (form.controls.email.hasError('email')) {
+        <mat-error>Format de email invalid.</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Parolă</mat-label>
+      <input matInput type="password" formControlName="parola" autocomplete="new-password" />
+      <mat-hint>Minim 8 caractere, cu literă mare, literă mică, cifră și caracter special.</mat-hint>
+      @if (form.controls.parola.hasError('required')) {
+        <mat-error>Parola este obligatorie.</mat-error>
+      } @else if (form.controls.parola.hasError('minlength')) {
+        <mat-error>Parola trebuie să aibă minim 8 caractere.</mat-error>
+      }
+    </mat-form-field>
+
+    @if (eroare(); as mesaj) {
+      <p class="eroare">{{ mesaj }}</p>
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" mat-dialog-close>Renunță</button>
+    <button mat-flat-button type="submit" [disabled]="seSalveaza()">
+      {{ seSalveaza() ? 'Se creează...' : 'Creează contul' }}
+    </button>
+  </mat-dialog-actions>
+</form>

@@ -18,7 +18,8 @@ public record ConsilierDto(
     string? Telefon,
     bool Activ,
     int InstitutieId,
-    DateTime CreatLa);
+    DateTime CreatLa,
+    bool AreCont);
 
 public record CreareContConsilierDto(string Email, string Parola);
 

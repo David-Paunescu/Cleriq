@@ -9,7 +9,19 @@ export const routes: Routes = [
   {
     path: '',
     canActivate: [authGuard],
-    loadComponent: () => import('./features/acasa/acasa').then(m => m.Acasa)
+    loadComponent: () => import('./layout/shell/shell').then(m => m.Shell),
+    children: [
+      {
+        path: '',
+        loadComponent: () => import('./features/acasa/acasa').then(m => m.Acasa)
+      },
+      {
+        path: 'consilieri',
+        loadComponent: () =>
+          import('./features/consilieri/consilieri-lista/consilieri-lista')
+            .then(m => m.ConsilieriLista)
+      }
+    ]
   },
   { path: '**', redirectTo: '' }
 ];

@@ -1,4 +1,3 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -7,6 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { AuthService } from '../../../core/auth/auth.service';
+import { extrageMesajEroare } from '../../../core/http/erori';
 
 @Component({
   selector: 'app-login',
@@ -42,19 +42,9 @@ export class Login {
       const redirect = this.route.snapshot.queryParamMap.get('redirect') ?? '/';
       this.router.navigateByUrl(redirect);
     } catch (err) {
-      this.eroare.set(this.extrageMesaj(err));
+      this.eroare.set(extrageMesajEroare(err));
     } finally {
       this.seIncarca.set(false);
     }
-  }
-
-  private extrageMesaj(err: unknown): string {
-    if (err instanceof HttpErrorResponse) {
-      if (err.status === 401)
-        return typeof err.error === 'string' ? err.error : 'Email sau parolă greșite.';
-      if (err.status === 0)
-        return 'Serverul nu poate fi contactat.';
-    }
-    return 'A apărut o eroare neașteptată. Încearcă din nou.';
   }
 }

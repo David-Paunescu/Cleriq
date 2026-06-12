@@ -27,10 +27,15 @@ public class ConsilieriController : ControllerBase
     public async Task<IActionResult> Lista()
     {
         var rezultat = await _context.Consilieri
-            .Select(c => MapeazaSpreDto(c))
+            .OrderBy(c => c.NumeComplet)
+            .Select(c => new
+            {
+                Consilier = c,
+                AreCont = _context.Users.Any(u => u.ConsilierId == c.Id)
+            })
             .ToListAsync();
 
-        return Ok(rezultat);
+        return Ok(rezultat.Select(x => MapeazaSpreDto(x.Consilier, x.AreCont)));
     }
 
     [HttpGet("{id}")]
@@ -40,7 +45,8 @@ public class ConsilieriController : ControllerBase
         if (consilier is null)
             return NotFound();
 
-        return Ok(MapeazaSpreDto(consilier));
+        var areCont = await _context.Users.AnyAsync(u => u.ConsilierId == id);
+        return Ok(MapeazaSpreDto(consilier, areCont));
     }
 
     [HttpPost]
@@ -57,13 +63,12 @@ public class ConsilieriController : ControllerBase
             Email = dto.Email,
             Telefon = telefonNormalizat,
             Activ = true
-            // InstitutieId se setează automat în SaveChanges din tokenul Adminului
         };
 
         _context.Consilieri.Add(consilier);
         await _context.SaveChangesAsync();
 
-        return Ok(MapeazaSpreDto(consilier));
+        return Ok(MapeazaSpreDto(consilier, areCont: false));
     }
 
     [HttpPut("{id}")]
@@ -85,7 +90,8 @@ public class ConsilieriController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(MapeazaSpreDto(consilier));
+        var areCont = await _context.Users.AnyAsync(u => u.ConsilierId == id);
+        return Ok(MapeazaSpreDto(consilier, areCont));
     }
 
     [HttpDelete("{id}")]
@@ -101,8 +107,6 @@ public class ConsilieriController : ControllerBase
 
         return NoContent();
     }
-
-    // === Cont de acces pentru consilier (vot individual) ===
 
     [HttpPost("{id}/Cont")]
     [Authorize(Roles = "Admin")]
@@ -136,7 +140,6 @@ public class ConsilieriController : ControllerBase
         return Ok(new ContConsilierDto(user.Id, user.Email!, id));
     }
 
-    // === Helper privat: normalizare telefon ===
     private static (string? Normalizat, string? Eroare) NormalizeazaTelefon(string? input)
     {
         if (string.IsNullOrWhiteSpace(input))
@@ -149,6 +152,6 @@ public class ConsilieriController : ControllerBase
         return (normalizat, null);
     }
 
-    private static ConsilierDto MapeazaSpreDto(Consilier c) => new(
-        c.Id, c.NumeComplet, c.Email, c.Telefon, c.Activ, c.InstitutieId, c.CreatLa);
+    private static ConsilierDto MapeazaSpreDto(Consilier c, bool areCont) => new(
+        c.Id, c.NumeComplet, c.Email, c.Telefon, c.Activ, c.InstitutieId, c.CreatLa, areCont);
 }

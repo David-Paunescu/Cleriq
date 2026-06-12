@@ -1,18 +1,11 @@
-<div style="padding: 24px; max-width: 600px; margin: 0 auto;">
-  <mat-card>
-    <mat-card-header>
-      <mat-card-title>Bun venit, {{ auth.utilizator()?.numeComplet }}</mat-card-title>
-      <mat-card-subtitle>
-        {{ auth.utilizator()?.email }} — {{ auth.utilizator()?.roluri?.join(', ') }}
-      </mat-card-subtitle>
-    </mat-card-header>
-    <mat-card-content>
-      @if (numarConsilieri() !== null) {
-        <p>Consilieri în instituție: {{ numarConsilieri() }}</p>
-      }
-    </mat-card-content>
-    <mat-card-actions>
-      <button mat-button (click)="auth.logout()">Deconectare</button>
-    </mat-card-actions>
-  </mat-card>
-</div>
+<mat-card>
+  <mat-card-header>
+    <mat-card-title>Bun venit, {{ auth.utilizator()?.numeComplet }}</mat-card-title>
+    <mat-card-subtitle>
+      {{ auth.utilizator()?.email }} — {{ auth.utilizator()?.roluri?.join(', ') }}
+    </mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    <p>Selectează o secțiune din meniu pentru a începe.</p>
+  </mat-card-content>
+</mat-card>

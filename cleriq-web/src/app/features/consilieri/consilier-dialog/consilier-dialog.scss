@@ -1,0 +1,17 @@
+.continut {
+  display: flex;
+  flex-direction: column;
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+mat-slide-toggle {
+  margin: 4px 0 16px;
+}
+
+.eroare {
+  color: var(--mat-sys-error);
+  margin: 0;
+}

@@ -82,6 +82,11 @@ Authorization: Bearer {{loginAdmin.response.body.$.token}}
 ////////////////
 
 
+### Lista consilieri (verificare AreCont)
+GET {{host}}/api/Consilieri
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+
 ### Refresh (rulează întâi loginAdmin)
 # @name refreshAdmin
 POST {{host}}/api/Auth/refresh

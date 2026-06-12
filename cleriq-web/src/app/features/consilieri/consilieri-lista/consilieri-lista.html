@@ -1,0 +1,89 @@
+<div class="antet">
+  <h1>Consilieri</h1>
+  @if (esteAdmin()) {
+    <button mat-flat-button (click)="adauga()">
+      <mat-icon>add</mat-icon>
+      Adaugă consilier
+    </button>
+  }
+</div>
+
+<mat-form-field appearance="outline" class="cautare">
+  <mat-label>Caută</mat-label>
+  <input matInput type="search" (input)="laCautare($event)" placeholder="Nume sau email" />
+  <mat-icon matSuffix>search</mat-icon>
+</mat-form-field>
+
+@if (seIncarca()) {
+  <div class="centru"><mat-spinner diameter="40" /></div>
+} @else if (eroare()) {
+  <div class="centru">
+    <p class="eroare">{{ eroare() }}</p>
+    <button mat-stroked-button (click)="incarca()">Reîncearcă</button>
+  </div>
+} @else {
+  <div class="tabel-container">
+    <table mat-table [dataSource]="consilieriFiltrati()" class="tabel">
+      <ng-container matColumnDef="numeComplet">
+        <th mat-header-cell *matHeaderCellDef>Nume complet</th>
+        <td mat-cell *matCellDef="let c">{{ c.numeComplet }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="email">
+        <th mat-header-cell *matHeaderCellDef>Email</th>
+        <td mat-cell *matCellDef="let c">{{ c.email ?? '—' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="telefon">
+        <th mat-header-cell *matHeaderCellDef>Telefon</th>
+        <td mat-cell *matCellDef="let c">{{ c.telefon ?? '—' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="activ">
+        <th mat-header-cell *matHeaderCellDef>Status</th>
+        <td mat-cell *matCellDef="let c">
+          <span class="badge" [class.badge-activ]="c.activ" [class.badge-inactiv]="!c.activ">
+            {{ c.activ ? 'Activ' : 'Inactiv' }}
+          </span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="areCont">
+        <th mat-header-cell *matHeaderCellDef>Cont de acces</th>
+        <td mat-cell *matCellDef="let c">
+          @if (c.areCont) {
+            <mat-icon class="icon-cont" matTooltip="Are cont de acces">check_circle</mat-icon>
+          } @else {
+            <span class="fara">—</span>
+          }
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="actiuni">
+        <th mat-header-cell *matHeaderCellDef class="col-actiuni"></th>
+        <td mat-cell *matCellDef="let c" class="col-actiuni">
+          <button mat-icon-button matTooltip="Editează" (click)="editeaza(c)">
+            <mat-icon>edit</mat-icon>
+          </button>
+          @if (!c.areCont) {
+            <button mat-icon-button matTooltip="Creează cont de acces" (click)="deschideCont(c)">
+              <mat-icon>person_add</mat-icon>
+            </button>
+          }
+          <button mat-icon-button matTooltip="Șterge" (click)="sterge(c)">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="coloane()"></tr>
+      <tr mat-row *matRowDef="let row; columns: coloane()"></tr>
+    </table>
+  </div>
+
+  @if (consilieriFiltrati().length === 0) {
+    <p class="gol">
+      {{ filtru() ? 'Niciun consilier nu corespunde căutării.' : 'Nu există consilieri înregistrați.' }}
+    </p>
+  }
+}

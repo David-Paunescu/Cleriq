@@ -1,0 +1,49 @@
+<mat-sidenav-container class="shell">
+  <mat-sidenav
+    #sidenav
+    [mode]="esteIngust() ? 'over' : 'side'"
+    [opened]="!esteIngust()"
+    class="shell-sidenav">
+    <mat-nav-list>
+      @for (element of elementeMeniu(); track element.ruta) {
+        <a mat-list-item
+           [routerLink]="element.ruta"
+           routerLinkActive
+           #rla="routerLinkActive"
+           [routerLinkActiveOptions]="{ exact: element.ruta === '/' }"
+           [activated]="rla.isActive"
+           (click)="esteIngust() && sidenav.close()">
+          <mat-icon matListItemIcon>{{ element.icon }}</mat-icon>
+          <span matListItemTitle>{{ element.eticheta }}</span>
+        </a>
+      }
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <mat-toolbar color="primary" class="shell-toolbar">
+      @if (esteIngust()) {
+        <button mat-icon-button (click)="sidenav.toggle()" aria-label="Meniu">
+          <mat-icon>menu</mat-icon>
+        </button>
+      }
+      <span class="titlu">Cleriq</span>
+      <span class="spacer"></span>
+      <button mat-button [matMenuTriggerFor]="meniuUtilizator">
+        <mat-icon>account_circle</mat-icon>
+        <span class="nume-utilizator">{{ auth.utilizator()?.numeComplet }}</span>
+      </button>
+      <mat-menu #meniuUtilizator="matMenu">
+        <button mat-menu-item disabled>{{ auth.utilizator()?.email }}</button>
+        <button mat-menu-item (click)="auth.logout()">
+          <mat-icon>logout</mat-icon>
+          <span>Deconectare</span>
+        </button>
+      </mat-menu>
+    </mat-toolbar>
+
+    <main class="shell-pagina">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

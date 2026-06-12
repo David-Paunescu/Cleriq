@@ -1,0 +1,74 @@
+.antet {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+
+  h1 {
+    margin: 0;
+    font: var(--mat-sys-headline-small);
+  }
+}
+
+.cautare {
+  width: 100%;
+  max-width: 360px;
+}
+
+.tabel-container {
+  overflow-x: auto;
+}
+
+.tabel {
+  width: 100%;
+}
+
+.badge {
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.badge-activ {
+  background: #e6f4ea;
+  color: #1e7e34;
+}
+
+.badge-inactiv {
+  background: #eceff1;
+  color: #546e7a;
+}
+
+.icon-cont {
+  color: #1e7e34;
+}
+
+.fara,
+.gol {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.gol {
+  text-align: center;
+  padding: 24px 0;
+}
+
+.centru {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 0;
+}
+
+.eroare {
+  color: var(--mat-sys-error);
+  margin: 0;
+}
+
+.col-actiuni {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
