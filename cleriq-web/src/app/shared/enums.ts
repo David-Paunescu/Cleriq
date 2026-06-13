@@ -47,3 +47,10 @@ export enum OptiuneVot {
   Impotriva = 2,
   Abtinere = 3
 }
+
+export enum StatusPrezenta {
+  Prezent = 1,
+  Absent = 2,
+  AbsentMotivat = 3,
+  OnlinePrezent = 4
+}

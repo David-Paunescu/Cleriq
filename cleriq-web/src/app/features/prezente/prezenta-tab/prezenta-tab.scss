@@ -1,0 +1,131 @@
+.card-cvorum {
+  margin: 16px 0;
+
+  &.cvorum-intrunit {
+    background: #e6f4ea;
+    color: #1e7e34;
+
+    .cvorum-icon { color: #1e7e34; }
+  }
+
+  &.cvorum-neintrunit {
+    background: #fdecea;
+    color: #c62828;
+
+    .cvorum-icon { color: #c62828; }
+  }
+}
+
+.cvorum-randul {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cvorum-icon {
+  font-size: 32px;
+  width: 32px;
+  height: 32px;
+}
+
+.cvorum-titlu {
+  font: var(--mat-sys-title-medium);
+  font-weight: 500;
+}
+
+.cvorum-sub {
+  font-size: 13px;
+}
+
+.antet {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 16px 0;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  h2 {
+    margin: 0;
+    font: var(--mat-sys-title-large);
+  }
+}
+
+.actiuni-antet {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tabel-container {
+  overflow-x: auto;
+}
+
+.tabel {
+  width: 100%;
+}
+
+.col-status {
+  width: 280px;
+}
+
+.status-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.status-field {
+  width: 240px;
+}
+
+.optiune-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-status {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.icon-invizibila {
+  visibility: hidden;
+}
+
+.spinner-rand {
+  position: absolute;
+  right: -28px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.rand-prezent,
+.rand-online {
+  background: rgba(76, 175, 80, 0.06);
+}
+
+.rand-motivat {
+  background: rgba(255, 152, 0, 0.06);
+}
+
+.gol {
+  text-align: center;
+  padding: 24px 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.centru {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 0;
+}
+
+.eroare {
+  color: var(--mat-sys-error);
+  margin: 0;
+}

@@ -20,13 +20,15 @@ import { actiuniPermise } from '../sedinte.permisiuni';
 import { Sedinta } from '../sedinte.models';
 import { SedinteService } from '../sedinte.service';
 import { PuncteTab } from '../../puncte/puncte-tab/puncte-tab';
+import { PrezentaTab } from '../../prezente/prezenta-tab/prezenta-tab';
+
 
 @Component({
   selector: 'app-sedinta-detalii',
   imports: [
     MatCardModule, MatTabsModule, MatIconModule, MatButtonModule,
     MatMenuModule, MatTooltipModule, MatProgressSpinnerModule,
-    PuncteTab
+    PuncteTab, PrezentaTab
   ],
   templateUrl: './sedinta-detalii.html',
   styleUrl: './sedinta-detalii.scss'

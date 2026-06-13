@@ -1,4 +1,4 @@
-import { ModDesfasurare, StatusSedinta, TipSedinta, OptiuneVot, RezultatPunct, TipMajoritate, TipPunct, TipVot } from './enums';
+import { ModDesfasurare, StatusSedinta, TipSedinta, OptiuneVot, RezultatPunct, StatusPrezenta, TipMajoritate, TipPunct, TipVot } from './enums';
 
 export function etichetaTipSedinta(t: TipSedinta): string {
   switch (t) {
@@ -65,5 +65,14 @@ export function etichetaOptiuneVot(o: OptiuneVot): string {
     case OptiuneVot.Pentru: return 'Pentru';
     case OptiuneVot.Impotriva: return 'Împotrivă';
     case OptiuneVot.Abtinere: return 'Abținere';
+  }
+}
+
+export function etichetaStatusPrezenta(s: StatusPrezenta): string {
+  switch (s) {
+    case StatusPrezenta.Prezent: return 'Prezent';
+    case StatusPrezenta.OnlinePrezent: return 'Prezent online';
+    case StatusPrezenta.AbsentMotivat: return 'Absent motivat';
+    case StatusPrezenta.Absent: return 'Absent';
   }
 }
