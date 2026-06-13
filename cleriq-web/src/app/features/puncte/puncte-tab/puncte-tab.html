@@ -1,0 +1,99 @@
+<div class="antet">
+  <h2>Ordine de zi</h2>
+  @if (poateModifica()) {
+    <button mat-flat-button (click)="adauga()">
+      <mat-icon>add</mat-icon>
+      Adaugă punct
+    </button>
+  }
+</div>
+
+@if (seIncarca()) {
+  <div class="centru"><mat-spinner diameter="40" /></div>
+} @else if (eroare()) {
+  <div class="centru">
+    <p class="eroare">{{ eroare() }}</p>
+    <button mat-stroked-button (click)="incarca()">Reîncearcă</button>
+  </div>
+} @else if (puncte().length === 0) {
+  <p class="gol">Nu există puncte pe ordinea de zi.</p>
+} @else {
+  <div class="tabel-container">
+    <table mat-table [dataSource]="puncte()" class="tabel">
+      <ng-container matColumnDef="ordine">
+        <th mat-header-cell *matHeaderCellDef class="col-ordine">Nr.</th>
+        <td mat-cell *matCellDef="let p" class="col-ordine">{{ p.ordine }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="titlu">
+        <th mat-header-cell *matHeaderCellDef>Titlu</th>
+        <td mat-cell *matCellDef="let p">
+          <div class="titlu">{{ p.titlu }}</div>
+          <div class="sub">
+            {{ etichetaTipPunct(p.tip) }}
+            @if (p.necesitaVot) {
+              · {{ etichetaTipVot(p.tipVot) }} · {{ etichetaTipMajoritate(p.tipMajoritate) }}
+            } @else {
+              · fără vot
+            }
+          </div>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>Status</th>
+        <td mat-cell *matCellDef="let p">
+          @if (p.necesitaVot) {
+            <span [class]="claseBadge(p)">{{ etichetaRezultatPunct(p.rezultat) }}</span>
+          } @else {
+            <span class="fara">—</span>
+          }
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="actiuni">
+        <th mat-header-cell *matHeaderCellDef class="col-actiuni"></th>
+        <td mat-cell *matCellDef="let p" class="col-actiuni">
+          @if (actiuni(p); as a) {
+            @if (a.poateEdita) {
+              <button mat-icon-button matTooltip="Editează" (click)="editeaza(p)">
+                <mat-icon>edit</mat-icon>
+              </button>
+            }
+            @if (a.poateInchideVot) {
+              <button mat-icon-button matTooltip="Închide vot" (click)="inchideVot(p)">
+                <mat-icon>how_to_vote</mat-icon>
+              </button>
+            }
+            <button mat-icon-button [matMenuTriggerFor]="meniu" matTooltip="Mai multe">
+              <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #meniu="matMenu">
+              @if (a.poateAmana) {
+                <button mat-menu-item (click)="amana(p)">
+                  <mat-icon>schedule</mat-icon>
+                  <span>Amână</span>
+                </button>
+              }
+              @if (a.poateRetrage) {
+                <button mat-menu-item (click)="retrage(p)">
+                  <mat-icon>remove_circle_outline</mat-icon>
+                  <span>Retrage</span>
+                </button>
+              }
+              @if (a.poateSterge) {
+                <button mat-menu-item (click)="sterge(p)">
+                  <mat-icon>delete</mat-icon>
+                  <span>Șterge</span>
+                </button>
+              }
+            </mat-menu>
+          }
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="coloane()"></tr>
+      <tr mat-row *matRowDef="let row; columns: coloane()"></tr>
+    </table>
+  </div>
+}

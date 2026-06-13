@@ -20,7 +20,8 @@ interface ElementMeniu {
 
 const MENIU: ElementMeniu[] = [
   { eticheta: 'Acasă', icon: 'home', ruta: '/' },
-  { eticheta: 'Consilieri', icon: 'groups', ruta: '/consilieri' }
+  { eticheta: 'Consilieri', icon: 'groups', ruta: '/consilieri' },
+  { eticheta: 'Ședințe', icon: 'event', ruta: '/sedinte' }
 ];
 
 @Component({

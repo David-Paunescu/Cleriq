@@ -20,6 +20,30 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/consilieri/consilieri-lista/consilieri-lista')
             .then(m => m.ConsilieriLista)
+      },
+      {
+      path: 'sedinte',
+      loadComponent: () =>
+        import('./features/sedinte/sedinte-lista/sedinte-lista')
+          .then(m => m.SedinteLista)
+      },
+      {
+        path: 'sedinte/noua',
+        loadComponent: () =>
+          import('./features/sedinte/sedinta-form/sedinta-form')
+            .then(m => m.SedintaForm)
+      },
+      {
+        path: 'sedinte/:id/editeaza',
+        loadComponent: () =>
+          import('./features/sedinte/sedinta-form/sedinta-form')
+            .then(m => m.SedintaForm)
+      },
+      {
+        path: 'sedinte/:id',
+        loadComponent: () =>
+          import('./features/sedinte/sedinta-detalii/sedinta-detalii')
+            .then(m => m.SedintaDetalii)
       }
     ]
   },

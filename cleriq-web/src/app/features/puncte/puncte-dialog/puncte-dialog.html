@@ -1,0 +1,74 @@
+<h2 mat-dialog-title>{{ esteEditare ? 'Editează punct' : 'Adaugă punct' }}</h2>
+
+<form [formGroup]="form" (ngSubmit)="salveaza()">
+  <mat-dialog-content class="continut">
+    <div class="rand-ordine-tip">
+      <mat-form-field appearance="outline">
+        <mat-label>Ordine</mat-label>
+        <input matInput type="number" min="1" formControlName="ordine" />
+        @if (form.controls.ordine.hasError('required')) {
+          <mat-error>Obligatorie.</mat-error>
+        } @else if (form.controls.ordine.hasError('min')) {
+          <mat-error>Minim 1.</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Tip</mat-label>
+        <mat-select formControlName="tip">
+          @for (t of tipuriPunct; track t) {
+            <mat-option [value]="t">{{ etichetaTipPunct(t) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Titlu</mat-label>
+      <input matInput formControlName="titlu" maxlength="500" />
+      @if (form.controls.titlu.hasError('required')) {
+        <mat-error>Titlul este obligatoriu.</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Descriere</mat-label>
+      <textarea matInput formControlName="descriere" rows="3"></textarea>
+    </mat-form-field>
+
+    <mat-slide-toggle formControlName="necesitaVot">Punctul necesită vot</mat-slide-toggle>
+
+    @if (necesitaVot()) {
+      <div class="rand-vot">
+        <mat-form-field appearance="outline">
+          <mat-label>Tip vot</mat-label>
+          <mat-select formControlName="tipVot">
+            @for (t of tipuriVot; track t) {
+              <mat-option [value]="t">{{ etichetaTipVot(t) }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Tip majoritate</mat-label>
+          <mat-select formControlName="tipMajoritate">
+            @for (t of tipuriMajoritate; track t) {
+              <mat-option [value]="t">{{ etichetaTipMajoritate(t) }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+    }
+
+    @if (eroare(); as mesaj) {
+      <p class="eroare">{{ mesaj }}</p>
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" mat-dialog-close>Renunță</button>
+    <button mat-flat-button type="submit" [disabled]="seSalveaza()">
+      {{ seSalveaza() ? 'Se salvează...' : 'Salvează' }}
+    </button>
+  </mat-dialog-actions>
+</form>

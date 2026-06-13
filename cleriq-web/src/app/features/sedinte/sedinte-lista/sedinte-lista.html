@@ -1,0 +1,104 @@
+<div class="antet">
+  <h1>Ședințe</h1>
+  @if (poateScrie()) {
+    <button mat-flat-button (click)="adauga()">
+      <mat-icon>add</mat-icon>
+      Ședință nouă
+    </button>
+  }
+</div>
+
+<div class="filtre">
+  <mat-form-field appearance="outline" class="cautare">
+    <mat-label>Caută</mat-label>
+    <input matInput type="search" (input)="laCautare($event)" placeholder="Titlu, număr sau loc" />
+    <mat-icon matSuffix>search</mat-icon>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="filtru-status">
+    <mat-label>Status</mat-label>
+    <mat-select [value]="statusFiltru()" (valueChange)="laStatusSchimbat($event)">
+      <mat-option value="toate">Toate</mat-option>
+      @for (st of statusuri; track st) {
+        <mat-option [value]="st">{{ etichetaStatus(st) }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+</div>
+
+@if (seIncarca()) {
+  <div class="centru"><mat-spinner diameter="40" /></div>
+} @else if (eroare()) {
+  <div class="centru">
+    <p class="eroare">{{ eroare() }}</p>
+    <button mat-stroked-button (click)="incarca()">Reîncearcă</button>
+  </div>
+} @else {
+  <div class="tabel-container">
+    <table mat-table [dataSource]="sedinteFiltrate()" class="tabel">
+      <ng-container matColumnDef="titlu">
+        <th mat-header-cell *matHeaderCellDef>Titlu</th>
+        <td mat-cell *matCellDef="let s">
+          <div class="celula-titlu">
+            <span class="titlu-principal">{{ s.titlu }}</span>
+            @if (s.numar) {
+              <span class="numar">Nr. {{ s.numar }}</span>
+            }
+          </div>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="dataOra">
+        <th mat-header-cell *matHeaderCellDef>Data și ora</th>
+        <td mat-cell *matCellDef="let s">{{ formateaza(s.dataOra) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="tip">
+        <th mat-header-cell *matHeaderCellDef>Tip</th>
+        <td mat-cell *matCellDef="let s">{{ etichetaTip(s.tip) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="modDesfasurare">
+        <th mat-header-cell *matHeaderCellDef>Mod</th>
+        <td mat-cell *matCellDef="let s">{{ etichetaMod(s.modDesfasurare) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>Status</th>
+        <td mat-cell *matCellDef="let s">
+          <span [class]="claseStatus(s.status)">{{ etichetaStatus(s.status) }}</span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="actiuni">
+        <th mat-header-cell *matHeaderCellDef class="col-actiuni"></th>
+        <td mat-cell *matCellDef="let s" class="col-actiuni">
+          @if (permisiuni(s).poateEdita) {
+            <button mat-icon-button matTooltip="Editează" (click)="editeaza(s, $event)">
+              <mat-icon>edit</mat-icon>
+            </button>
+          }
+          @if (poateSterge() && permisiuni(s).poateSterge) {
+            <button mat-icon-button matTooltip="Șterge" (click)="sterge(s, $event)">
+              <mat-icon>delete</mat-icon>
+            </button>
+          }
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="coloane()"></tr>
+      <tr mat-row *matRowDef="let row; columns: coloane()"
+          class="rand-clickabil" (click)="deschide(row)"></tr>
+    </table>
+  </div>
+
+  @if (sedinteFiltrate().length === 0) {
+    <p class="gol">
+      @if (filtru() || statusFiltru() !== 'toate') {
+        Nicio ședință nu corespunde filtrelor.
+      } @else {
+        Nu există ședințe înregistrate.
+      }
+    </p>
+  }
+}

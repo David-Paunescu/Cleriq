@@ -1,0 +1,36 @@
+.continut {
+  display: flex;
+  flex-direction: column;
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+.rand-ordine-tip {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 12px;
+}
+
+.rand-vot {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 480px) {
+  .rand-ordine-tip,
+  .rand-vot {
+    grid-template-columns: 1fr;
+  }
+}
+
+mat-slide-toggle {
+  margin: 4px 0 12px;
+}
+
+.eroare {
+  color: var(--mat-sys-error);
+  margin: 0;
+}

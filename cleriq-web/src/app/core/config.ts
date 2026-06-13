@@ -1,0 +1,1 @@
+export const FUS_INSTITUTIE = 'Europe/Bucharest';

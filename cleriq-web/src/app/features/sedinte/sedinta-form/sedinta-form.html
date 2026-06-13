@@ -1,0 +1,83 @@
+<div class="antet">
+  <button mat-icon-button (click)="renunta()" aria-label="Înapoi">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  <h1>{{ esteEditare ? 'Editează ședință' : 'Ședință nouă' }}</h1>
+</div>
+
+@if (seIncarca()) {
+  <div class="centru"><mat-spinner diameter="40" /></div>
+} @else if (eroareIncarcare(); as mesaj) {
+  <mat-card class="card-eroare">
+    <mat-card-content>
+      <p class="eroare">{{ mesaj }}</p>
+      <button mat-stroked-button (click)="renunta()">Înapoi</button>
+    </mat-card-content>
+  </mat-card>
+} @else {
+  <mat-card>
+    <mat-card-content>
+      <form [formGroup]="form" (ngSubmit)="salveaza()">
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Titlu</mat-label>
+          <input matInput formControlName="titlu" maxlength="300" />
+          @if (form.controls.titlu.hasError('required')) {
+            <mat-error>Titlul este obligatoriu.</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Număr ședință</mat-label>
+          <input matInput formControlName="numar" maxlength="50" />
+          <mat-hint>Opțional</mat-hint>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Tip ședință</mat-label>
+          <mat-select formControlName="tip">
+            @for (t of tipuri; track t) {
+              <mat-option [value]="t">{{ etichetaTip(t) }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Data și ora</mat-label>
+          <input matInput type="datetime-local" formControlName="dataOra" />
+          <mat-hint>Fus orar instituție: {{ fusInstitutie }}</mat-hint>
+          @if (form.controls.dataOra.hasError('required')) {
+            <mat-error>Data și ora sunt obligatorii.</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Mod desfășurare</mat-label>
+          <mat-select formControlName="modDesfasurare">
+            @for (m of moduri; track m) {
+              <mat-option [value]="m">{{ etichetaMod(m) }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Loc</mat-label>
+          <input matInput formControlName="loc" maxlength="300" />
+          <mat-hint>Opțional (ex: Sala de ședințe, Primăria Slobozia)</mat-hint>
+        </mat-form-field>
+
+        @if (eroareSalvare(); as mesaj) {
+          <p class="eroare">{{ mesaj }}</p>
+        }
+
+        <div class="actiuni">
+          <button mat-button type="button" (click)="renunta()" [disabled]="seSalveaza()">
+            Renunță
+          </button>
+          <button mat-flat-button type="submit" [disabled]="seSalveaza()">
+            {{ seSalveaza() ? 'Se salvează...' : (esteEditare ? 'Salvează' : 'Creează ședința') }}
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+}

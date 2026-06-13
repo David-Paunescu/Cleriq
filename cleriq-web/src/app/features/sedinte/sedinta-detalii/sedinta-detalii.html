@@ -1,0 +1,104 @@
+<div class="antet">
+  <button mat-icon-button (click)="inapoiLaLista()" aria-label="Înapoi">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  @if (sedinta(); as s) {
+    <div class="antet-text">
+      <h1>{{ s.titlu }}</h1>
+      <span [class]="claseStatus(s.status)">{{ etichetaStatus(s.status) }}</span>
+    </div>
+
+    @if (poateScrie() && permisiuni(); as p) {
+      <div class="antet-actiuni">
+        @if (p.poateEdita) {
+          <button mat-stroked-button (click)="editeaza()" [disabled]="seExecuta()">
+            <mat-icon>edit</mat-icon> Editează
+          </button>
+        }
+        @if (p.poateIncepe) {
+          <button mat-flat-button (click)="incepe()" [disabled]="seExecuta()">
+            <mat-icon>play_arrow</mat-icon> Începe ședința
+          </button>
+        }
+        @if (p.poateFinaliza) {
+          <button mat-flat-button (click)="finalizeaza()" [disabled]="seExecuta()">
+            <mat-icon>flag</mat-icon> Finalizează
+          </button>
+        }
+        <button mat-icon-button [matMenuTriggerFor]="meniuMai" [disabled]="seExecuta()"
+                matTooltip="Mai multe acțiuni">
+          <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #meniuMai="matMenu">
+          @if (p.poateAnula) {
+            <button mat-menu-item (click)="anuleaza()">
+              <mat-icon>cancel</mat-icon>
+              <span>Anulează ședința</span>
+            </button>
+          }
+          @if (poateSterge() && p.poateSterge) {
+            <button mat-menu-item (click)="sterge()">
+              <mat-icon>delete</mat-icon>
+              <span>Șterge</span>
+            </button>
+          }
+        </mat-menu>
+      </div>
+    }
+  }
+</div>
+
+@if (seIncarca()) {
+  <div class="centru"><mat-spinner diameter="40" /></div>
+} @else if (eroare(); as mesaj) {
+  <div class="centru">
+    <p class="eroare">{{ mesaj }}</p>
+    <button mat-stroked-button (click)="incarca()">Reîncearcă</button>
+  </div>
+} @else if (sedinta(); as s) {
+  <mat-tab-group animationDuration="0ms">
+    <mat-tab label="Detalii">
+      <mat-card class="card-detalii">
+        <mat-card-content>
+          <dl class="grila">
+            <dt>Titlu</dt>
+            <dd>{{ s.titlu }}</dd>
+
+            <dt>Număr</dt>
+            <dd>{{ s.numar ?? '—' }}</dd>
+
+            <dt>Tip</dt>
+            <dd>{{ etichetaTip(s.tip) }}</dd>
+
+            <dt>Mod desfășurare</dt>
+            <dd>{{ etichetaMod(s.modDesfasurare) }}</dd>
+
+            <dt>Data și ora</dt>
+            <dd>{{ formateazaData(s.dataOra) }} <span class="fus">({{ indicatorFus(s.dataOra) }})</span></dd>
+
+            <dt>Loc</dt>
+            <dd>{{ s.loc ?? '—' }}</dd>
+
+            <dt>Status</dt>
+            <dd><span [class]="claseStatus(s.status)">{{ etichetaStatus(s.status) }}</span></dd>
+
+            <dt>Convocare trimisă</dt>
+            <dd>
+              @if (s.convocareTrimisaLa) {
+                {{ formateazaData(s.convocareTrimisaLa) }}
+              } @else {
+                <span class="placeholder">Nu a fost trimisă</span>
+              }
+            </dd>
+
+            <dt>Creată</dt>
+            <dd>{{ formateazaData(s.creatLa) }}</dd>
+          </dl>
+        </mat-card-content>
+      </mat-card>
+    </mat-tab>
+    <mat-tab label="Ordine de zi">
+      <app-puncte-tab [sedintaId]="s.id" />
+    </mat-tab>
+  </mat-tab-group>
+}

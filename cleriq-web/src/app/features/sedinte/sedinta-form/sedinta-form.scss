@@ -1,0 +1,52 @@
+.antet {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+
+  h1 {
+    margin: 0;
+    font: var(--mat-sys-headline-small);
+  }
+}
+
+form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 24px;
+  padding-top: 8px;
+}
+
+.full {
+  grid-column: 1 / -1;
+}
+
+.actiuni {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.eroare {
+  grid-column: 1 / -1;
+  color: var(--mat-sys-error);
+  margin: 0;
+}
+
+.card-eroare {
+  max-width: 600px;
+}
+
+.centru {
+  display: flex;
+  justify-content: center;
+  padding: 32px 0;
+}
+
+@media (max-width: 599px) {
+  form {
+    grid-template-columns: 1fr;
+  }
+}
