@@ -54,3 +54,37 @@ export enum StatusPrezenta {
   AbsentMotivat = 3,
   OnlinePrezent = 4
 }
+
+export enum TipDocument {
+  ProiectHCL = 1,
+  ExpunereDeMotive = 2,
+  Aviz = 3,
+  Raport = 4,
+  Anexa = 5,
+  Altele = 6
+}
+
+export enum StatusTrimitere {
+  Trimisa = 1,
+  Esuata = 2,
+  FaraDestinatie = 3,
+  InAsteptare = 4
+}
+
+export enum StatusConvocare {
+  TotalSucces = 1,
+  PartialSucces = 2,
+  Esuata = 3,
+  FaraCoordonate = 4,
+  InCursDeTrimitere = 5
+}
+
+export enum CanalNotificare {
+  Email = 1,
+  Sms = 2
+}
+
+export enum StatusIncercare {
+  Trimisa = 1,
+  Esuata = 2
+}

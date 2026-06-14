@@ -1,0 +1,66 @@
+.continut {
+  display: flex;
+  flex-direction: column;
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+.zona-fisier {
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px dashed var(--mat-sys-outline-variant);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.buton-select-fisier {
+  min-width: 200px;
+}
+
+.hint-fisier {
+  margin: 0;
+  font-size: 12px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.fisier-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--mat-sys-surface-container-low);
+  border-radius: 4px;
+}
+
+.icon-fisier {
+  color: var(--mat-sys-primary);
+  flex-shrink: 0;
+}
+
+.detalii {
+  flex: 1;
+  min-width: 0;
+}
+
+.nume {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.marime {
+  font-size: 12px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.eroare {
+  color: var(--mat-sys-error);
+  margin: 0;
+}

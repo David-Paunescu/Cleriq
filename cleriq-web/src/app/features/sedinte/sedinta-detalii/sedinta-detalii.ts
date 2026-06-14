@@ -21,14 +21,16 @@ import { Sedinta } from '../sedinte.models';
 import { SedinteService } from '../sedinte.service';
 import { PuncteTab } from '../../puncte/puncte-tab/puncte-tab';
 import { PrezentaTab } from '../../prezente/prezenta-tab/prezenta-tab';
-
+import { VoturiTab } from '../../voturi/voturi-tab/voturi-tab';
+import { DocumenteTab } from '../../documente/documente-tab/documente-tab';
+import { ConvocariTab } from '../../convocari/convocari-tab/convocari-tab';
 
 @Component({
   selector: 'app-sedinta-detalii',
   imports: [
     MatCardModule, MatTabsModule, MatIconModule, MatButtonModule,
     MatMenuModule, MatTooltipModule, MatProgressSpinnerModule,
-    PuncteTab, PrezentaTab
+    PuncteTab, PrezentaTab, VoturiTab, DocumenteTab, ConvocariTab
   ],
   templateUrl: './sedinta-detalii.html',
   styleUrl: './sedinta-detalii.scss'
@@ -176,4 +178,13 @@ export class SedintaDetalii {
       case StatusSedinta.Anulata: return 'badge badge-anulata';
     }
   }
+
+  async reincarcaSedinta(): Promise<void> {
+    try {
+      this.sedinta.set(await this.api.detalii(this.id));
+    } catch (err) {
+      this.snackBar.open(extrageMesajEroare(err), 'Închide', { duration: 5000 });
+    }
+  }
+  
 }

@@ -1,0 +1,102 @@
+.continut {
+  min-width: 720px;
+  max-width: 100%;
+}
+
+.filtru-canal {
+  width: 200px;
+  margin-bottom: 12px;
+}
+
+.tabel-container {
+  overflow-x: auto;
+}
+
+.tabel {
+  width: 100%;
+}
+
+.badge {
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.badge-trimisa {
+  background: #e6f4ea;
+  color: #1e7e34;
+}
+
+.badge-esuata {
+  background: #fdecea;
+  color: #c62828;
+}
+
+.badge-canal {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.badge-canal-email {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.badge-canal-sms {
+  background: #f3e5f5;
+  color: #6a1b9a;
+}
+
+.icon-canal {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+}
+
+.destinatar,
+.data {
+  white-space: nowrap;
+}
+
+.detalii {
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.placeholder {
+  color: var(--mat-sys-on-surface-variant);
+  font-style: italic;
+}
+
+.gol {
+  text-align: center;
+  padding: 24px 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.centru {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 0;
+}
+
+.eroare {
+  color: var(--mat-sys-error);
+  margin: 0;
+}
+
+@media (max-width: 759px) {
+  .continut {
+    min-width: 0;
+  }
+}

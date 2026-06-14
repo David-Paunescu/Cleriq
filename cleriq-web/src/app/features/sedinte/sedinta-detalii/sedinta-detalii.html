@@ -103,5 +103,17 @@
     <mat-tab label="Prezență">
       <app-prezenta-tab [sedintaId]="s.id" />
     </mat-tab>
+    <mat-tab label="Voturi">
+      <app-voturi-tab [sedintaId]="s.id" [statusSedinta]="s.status" />
+    </mat-tab>
+    <mat-tab label="Documente">
+      <app-documente-tab [sedintaId]="s.id" />
+    </mat-tab>
+    <mat-tab label="Convocări">
+      <app-convocari-tab
+        [sedintaId]="s.id"
+        [statusSedinta]="s.status"
+        (sedintaSchimbata)="reincarcaSedinta()" />
+    </mat-tab>
   </mat-tab-group>
 }

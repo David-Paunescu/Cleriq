@@ -1,0 +1,82 @@
+<h2 mat-dialog-title>{{ esteEditare ? 'Editează document' : 'Adaugă document' }}</h2>
+
+<form [formGroup]="form" (ngSubmit)="salveaza()">
+  <mat-dialog-content class="continut">
+    @if (!esteEditare) {
+      <div class="zona-fisier">
+        <input
+          #inputFisier
+          type="file"
+          accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+          (change)="laFisierSelectat($event)"
+          hidden />
+
+        @if (fisierSelectat(); as f) {
+          <div class="fisier-info">
+            <mat-icon class="icon-fisier">insert_drive_file</mat-icon>
+            <div class="detalii">
+              <div class="nume">{{ f.name }}</div>
+              <div class="marime">{{ formateazaMarime(f.size) }}</div>
+            </div>
+            <button mat-icon-button type="button" (click)="inputFisier.click()"
+                    matTooltip="Schimbă fișierul">
+              <mat-icon>swap_horiz</mat-icon>
+            </button>
+          </div>
+        } @else {
+          <button mat-stroked-button type="button" (click)="inputFisier.click()"
+                  class="buton-select-fisier">
+            <mat-icon>upload_file</mat-icon>
+            Selectează fișier
+          </button>
+          <p class="hint-fisier">
+            Acceptat: PDF, Word, Excel, JPG, PNG. Maxim 25 MB.
+          </p>
+        }
+
+        @if (eroareFisier(); as mesaj) {
+          <p class="eroare">{{ mesaj }}</p>
+        }
+      </div>
+    }
+
+    <mat-form-field appearance="outline">
+      <mat-label>Denumire</mat-label>
+      <input matInput formControlName="denumire" maxlength="300" />
+      @if (form.controls.denumire.hasError('required')) {
+        <mat-error>Denumirea este obligatorie.</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Tip document</mat-label>
+      <mat-select formControlName="tipDocument">
+        @for (t of tipuriDocument; track t) {
+          <mat-option [value]="t">{{ etichetaTipDocument(t) }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Ordine</mat-label>
+      <input matInput type="number" min="0" formControlName="ordine" />
+      <mat-hint>Folosit la sortare în convocări și pe portalul public.</mat-hint>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Descriere</mat-label>
+      <textarea matInput formControlName="descriere" rows="2" maxlength="1000"></textarea>
+    </mat-form-field>
+
+    @if (eroare(); as mesaj) {
+      <p class="eroare">{{ mesaj }}</p>
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" mat-dialog-close>Renunță</button>
+    <button mat-flat-button type="submit" [disabled]="seSalveaza()">
+      {{ seSalveaza() ? 'Se salvează...' : (esteEditare ? 'Salvează' : 'Încarcă') }}
+    </button>
+  </mat-dialog-actions>
+</form>

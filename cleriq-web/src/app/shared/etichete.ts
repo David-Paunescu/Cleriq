@@ -1,4 +1,6 @@
-import { ModDesfasurare, StatusSedinta, TipSedinta, OptiuneVot, RezultatPunct, StatusPrezenta, TipMajoritate, TipPunct, TipVot } from './enums';
+import { ModDesfasurare, StatusSedinta, TipSedinta, OptiuneVot, RezultatPunct, StatusPrezenta, 
+         TipMajoritate, TipPunct, TipVot, TipDocument, StatusTrimitere, StatusConvocare,
+         CanalNotificare, StatusIncercare  } from './enums';
 
 export function etichetaTipSedinta(t: TipSedinta): string {
   switch (t) {
@@ -74,5 +76,49 @@ export function etichetaStatusPrezenta(s: StatusPrezenta): string {
     case StatusPrezenta.OnlinePrezent: return 'Prezent online';
     case StatusPrezenta.AbsentMotivat: return 'Absent motivat';
     case StatusPrezenta.Absent: return 'Absent';
+  }
+}
+
+export function etichetaTipDocument(t: TipDocument): string {
+  switch (t) {
+    case TipDocument.ProiectHCL: return 'Proiect HCL';
+    case TipDocument.ExpunereDeMotive: return 'Expunere de motive';
+    case TipDocument.Aviz: return 'Aviz';
+    case TipDocument.Raport: return 'Raport';
+    case TipDocument.Anexa: return 'Anexă';
+    case TipDocument.Altele: return 'Alt document';
+  }
+}
+export function etichetaStatusTrimitere(s: StatusTrimitere | null | undefined): string {
+  if (s == null) return '—';
+  switch (s) {
+    case StatusTrimitere.Trimisa: return 'Trimis';
+    case StatusTrimitere.Esuata: return 'Eșuat';
+    case StatusTrimitere.FaraDestinatie: return 'Fără destinație';
+    case StatusTrimitere.InAsteptare: return 'În așteptare';
+  }
+}
+
+export function etichetaStatusConvocare(s: StatusConvocare): string {
+  switch (s) {
+    case StatusConvocare.TotalSucces: return 'Trimis cu succes';
+    case StatusConvocare.PartialSucces: return 'Parțial trimis';
+    case StatusConvocare.Esuata: return 'Eșuat';
+    case StatusConvocare.FaraCoordonate: return 'Fără coordonate';
+    case StatusConvocare.InCursDeTrimitere: return 'În curs de trimitere';
+  }
+}
+
+export function etichetaCanalNotificare(c: CanalNotificare): string {
+  switch (c) {
+    case CanalNotificare.Email: return 'Email';
+    case CanalNotificare.Sms: return 'SMS';
+  }
+}
+
+export function etichetaStatusIncercare(s: StatusIncercare): string {
+  switch (s) {
+    case StatusIncercare.Trimisa: return 'Trimisă';
+    case StatusIncercare.Esuata: return 'Eșuată';
   }
 }

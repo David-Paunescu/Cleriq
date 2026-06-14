@@ -1,0 +1,122 @@
+<div class="antet">
+  <h2>Documente</h2>
+  @if (actiuni().poateAdauga) {
+    <button mat-flat-button (click)="adauga()">
+      <mat-icon>upload_file</mat-icon>
+      Încarcă document
+    </button>
+  }
+</div>
+
+<div class="filtre">
+  <mat-form-field appearance="outline" class="cautare">
+    <mat-label>Caută</mat-label>
+    <input matInput type="search" (input)="laCautare($event)" placeholder="Denumire sau descriere" />
+    <mat-icon matSuffix>search</mat-icon>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="filtru-tip">
+    <mat-label>Tip</mat-label>
+    <mat-select [value]="filtruTip()" (valueChange)="laFiltruTip($event)">
+      <mat-option value="toate">Toate</mat-option>
+      @for (t of tipuriDocument; track t) {
+        <mat-option [value]="t">{{ etichetaTipDocument(t) }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+</div>
+
+@if (seIncarca() && documente().length === 0) {
+  <div class="centru"><mat-spinner diameter="40" /></div>
+} @else if (eroare(); as mesaj) {
+  <div class="centru">
+    <p class="eroare">{{ mesaj }}</p>
+    <button mat-stroked-button (click)="incarca()">Reîncearcă</button>
+  </div>
+} @else if (documente().length === 0) {
+  <p class="gol">Nu există documente încărcate.</p>
+} @else if (documenteFiltrate().length === 0) {
+  <p class="gol">Niciun document nu corespunde filtrelor.</p>
+} @else {
+  <div class="tabel-container">
+    <table mat-table [dataSource]="documenteFiltrate()" class="tabel">
+      <ng-container matColumnDef="ordine">
+        <th mat-header-cell *matHeaderCellDef class="col-ordine">Nr.</th>
+        <td mat-cell *matCellDef="let d" class="col-ordine">{{ d.ordine }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="denumire">
+        <th mat-header-cell *matHeaderCellDef>Denumire</th>
+        <td mat-cell *matCellDef="let d">
+          <div class="celula-link">
+            <button type="button" class="link-descarcare" (click)="descarca(d)">
+              <mat-icon class="icon-fisier">insert_drive_file</mat-icon>
+              <div class="celula-denumire">
+                <span class="denumire">{{ d.denumire }}</span>
+                <span class="sub">{{ d.numeFisierOriginal }}</span>
+              </div>
+            </button>
+            @if (d.descriere) {
+              <mat-icon class="icon-info" [matTooltip]="d.descriere" matTooltipPosition="right">
+                info_outline
+              </mat-icon>
+            }
+          </div>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="tip">
+        <th mat-header-cell *matHeaderCellDef class="col-tip">Tip</th>
+        <td mat-cell *matCellDef="let d" class="col-tip">{{ etichetaTipDocument(d.tipDocument) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="marime">
+        <th mat-header-cell *matHeaderCellDef>Mărime</th>
+        <td mat-cell *matCellDef="let d">{{ formateazaMarime(d.marime) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="vizibilitate">
+        <th mat-header-cell *matHeaderCellDef>Vizibilitate</th>
+        <td mat-cell *matCellDef="let d">
+          <button mat-icon-button
+                  [matTooltip]="d.estePublic ? 'Public — click pentru a marca privat' : 'Privat — click pentru a publica'"
+                  (click)="comutaVizibilitate(d)"
+                  [disabled]="!actiuni().poateSchimbaVizibilitate || esteRandBlocat(d.id)">
+            @if (esteRandBlocat(d.id)) {
+              <mat-spinner diameter="20"></mat-spinner>
+            } @else {
+              <mat-icon [class.icon-public]="d.estePublic" [class.icon-privat]="!d.estePublic">
+                {{ d.estePublic ? 'public' : 'lock' }}
+              </mat-icon>
+            }
+          </button>
+          <span class="badge" [class.badge-public]="d.estePublic" [class.badge-privat]="!d.estePublic">
+            {{ d.estePublic ? 'Public' : 'Privat' }}
+          </span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="actiuni">
+        <th mat-header-cell *matHeaderCellDef class="col-actiuni"></th>
+        <td mat-cell *matCellDef="let d" class="col-actiuni">
+          <button mat-icon-button matTooltip="Descarcă" (click)="descarca(d)">
+            <mat-icon>download</mat-icon>
+          </button>
+          @if (actiuni().poateEdita) {
+            <button mat-icon-button matTooltip="Editează metadate" (click)="editeaza(d)">
+              <mat-icon>edit</mat-icon>
+            </button>
+          }
+          @if (actiuni().poateSterge) {
+            <button mat-icon-button matTooltip="Șterge" (click)="sterge(d)">
+              <mat-icon>delete</mat-icon>
+            </button>
+          }
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="coloane()"></tr>
+      <tr mat-row *matRowDef="let row; columns: coloane()"></tr>
+    </table>
+  </div>
+}

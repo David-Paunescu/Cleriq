@@ -1,0 +1,178 @@
+<div class="antet">
+  <div class="antet-text">
+    <h2>Convocări</h2>
+    @if (pollingActiv()) {
+      <div class="indicator-polling">
+        <mat-spinner diameter="16"></mat-spinner>
+        <span>
+          Se trimit convocările...
+          ({{ numaratoriCanale().inAsteptare }} în așteptare,
+           {{ numaratoriCanale().trimise }} trimise<!---->
+           @if (numaratoriCanale().esuate > 0) {
+             , {{ numaratoriCanale().esuate }} eșuate
+           })
+        </span>
+      </div>
+    }
+  </div>
+
+  @if (!actiuni().esteReadOnly && convocari().length > 0) {
+    <div class="antet-actiuni">
+      <button mat-icon-button (click)="incarca()"
+              [disabled]="seIncarca() || seTrimite() || seReseteaza()"
+              matTooltip="Reîncarcă">
+        <mat-icon>refresh</mat-icon>
+      </button>
+      @if (actiuni().poateReseta) {
+        <button mat-icon-button [matMenuTriggerFor]="meniu" matTooltip="Mai multe">
+          <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #meniu="matMenu">
+          <button mat-menu-item (click)="reseteaza()" [disabled]="seReseteaza()">
+            <mat-icon>restart_alt</mat-icon>
+            <span>Resetare completă</span>
+          </button>
+        </mat-menu>
+      }
+    </div>
+  }
+</div>
+
+@if (actiuni().esteReadOnly && convocari().length > 0) {
+  <div class="banner-readonly">
+    <mat-icon>info</mat-icon>
+    <span>
+      Ședință {{ etichetaStatusSedinta(statusSedinta()) }} — convocările sunt afișate doar pentru istoric.
+    </span>
+  </div>
+}
+
+@if (seIncarca() && convocari().length === 0) {
+  <div class="centru"><mat-spinner diameter="40" /></div>
+} @else if (eroare(); as mesaj) {
+  <div class="centru">
+    <p class="eroare">{{ mesaj }}</p>
+    <button mat-stroked-button (click)="incarca()">Reîncearcă</button>
+  </div>
+} @else if (convocari().length === 0) {
+  @if (actiuni().poateTrimite) {
+    <mat-card class="card-prompt">
+      <mat-card-content>
+        <mat-icon class="icon-prompt">mail_outline</mat-icon>
+        <h3>Convocările nu au fost trimise</h3>
+        <p>
+          Trimiterea va notifica toți consilierii activi pe email și SMS, conform datelor lor de contact.
+          Conținutul mesajelor este înghețat la trimitere și nu mai poate fi modificat.
+        </p>
+        <button mat-flat-button (click)="trimite()" [disabled]="seTrimite()">
+          <mat-icon>send</mat-icon>
+          {{ seTrimite() ? 'Se trimite...' : 'Trimite convocarea' }}
+        </button>
+      </mat-card-content>
+    </mat-card>
+  } @else {
+    <p class="gol">
+      @if (actiuni().esteReadOnly) {
+        Convocările nu au fost trimise pentru această ședință.
+      } @else {
+        Convocările pot fi trimise doar de Admin sau Secretar.
+      }
+    </p>
+  }
+} @else {
+  <div class="filtre">
+    <mat-form-field appearance="outline" class="cautare">
+      <mat-label>Caută</mat-label>
+      <input matInput type="search" (input)="laCautare($event)" placeholder="Nume consilier" />
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="filtru-status">
+      <mat-label>Status</mat-label>
+      <mat-select [value]="filtruStatus()" (valueChange)="laFiltruStatus($event)">
+        <mat-option value="toate">Toate</mat-option>
+        @for (s of statusuriConvocare; track s) {
+          <mat-option [value]="s">{{ etichetaStatusConvocare(s) }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  @if (convocariFiltrate().length === 0) {
+    <p class="gol">Nicio convocare nu corespunde filtrelor.</p>
+  } @else {
+    <div class="tabel-container">
+      <table mat-table [dataSource]="convocariFiltrate()" class="tabel">
+        <ng-container matColumnDef="consilier">
+          <th mat-header-cell *matHeaderCellDef>Consilier</th>
+          <td mat-cell *matCellDef="let c">{{ c.numeCompletConsilier }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="email">
+          <th mat-header-cell *matHeaderCellDef>Email</th>
+          <td mat-cell *matCellDef="let c">
+            <span [class]="claseBadgeTrimitere(c.emailStatus)">
+              @if (c.emailStatus === StatusTrimitere.InAsteptare) {
+                <mat-spinner diameter="12" class="spinner-badge"></mat-spinner>
+              }
+              {{ etichetaStatusTrimitere(c.emailStatus) }}
+              @if (c.emailDetalii) {
+                <mat-icon class="icon-detalii" [matTooltip]="c.emailDetalii">
+                  info_outline
+                </mat-icon>
+              }
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="sms">
+          <th mat-header-cell *matHeaderCellDef>SMS</th>
+          <td mat-cell *matCellDef="let c">
+            <span [class]="claseBadgeTrimitere(c.smsStatus)">
+              @if (c.smsStatus === StatusTrimitere.InAsteptare) {
+                <mat-spinner diameter="12" class="spinner-badge"></mat-spinner>
+              }
+              {{ etichetaStatusTrimitere(c.smsStatus) }}
+              @if (c.smsDetalii) {
+                <mat-icon class="icon-detalii" [matTooltip]="c.smsDetalii">
+                  info_outline
+                </mat-icon>
+              }
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="statusGeneral">
+          <th mat-header-cell *matHeaderCellDef>Status general</th>
+          <td mat-cell *matCellDef="let c">
+            <span [class]="claseBadgeConvocare(c.statusGeneral)">
+              {{ etichetaStatusConvocare(c.statusGeneral) }}
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="actiuni">
+          <th mat-header-cell *matHeaderCellDef class="col-actiuni"></th>
+          <td mat-cell *matCellDef="let c" class="col-actiuni">
+            <button mat-icon-button matTooltip="Vezi istoric trimiteri" (click)="vezi(c)">
+              <mat-icon>history</mat-icon>
+            </button>
+            @if (actiuni().poateRetry && areCanalEsuat(c)) {
+              <button mat-icon-button matTooltip="Reîncearcă trimiterea"
+                      (click)="retry(c)" [disabled]="esteRandBlocat(c.id)">
+                @if (esteRandBlocat(c.id)) {
+                  <mat-spinner diameter="20"></mat-spinner>
+                } @else {
+                  <mat-icon>refresh</mat-icon>
+                }
+              </button>
+            }
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="coloane()"></tr>
+        <tr mat-row *matRowDef="let row; columns: coloane()"></tr>
+      </table>
+    </div>
+  }
+}
