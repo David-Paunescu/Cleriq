@@ -1,0 +1,199 @@
+<div class="antet-tab">
+  <h2>Voturi</h2>
+  <div class="actiuni-tab">
+    @if (puncte().length > 0) {
+      <button mat-stroked-button (click)="comutaExpandareTot()">
+        <mat-icon>{{ totExpandat() ? 'unfold_less' : 'unfold_more' }}</mat-icon>
+        {{ totExpandat() ? 'Colapsează tot' : 'Expandează tot' }}
+      </button>
+    }
+    <button mat-icon-button (click)="incarca()" [disabled]="seIncarca()" matTooltip="Reîncarcă">
+      <mat-icon>refresh</mat-icon>
+    </button>
+  </div>
+</div>
+
+@if (afiseazaBannerStatus()) {
+  <div class="banner-status">
+    <mat-icon>info</mat-icon>
+    <span>
+      Ședința este în status <strong>{{ etichetaStatusSedinta(statusSedinta()) }}</strong>.
+      Voturile se înregistrează normal pe ședințe Convocate sau În desfășurare.
+    </span>
+  </div>
+}
+
+@if (seIncarca() && puncte().length === 0) {
+  <div class="centru"><mat-spinner diameter="40" /></div>
+} @else if (eroare(); as mesaj) {
+  <div class="centru">
+    <p class="eroare">{{ mesaj }}</p>
+    <button mat-stroked-button (click)="incarca()">Reîncearcă</button>
+  </div>
+} @else if (puncte().length === 0) {
+  <p class="gol">Nu există puncte cu vot pe ordinea de zi.</p>
+} @else {
+  <mat-accordion multi>
+    @for (punct of puncte(); track punct.id) {
+      <mat-expansion-panel
+        [expanded]="esteExpandat(punct.id)"
+        (opened)="setExpandat(punct.id, true)"
+        (closed)="setExpandat(punct.id, false)">
+
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            <span class="ordine">{{ punct.ordine }}.</span>
+            <span class="titlu-punct">{{ punct.titlu }}</span>
+          </mat-panel-title>
+          <mat-panel-description>
+            @if (voturiPunct(punct.id); as vp) {
+              <span class="tally" matTooltip="Pentru — Împotrivă — Abținere">
+                {{ vp.pentru }} — {{ vp.impotriva }} — {{ vp.abtineri }}
+              </span>
+            }
+            <span [class]="claseBadge(punct)">{{ etichetaRezultatPunct(punct.rezultat) }}</span>
+          </mat-panel-description>
+        </mat-expansion-panel-header>
+
+        @switch (modBody(punct)) {
+
+          @case ('rezultat-inchis') {
+            @if (voturiPunct(punct.id); as vp) {
+              <div class="randul-tally">
+                <div><strong>Pentru:</strong> {{ vp.pentru }}</div>
+                <div><strong>Împotrivă:</strong> {{ vp.impotriva }}</div>
+                <div><strong>Abținere:</strong> {{ vp.abtineri }}</div>
+                <div><strong>Total exprimate:</strong> {{ vp.totalExprimate }}</div>
+              </div>
+              @if (vp.tipVot === TipVot.Secret) {
+                <p class="info-secret-mic">Vot secret — voturile nu sunt nominalizate.</p>
+                @if (vp.participanti.length > 0) {
+                  <h4>Au votat ({{ vp.participanti.length }})</h4>
+                  <div class="lista-participanti">
+                    @for (nume of vp.participanti; track nume) {
+                      <span class="participant">{{ nume }}</span>
+                    }
+                  </div>
+                }
+              } @else {
+                @if (vp.voturiNominale.length > 0) {
+                  <h4>Voturi nominale</h4>
+                  <div class="lista-voturi-nominale">
+                    @for (v of vp.voturiNominale; track v.id) {
+                      <div class="rand-vot-nominal">
+                        <span>{{ v.numeCompletConsilier }}</span>
+                        <span class="badge-optiune" [class]="claseBadgeOptiune(v.optiune)">
+                          {{ etichetaOptiuneVot(v.optiune) }}
+                        </span>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <p class="gol">Niciun vot înregistrat.</p>
+                }
+              }
+            }
+          }
+
+          @case ('tabel-management') {
+            <p class="info-mod">
+              Înregistrare voturi pentru consilierii prezenți. Click pe opțiune pentru a vota sau a schimba.
+            </p>
+            @if (consilieriPrezenti().length === 0) {
+              <p class="gol">Niciun consilier prezent. Marchează prezența în tab-ul „Prezență".</p>
+            } @else {
+              <div class="lista-consilieri">
+                @for (c of consilieriPrezenti(); track c.consilierId) {
+                  <div class="rand-consilier">
+                    <mat-icon class="icon-prezenta">{{ iconaPrezenta(c.status) }}</mat-icon>
+                    <span class="nume-consilier">{{ c.numeCompletConsilier }}</span>
+                    <mat-button-toggle-group
+                      [value]="optiuneConsilierPe(punct.id, c.consilierId)"
+                      (change)="voteazaManual(punct, c.consilierId, $event.value)"
+                      [disabled]="esteChipBlocat(punct.id + '-' + c.consilierId)">
+                      @for (o of optiuni; track o) {
+                        <mat-button-toggle [value]="o">{{ etichetaOptiuneVot(o) }}</mat-button-toggle>
+                      }
+                    </mat-button-toggle-group>
+                  </div>
+                }
+              </div>
+            }
+          }
+
+          @case ('chip-self') {
+            <div class="vot-self">
+              <p class="info-self">Selectează votul tău pentru acest punct:</p>
+              <mat-button-toggle-group
+                [value]="optiuneSelfPe(punct.id)"
+                (change)="voteazaSelf(punct, $event.value)"
+                [disabled]="esteChipBlocat(punct.id + '-self')"
+                class="chips-self">
+                @for (o of optiuni; track o) {
+                  <mat-button-toggle [value]="o">{{ etichetaOptiuneVot(o) }}</mat-button-toggle>
+                }
+              </mat-button-toggle-group>
+              @if (voturiPunct(punct.id); as vp) {
+                @if (vp.tipVot === TipVot.Secret) {
+                  <p class="info-secret-mic">
+                    Vot secret — opțiunea ta nu este vizibilă pentru ceilalți. Numele tău apare doar în
+                    lista celor care au votat ({{ vp.participanti.length }}).
+                  </p>
+                }
+              }
+            </div>
+          }
+
+          @case ('mesaj-secret') {
+            <div class="info-secret-mod">
+              <mat-icon>lock</mat-icon>
+              <div>
+                <p>
+                  <strong>Vot secret.</strong> Voturile se înregistrează exclusiv de către consilieri
+                  din contul propriu. Admin și Secretar nu pot introduce voturi manual.
+                </p>
+                @if (voturiPunct(punct.id); as vp) {
+                  <div class="randul-tally">
+                    <div><strong>Pentru:</strong> {{ vp.pentru }}</div>
+                    <div><strong>Împotrivă:</strong> {{ vp.impotriva }}</div>
+                    <div><strong>Abținere:</strong> {{ vp.abtineri }}</div>
+                    <div><strong>Total:</strong> {{ vp.totalExprimate }}</div>
+                  </div>
+                  @if (vp.participanti.length > 0) {
+                    <h4>Au votat ({{ vp.participanti.length }})</h4>
+                    <div class="lista-participanti">
+                      @for (nume of vp.participanti; track nume) {
+                        <span class="participant">{{ nume }}</span>
+                      }
+                    </div>
+                  } @else {
+                    <p class="gol">Niciun vot înregistrat încă.</p>
+                  }
+                }
+              </div>
+            </div>
+          }
+
+          @case ('mesaj-neprezent') {
+            <div class="info-neprezent">
+              <mat-icon>warning</mat-icon>
+              <div>
+                <p>
+                  <strong>Nu poți vota.</strong> Pentru a putea vota, secretarul trebuie să te marcheze
+                  ca prezent (fizic sau online) în tab-ul „Prezență".
+                </p>
+                @if (voturiPunct(punct.id); as vp) {
+                  <div class="randul-tally">
+                    <div><strong>Pentru:</strong> {{ vp.pentru }}</div>
+                    <div><strong>Împotrivă:</strong> {{ vp.impotriva }}</div>
+                    <div><strong>Abținere:</strong> {{ vp.abtineri }}</div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        }
+      </mat-expansion-panel>
+    }
+  </mat-accordion>
+}

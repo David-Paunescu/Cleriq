@@ -1,0 +1,231 @@
+.antet-tab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 16px 0;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  h2 {
+    margin: 0;
+    font: var(--mat-sys-title-large);
+  }
+}
+
+.actiuni-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.banner-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #fff3e0;
+  color: #e65100;
+  border-radius: 4px;
+  margin-bottom: 16px;
+
+  mat-icon { flex-shrink: 0; }
+}
+
+mat-expansion-panel { margin-bottom: 8px; }
+
+mat-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .ordine {
+    color: var(--mat-sys-on-surface-variant);
+    flex-shrink: 0;
+  }
+
+  .titlu-punct {
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+mat-panel-description {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.tally {
+  font-family: monospace;
+  font-size: 13px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.badge {
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.badge-deschis  { background: #e3f2fd; color: #1565c0; }
+.badge-adoptat  { background: #e6f4ea; color: #1e7e34; }
+.badge-respins  { background: #fdecea; color: #c62828; }
+.badge-amanat   { background: #fff8e1; color: #ef6c00; }
+.badge-retras   { background: #eceff1; color: #546e7a; }
+
+.randul-tally {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px 16px;
+  margin: 12px 0;
+  padding: 12px;
+  background: var(--mat-sys-surface-container-low);
+  border-radius: 4px;
+}
+
+.info-secret-mod,
+.info-neprezent {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+
+  > mat-icon {
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  > div { flex: 1; }
+
+  p { margin: 0 0 8px; }
+}
+
+.info-secret-mod mat-icon { color: #1565c0; }
+.info-neprezent mat-icon { color: #ef6c00; }
+
+.info-mod {
+  margin: 0 0 12px;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 14px;
+}
+
+.info-self {
+  margin: 0 0 12px;
+  font-weight: 500;
+}
+
+.info-secret-mic {
+  margin: 12px 0 0;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 13px;
+}
+
+.lista-consilieri {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rand-consilier {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border-radius: 4px;
+
+  &:hover { background: var(--mat-sys-surface-container-low); }
+}
+
+.icon-prezenta {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.nume-consilier {
+  flex: 1;
+  min-width: 0;
+}
+
+.lista-voturi-nominale {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rand-vot-nominal {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 4px;
+  background: var(--mat-sys-surface-container-low);
+}
+
+.badge-optiune {
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.badge-optiune-pentru    { background: #e6f4ea; color: #1e7e34; }
+.badge-optiune-impotriva { background: #fdecea; color: #c62828; }
+.badge-optiune-abtinere  { background: #eceff1; color: #546e7a; }
+
+.lista-participanti {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.participant {
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: var(--mat-sys-surface-container-low);
+  font-size: 13px;
+}
+
+h4 {
+  margin: 12px 0 6px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.chips-self {
+  display: flex;
+  width: 100%;
+
+  mat-button-toggle { flex: 1; }
+}
+
+.gol {
+  color: var(--mat-sys-on-surface-variant);
+  text-align: center;
+  padding: 16px 0;
+  margin: 0;
+}
+
+.centru {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 0;
+}
+
+.eroare {
+  color: var(--mat-sys-error);
+  margin: 0;
+}
+
+@media (max-width: 599px) {
+  .rand-consilier { flex-wrap: wrap; }
+
+  mat-button-toggle-group { width: 100%; }
+}

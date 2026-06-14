@@ -23,4 +23,5 @@ public record VoturiPunctDto(
     int Abtineri,
     int TotalExprimate,
     List<VotDto> VoturiNominale,   // gol la vot secret
-    List<string> Participanti);    // cine a votat (turnout) — util mai ales la secret
+    List<string> Participanti,    // cine a votat (turnout) — util mai ales la secret
+    OptiuneVot? VotulMeu);

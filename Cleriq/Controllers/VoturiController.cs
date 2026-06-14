@@ -41,6 +41,11 @@ public class VoturiController : ControllerBase
                 v.Optiune, v.DataOra, v.InstitutieId))
             .ToList();
 
+        OptiuneVot? votulMeu = null;
+        var consilierIdClaim = User.FindFirst("ConsilierId")?.Value;
+        if (int.TryParse(consilierIdClaim, out var cidLogat))
+            votulMeu = voturi.FirstOrDefault(v => v.ConsilierId == cidLogat)?.Optiune;
+
         return Ok(new VoturiPunctDto(
             punctId,
             punct.TipVot,
@@ -49,7 +54,8 @@ public class VoturiController : ControllerBase
             rezumat.Abtineri,
             rezumat.TotalExprimate,
             voturiNominale,
-            rezumat.Participanti.ToList()));
+            rezumat.Participanti.ToList(),
+            votulMeu));
     }
 
     // Vot introdus manual de secretar/admin (ex: consilier fără cont, ședință hibridă).

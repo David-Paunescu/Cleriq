@@ -21,6 +21,12 @@
               {{ cvorum().prezenti }} prezenți din {{ cvorum().total }}
               (prag necesar: {{ cvorum().necesar }})
             </div>
+            <div class="cvorum-breakdown">
+              Fizic: {{ cvorum().prezentFizic }} ·
+              Online: {{ cvorum().prezentOnline }} ·
+              Motivat: {{ cvorum().absentMotivat }} ·
+              Absent: {{ cvorum().absent }}
+            </div>
           </div>
         </div>
       </mat-card-content>
@@ -35,10 +41,20 @@
                 (click)="marcheazaTotiPrezenti()"
                 [disabled]="bulkInCurs() !== null || seIncarca()">
           <mat-icon>group</mat-icon>
-          @if (bulkInCurs(); as b) {
+          @if (progresPrezent(); as b) {
             <span>Se procesează ({{ b.procesate }}/{{ b.total }})</span>
           } @else {
             <span>Marchează toți prezenți</span>
+          }
+        </button>
+        <button mat-stroked-button
+                (click)="reseteazaPrezenta()"
+                [disabled]="bulkInCurs() !== null || seIncarca()">
+          <mat-icon>restart_alt</mat-icon>
+          @if (progresReset(); as b) {
+            <span>Se procesează ({{ b.procesate }}/{{ b.total }})</span>
+          } @else {
+            <span>Resetează prezența</span>
           }
         </button>
         <button mat-icon-button
@@ -51,11 +67,21 @@
     }
   </div>
 
+  @if (prezente().length > 0) {
+    <mat-form-field appearance="outline" class="cautare" subscriptSizing="dynamic">
+      <mat-label>Caută consilier</mat-label>
+      <input matInput type="search" [value]="filtru()" (input)="laCautare($event)" />
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+  }
+
   @if (prezente().length === 0) {
     <p class="gol">Nu există consilieri activi în această instituție.</p>
+  } @else if (prezenteFiltrate().length === 0) {
+    <p class="gol">Niciun consilier nu corespunde căutării.</p>
   } @else {
     <div class="tabel-container">
-      <table mat-table [dataSource]="prezente()" class="tabel">
+      <table mat-table [dataSource]="prezenteFiltrate()" class="tabel">
         <ng-container matColumnDef="numeComplet">
           <th mat-header-cell *matHeaderCellDef>Consilier</th>
           <td mat-cell *matCellDef="let p">{{ p.numeCompletConsilier }}</td>

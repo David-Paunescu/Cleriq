@@ -37,6 +37,12 @@
   font-size: 13px;
 }
 
+.cvorum-breakdown {
+  font-size: 12px;
+  opacity: 0.85;
+  margin-top: 2px;
+}
+
 .antet {
   display: flex;
   align-items: center;
@@ -48,6 +54,18 @@
   h2 {
     margin: 0;
     font: var(--mat-sys-title-large);
+  }
+}
+
+.cautare {
+  width: 100%;
+  max-width: 360px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 599px) {
+  .cautare {
+    max-width: none;
   }
 }
 
