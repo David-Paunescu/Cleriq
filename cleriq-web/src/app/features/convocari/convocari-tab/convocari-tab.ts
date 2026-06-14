@@ -51,6 +51,7 @@ export class ConvocariTab implements OnInit, OnDestroy {
 
   readonly sedintaId = input.required<number>();
   readonly statusSedinta = input.required<StatusSedinta>();
+  readonly tabActiv = input(true);
   readonly sedintaSchimbata = output<void>();
 
   readonly seIncarca = signal(false);
@@ -98,7 +99,8 @@ export class ConvocariTab implements OnInit, OnDestroy {
   constructor() {
     effect(() => {
       const lista = this.convocari();
-      if (existaInAsteptare(lista) && !this.actiuni().esteReadOnly) {
+      const peTab = this.tabActiv();
+      if (peTab && existaInAsteptare(lista) && !this.actiuni().esteReadOnly) {
         this.porneestePolling();
       } else {
         this.opresteePolling();
@@ -109,7 +111,9 @@ export class ConvocariTab implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.incarca();
     this.vizibilitateHandler = () => {
-      if (document.visibilityState === 'visible' && existaInAsteptare(this.convocari())) {
+      if (document.visibilityState === 'visible'
+          && this.tabActiv()
+          && existaInAsteptare(this.convocari())) {
         this.incarca();
       }
     };

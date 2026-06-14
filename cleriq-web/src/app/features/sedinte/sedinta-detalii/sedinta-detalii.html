@@ -56,7 +56,9 @@
     <button mat-stroked-button (click)="incarca()">Reîncearcă</button>
   </div>
 } @else if (sedinta(); as s) {
-  <mat-tab-group animationDuration="0ms">
+  <mat-tab-group animationDuration="0ms"
+               [selectedIndex]="indexTabActiv()"
+               (selectedIndexChange)="indexTabActiv.set($event)">
     <mat-tab label="Detalii">
       <mat-card class="card-detalii">
         <mat-card-content>
@@ -113,6 +115,7 @@
       <app-convocari-tab
         [sedintaId]="s.id"
         [statusSedinta]="s.status"
+        [tabActiv]="indexTabActiv() === 5"
         (sedintaSchimbata)="reincarcaSedinta()" />
     </mat-tab>
   </mat-tab-group>

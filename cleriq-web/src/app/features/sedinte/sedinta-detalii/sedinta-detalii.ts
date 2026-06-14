@@ -49,6 +49,7 @@ export class SedintaDetalii {
   readonly seExecuta = signal(false);
   readonly eroare = signal<string | null>(null);
   readonly sedinta = signal<Sedinta | null>(null);
+  readonly indexTabActiv = signal(0);
 
   readonly poateScrie = computed(() => this.auth.areOricareRol('Admin', 'Secretar'));
   readonly poateSterge = computed(() => this.auth.areRol('Admin'));
