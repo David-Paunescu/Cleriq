@@ -24,13 +24,15 @@ import { PrezentaTab } from '../../prezente/prezenta-tab/prezenta-tab';
 import { VoturiTab } from '../../voturi/voturi-tab/voturi-tab';
 import { DocumenteTab } from '../../documente/documente-tab/documente-tab';
 import { ConvocariTab } from '../../convocari/convocari-tab/convocari-tab';
+import { TranscriereTab } from '../../transcriere/transcriere-tab/transcriere-tab';
 
 @Component({
   selector: 'app-sedinta-detalii',
   imports: [
     MatCardModule, MatTabsModule, MatIconModule, MatButtonModule,
     MatMenuModule, MatTooltipModule, MatProgressSpinnerModule,
-    PuncteTab, PrezentaTab, VoturiTab, DocumenteTab, ConvocariTab
+    PuncteTab, PrezentaTab, VoturiTab, DocumenteTab, ConvocariTab,
+    TranscriereTab
   ],
   templateUrl: './sedinta-detalii.html',
   styleUrl: './sedinta-detalii.scss'

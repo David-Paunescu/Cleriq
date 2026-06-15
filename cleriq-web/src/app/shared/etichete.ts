@@ -1,6 +1,6 @@
 import { ModDesfasurare, StatusSedinta, TipSedinta, OptiuneVot, RezultatPunct, StatusPrezenta, 
          TipMajoritate, TipPunct, TipVot, TipDocument, StatusTrimitere, StatusConvocare,
-         CanalNotificare, StatusIncercare  } from './enums';
+         CanalNotificare, StatusIncercare, StatusTranscriere } from './enums';
 
 export function etichetaTipSedinta(t: TipSedinta): string {
   switch (t) {
@@ -120,5 +120,14 @@ export function etichetaStatusIncercare(s: StatusIncercare): string {
   switch (s) {
     case StatusIncercare.Trimisa: return 'Trimisă';
     case StatusIncercare.Esuata: return 'Eșuată';
+  }
+}
+
+export function etichetaStatusTranscriere(s: StatusTranscriere): string {
+  switch (s) {
+    case StatusTranscriere.InAsteptare: return 'În așteptare';
+    case StatusTranscriere.InProces: return 'În procesare';
+    case StatusTranscriere.Finalizata: return 'Finalizată';
+    case StatusTranscriere.Esuata: return 'Eșuată';
   }
 }

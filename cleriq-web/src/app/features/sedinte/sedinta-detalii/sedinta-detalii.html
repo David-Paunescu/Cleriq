@@ -118,5 +118,10 @@
         [tabActiv]="indexTabActiv() === 5"
         (sedintaSchimbata)="reincarcaSedinta()" />
     </mat-tab>
+    <mat-tab label="Transcriere">
+      <app-transcriere-tab
+        [sedintaId]="s.id"
+        [tabActiv]="indexTabActiv() === 6" />
+    </mat-tab>
   </mat-tab-group>
 }

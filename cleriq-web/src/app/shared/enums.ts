@@ -88,3 +88,10 @@ export enum StatusIncercare {
   Trimisa = 1,
   Esuata = 2
 }
+
+export enum StatusTranscriere {
+  InAsteptare = 1,
+  InProces = 2,
+  Finalizata = 3,
+  Esuata = 4
+}

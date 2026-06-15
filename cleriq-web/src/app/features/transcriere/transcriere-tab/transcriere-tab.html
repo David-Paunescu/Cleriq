@@ -1,0 +1,202 @@
+@if (seIncarca() && transcriere() === null && progresUpload() === null) {
+  <div class="centru"><mat-spinner diameter="40" /></div>
+} @else if (eroare(); as mesaj) {
+  <div class="centru">
+    <p class="eroare">{{ mesaj }}</p>
+    <button mat-stroked-button (click)="incarca()">Reîncearcă</button>
+  </div>
+} @else if (progresUpload(); as p) {
+  <mat-card class="card-upload">
+    <mat-card-content>
+      <div class="upload-antet">
+        <mat-icon class="upload-icon">cloud_upload</mat-icon>
+        <h3>Se încarcă audio...</h3>
+      </div>
+      <mat-progress-bar mode="determinate" [value]="p.procentaj"></mat-progress-bar>
+      <div class="upload-detalii">
+        <span class="procentaj">{{ p.procentaj }}%</span>
+        <span class="bytes">
+          {{ formateazaMarimeAudio(p.octetiIncarcati) }} /
+          {{ formateazaMarimeAudio(p.octetiTotali) }}
+        </span>
+      </div>
+      <button mat-stroked-button (click)="anuleazaUpload()" class="buton-anulare">
+        <mat-icon>cancel</mat-icon>
+        Anulează
+      </button>
+    </mat-card-content>
+  </mat-card>
+} @else if (actiuni().esteReadOnly) {
+  <mat-card class="card-mesaj">
+    <mat-card-content>
+      @if (continutPentruConsilier(); as text) {
+        <pre class="continut-prose">{{ text }}</pre>
+      } @else if (seIncarcaContinut() && transcriere()?.status === StatusTranscriere.Finalizata) {
+        <div class="centru-mic"><mat-spinner diameter="32" /></div>
+      } @else if (transcriere()?.status === StatusTranscriere.Finalizata) {
+        <p>Transcrierea este în curs de revizuire.</p>
+      } @else {
+        <p>Transcrierea nu este încă disponibilă.</p>
+      }
+    </mat-card-content>
+  </mat-card>
+} @else if (transcriere() === null) {
+  <input
+    #inputFisier
+    type="file"
+    accept=".mp3,.wav,.m4a,.ogg,.flac,.aac"
+    (change)="laFisierSelectat($event)"
+    hidden />
+
+  <div class="drop-zone"
+       [class.drop-zone-activ]="dragInCurs()"
+       (dragover)="laDragOver($event)"
+       (dragleave)="laDragLeave($event)"
+       (drop)="laDrop($event)">
+    <mat-icon class="drop-icon">cloud_upload</mat-icon>
+    <h3>Trage fișierul audio aici</h3>
+    <p class="drop-hint">
+      sau apasă butonul de mai jos pentru a-l selecta.
+      <br>
+      Formate acceptate: MP3, WAV, M4A, OGG, FLAC, AAC. Maxim 500 MB.
+    </p>
+    <button mat-flat-button (click)="inputFisier.click()">
+      <mat-icon>folder_open</mat-icon>
+      Selectează fișier
+    </button>
+
+    @if (eroareUpload(); as mesaj) {
+      <p class="eroare-upload">{{ mesaj }}</p>
+    }
+  </div>
+} @else if (transcriere(); as t) {
+  <mat-card class="card-status"
+            [class.card-status-asteptare]="t.status === StatusTranscriere.InAsteptare"
+            [class.card-status-procesare]="t.status === StatusTranscriere.InProces"
+            [class.card-status-esuata]="t.status === StatusTranscriere.Esuata"
+            [class.card-status-finalizata]="t.status === StatusTranscriere.Finalizata">
+    <mat-card-content>
+      <div class="status-randul">
+        <mat-icon class="status-icon">{{ iconaStatus(t.status) }}</mat-icon>
+        <div class="status-text">
+          <div class="status-titlu">{{ etichetaStatusTranscriere(t.status) }}</div>
+          <div class="status-sub">{{ mesajStatus(t) }}</div>
+        </div>
+        @if (esteInLucru()) {
+          <mat-spinner diameter="24" class="status-spinner"></mat-spinner>
+        }
+      </div>
+
+      @if (t.status === StatusTranscriere.Esuata && t.ultimaEroare) {
+        <div class="eroare-detalii">
+          <strong>Detalii eroare:</strong> {{ t.ultimaEroare }}
+          @if (t.numarEsecuri > 0) {
+            <span class="incercari">({{ t.numarEsecuri }} încercări)</span>
+          }
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="card-detalii">
+    <mat-card-content>
+      <dl class="grila">
+        <dt>Mărime audio</dt>
+        <dd>{{ formateazaMarimeAudio(t.dimensiuneAudio) }}</dd>
+
+        <dt>Durată</dt>
+        <dd>{{ formateazaDurataAudio(t.durataAudioSecunde) }}</dd>
+
+        <dt>Model</dt>
+        <dd>{{ t.modelFolosit }}</dd>
+
+        @if (t.dataPrimireBrut) {
+          <dt>Transcriere primită</dt>
+          <dd>{{ formateazaDataOra(t.dataPrimireBrut) }}</dd>
+        }
+
+        @if (t.dataUltimeiEditari) {
+          <dt>Ultima editare</dt>
+          <dd>{{ formateazaDataOra(t.dataUltimeiEditari) }}</dd>
+        }
+      </dl>
+    </mat-card-content>
+  </mat-card>
+
+  <div class="actiuni">
+    @if (actiuni().poateDescarcaAudio) {
+      <button mat-stroked-button (click)="descarcaAudio()">
+        <mat-icon>download</mat-icon>
+        Descarcă audio
+      </button>
+    }
+    @if (actiuni().poateRetry) {
+      <button mat-flat-button (click)="retry()">
+        <mat-icon>refresh</mat-icon>
+        Reîncearcă transcrierea
+      </button>
+    }
+    @if (actiuni().poateIncarca) {
+      <input
+        #inputFisierInlocuire
+        type="file"
+        accept=".mp3,.wav,.m4a,.ogg,.flac,.aac"
+        (change)="laFisierSelectat($event)"
+        hidden />
+      <button mat-stroked-button (click)="inputFisierInlocuire.click()">
+        <mat-icon>file_upload</mat-icon>
+        Înlocuiește audio
+      </button>
+    }
+    @if (actiuni().poateSterge) {
+      <button mat-icon-button [matMenuTriggerFor]="meniu" matTooltip="Mai multe">
+        <mat-icon>more_vert</mat-icon>
+      </button>
+      <mat-menu #meniu="matMenu">
+        <button mat-menu-item (click)="sterge()">
+          <mat-icon>delete</mat-icon>
+          <span>Șterge transcrierea</span>
+        </button>
+      </mat-menu>
+    }
+  </div>
+
+  @if (t.status === StatusTranscriere.Finalizata) {
+    @if (seIncarcaAudio()) {
+      <div class="centru-mic"><mat-spinner diameter="32" /></div>
+    } @else if (audioUrl(); as url) {
+      <audio #playerAudio [src]="url" controls class="audio-player"></audio>
+    } @else if (eroareAudio(); as mesajAudio) {
+      <p class="eroare-audio">{{ mesajAudio }}</p>
+    }
+
+    <div class="optiuni-format">
+      <mat-checkbox [checked]="afiseazaSpeaker()" (change)="comutaSpeaker()">
+        Speaker
+      </mat-checkbox>
+      <mat-checkbox [checked]="afiseazaTimestamp()" (change)="comutaTimestamp()">
+        Timestamp
+      </mat-checkbox>
+    </div>
+
+    @if (seIncarcaContinut()) {
+      <div class="centru-mic"><mat-spinner diameter="32" /></div>
+    } @else if (segmente().length === 0) {
+      <p class="gol">Transcrierea nu are conținut.</p>
+    } @else {
+      <div class="viewer-brut" [class.fara-audio]="!audioUrl()">
+        @for (seg of segmente(); track $index) {
+          <button class="segment" type="button" (click)="seek(seg.start)">
+            @if (afiseazaTimestamp()) {
+              <span class="timestamp">[{{ formateazaTimp(seg.start) }}]</span>
+            }
+            @if (afiseazaSpeaker()) {
+              <span class="speaker">[{{ seg.speaker }}]:</span>
+            }
+            <span class="text-seg">{{ seg.text }}</span>
+          </button>
+        }
+      </div>
+    }
+  }
+}
