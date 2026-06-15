@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/auth/auth.guard';
+import { ghidModificariNesalvate } from './core/modificari/ghid-modificari-nesalvate';
 
 export const routes: Routes = [
   {
@@ -41,6 +42,7 @@ export const routes: Routes = [
       },
       {
         path: 'sedinte/:id',
+        canDeactivate: [ghidModificariNesalvate],
         loadComponent: () =>
           import('./features/sedinte/sedinta-detalii/sedinta-detalii')
             .then(m => m.SedintaDetalii)

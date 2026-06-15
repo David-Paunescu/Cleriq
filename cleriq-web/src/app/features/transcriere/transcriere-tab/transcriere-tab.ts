@@ -15,6 +15,9 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthService } from '../../../core/auth/auth.service';
+import {
+  ModificariNesalvateService, ProprietarStareModificari
+} from '../../../core/modificari/modificari-nesalvate.service';
 import { extrageMesajEroare } from '../../../core/http/erori';
 import { formateazaDataOra } from '../../../shared/data';
 import { StatusTranscriere } from '../../../shared/enums';
@@ -29,6 +32,7 @@ import { ProgresUpload, TranscriereService } from '../transcriere.service';
 
 const INTERVAL_POLLING_MS = 5000;
 const CHEIE_OPTIUNI = 'cleriq.transcriere.optiuni';
+const DEBOUNCE_AUTOSAVE_MS = 2000;
 
 @Component({
   selector: 'app-transcriere-tab',
@@ -45,6 +49,7 @@ export class TranscriereTab implements OnInit, OnDestroy {
   private readonly auth = inject(AuthService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly modificari = inject(ModificariNesalvateService);
 
   readonly sedintaId = input.required<number>();
   readonly tabActiv = input(true);
@@ -64,11 +69,20 @@ export class TranscriereTab implements OnInit, OnDestroy {
   readonly afiseazaSpeaker = signal(true);
   readonly afiseazaTimestamp = signal(false);
 
+  readonly valoareEditor = signal('');
+  readonly ultimaValoareSalvata = signal('');
+  readonly valoareEditorInitializata = signal(false);
+  readonly dataUltimeiSalvari = signal<Date | null>(null);
+  readonly seSalveaza = signal(false);
+  readonly eroareSalvare = signal<string | null>(null);
+
   readonly playerAudio = viewChild<ElementRef<HTMLAudioElement>>('playerAudio');
+  readonly textareaEditor = viewChild<ElementRef<HTMLTextAreaElement>>('textareaEditor');
 
   private subscriereUpload: Subscription | null = null;
   private intervalId: ReturnType<typeof setInterval> | null = null;
   private vizibilitateHandler: (() => void) | null = null;
+  private proprietar!: ProprietarStareModificari;
 
   readonly esteAdmin = computed(() => this.auth.areRol('Admin'));
   readonly esteAdminSauSecretar = computed(() => this.auth.areOricareRol('Admin', 'Secretar'));
@@ -90,12 +104,51 @@ export class TranscriereTab implements OnInit, OnDestroy {
     return c.continutEditat;
   });
 
+  readonly esteDirty = computed(() =>
+    this.valoareEditor() !== this.ultimaValoareSalvata());
+
+  readonly placeholderEditor = computed(() => {
+    const c = this.continut();
+    if (c && c.continutEditat === null) {
+      return 'Adaugă text aici sau folosește versiunea brută pentru a publica transcrierea.';
+    }
+    return '';
+  });
+
+  readonly afiseazaIndicator = computed(() => {
+    if (this.seSalveaza()) {
+      return { clasa: 'stare-salvare', spinner: true, text: 'Se salvează...' };
+    }
+    if (this.eroareSalvare()) {
+      return { clasa: 'stare-eroare', spinner: false, text: 'Eroare la salvare. Reîncearcă.' };
+    }
+    if (this.esteDirty()) {
+      return { clasa: 'stare-dirty', spinner: false, text: 'Modificări nesalvate' };
+    }
+    const data = this.dataUltimeiSalvari();
+    if (data) {
+      const ora = data.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
+      return { clasa: 'stare-salvat', spinner: false, text: `Salvat la ${ora}` };
+    }
+    return null;
+  });
+
   readonly StatusTranscriere = StatusTranscriere;
   readonly etichetaStatusTranscriere = etichetaStatusTranscriere;
   readonly formateazaDataOra = formateazaDataOra;
   readonly formateazaMarimeAudio = formateazaMarimeAudio;
   readonly formateazaDurataAudio = formateazaDurataAudio;
   readonly formateazaTimp = formateazaTimp;
+
+  private readonly handlerKeydown = (event: KeyboardEvent): void => {
+    if (!this.tabActiv()) return;
+    if (!(event.ctrlKey || event.metaKey)) return;
+    if (event.key.toLowerCase() !== 's') return;
+    event.preventDefault();
+    if (this.actiuni().poateEditaContinut) {
+      this.salveazaImediat(false);
+    }
+  };
 
   constructor() {
     const optiuni = this.citesteOptiuni();
@@ -125,18 +178,54 @@ export class TranscriereTab implements OnInit, OnDestroy {
       this.afiseazaTimestamp();
       this.salveazaOptiuni();
     });
+
+    effect(() => {
+      const c = this.continut();
+      if (c && !this.valoareEditorInitializata()) {
+        const valoare = c.continutEditat ?? '';
+        this.valoareEditor.set(valoare);
+        this.ultimaValoareSalvata.set(valoare);
+        this.valoareEditorInitializata.set(true);
+      }
+    });
+
+    effect(() => {
+      const valoare = this.valoareEditor();
+      const ref = this.textareaEditor();
+      if (ref && ref.nativeElement.value !== valoare) {
+        ref.nativeElement.value = valoare;
+      }
+    });
+
+    effect((onCleanup) => {
+      if (!this.esteDirty() || this.seSalveaza()) return;
+      const timer = setTimeout(() => this.salveazaImediat(true), DEBOUNCE_AUTOSAVE_MS);
+      onCleanup(() => clearTimeout(timer));
+    });
   }
 
   ngOnInit(): void {
+    this.proprietar = {
+      id: `transcriere-tab-${this.sedintaId()}`,
+      areModificariNesalvate: () => this.esteDirty()
+    };
+    this.modificari.inregistreaza(this.proprietar);
+
     this.incarca();
+
     this.vizibilitateHandler = () => {
-      if (document.visibilityState === 'visible'
+      if (document.visibilityState === 'hidden') {
+        if (this.esteDirty() && !this.seSalveaza()) {
+          this.salveazaImediat(true);
+        }
+      } else if (document.visibilityState === 'visible'
           && this.tabActiv()
           && this.esteInLucru()) {
         this.incarcaFaraSpinner();
       }
     };
     document.addEventListener('visibilitychange', this.vizibilitateHandler);
+    window.addEventListener('keydown', this.handlerKeydown);
   }
 
   ngOnDestroy(): void {
@@ -147,6 +236,8 @@ export class TranscriereTab implements OnInit, OnDestroy {
       document.removeEventListener('visibilitychange', this.vizibilitateHandler);
       this.vizibilitateHandler = null;
     }
+    window.removeEventListener('keydown', this.handlerKeydown);
+    this.modificari.retragere(this.proprietar.id);
   }
 
   private porneestePolling(): void {
@@ -220,6 +311,11 @@ export class TranscriereTab implements OnInit, OnDestroy {
     }
     this.continut.set(null);
     this.eroareAudio.set(null);
+    this.valoareEditor.set('');
+    this.ultimaValoareSalvata.set('');
+    this.valoareEditorInitializata.set(false);
+    this.dataUltimeiSalvari.set(null);
+    this.eroareSalvare.set(null);
   }
 
   seek(secunde: number): void {
@@ -237,6 +333,47 @@ export class TranscriereTab implements OnInit, OnDestroy {
 
   comutaTimestamp(): void {
     this.afiseazaTimestamp.update(v => !v);
+  }
+
+  laInputEditor(event: Event): void {
+    this.valoareEditor.set((event.target as HTMLTextAreaElement).value);
+  }
+
+  private async salveazaImediat(silent: boolean): Promise<void> {
+    if (!this.esteDirty() || this.seSalveaza()) return;
+
+    const valoare = this.valoareEditor();
+    const inceput = Date.now();
+    this.seSalveaza.set(true);
+    this.eroareSalvare.set(null);
+
+    try {
+      const rezultat = await this.api.editeazaContinut(this.sedintaId(),
+        { continutEditat: valoare });
+
+      this.transcriere.set(rezultat);
+      this.continut.update(c => c ? { ...c, continutEditat: valoare } : null);
+      this.ultimaValoareSalvata.set(valoare);
+
+      if (!this.esteDirty()) {
+        const ramas = 600 - (Date.now() - inceput);
+        if (ramas > 0) await new Promise(r => setTimeout(r, ramas));
+      }
+
+      this.dataUltimeiSalvari.set(new Date());
+
+      if (!silent) {
+        this.snackBar.open('Transcrierea a fost salvată.', 'Închide', { duration: 3000 });
+      }
+    } catch (err) {
+      const mesaj = extrageMesajEroare(err);
+      this.eroareSalvare.set(mesaj);
+      if (!silent) {
+        this.snackBar.open(mesaj, 'Închide', { duration: 5000 });
+      }
+    } finally {
+      this.seSalveaza.set(false);
+    }
   }
 
   private citesteOptiuni(): { speaker: boolean; timestamp: boolean } {

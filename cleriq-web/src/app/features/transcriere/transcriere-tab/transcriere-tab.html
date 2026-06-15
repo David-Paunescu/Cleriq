@@ -162,6 +162,34 @@
   </div>
 
   @if (t.status === StatusTranscriere.Finalizata) {
+    @if (actiuni().poateEditaContinut) {
+      <mat-card class="card-editor">
+        <mat-card-content>
+          <div class="antet-editor">
+            <h3>Editor transcriere</h3>
+            @if (afiseazaIndicator(); as ind) {
+              <span class="indicator-stare" [class]="ind.clasa">
+                @if (ind.spinner) {
+                  <mat-spinner diameter="14"></mat-spinner>
+                }
+                <span>{{ ind.text }}</span>
+              </span>
+            }
+          </div>
+
+          <textarea
+            #textareaEditor
+            rows="15"
+            class="textarea-editor"
+            (input)="laInputEditor($event)"
+            [placeholder]="placeholderEditor()">
+          </textarea>
+          <div class="actiuni-editor">
+            <span class="hint-ctrls">Auto-save la 2 secunde · Ctrl+S pentru salvare imediată</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    }
     @if (seIncarcaAudio()) {
       <div class="centru-mic"><mat-spinner diameter="32" /></div>
     } @else if (audioUrl(); as url) {
