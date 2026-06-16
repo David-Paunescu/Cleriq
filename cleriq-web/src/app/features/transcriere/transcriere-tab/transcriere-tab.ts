@@ -75,6 +75,8 @@ export class TranscriereTab implements OnInit, OnDestroy {
   readonly dataUltimeiSalvari = signal<Date | null>(null);
   readonly seSalveaza = signal(false);
   readonly eroareSalvare = signal<string | null>(null);
+  readonly dirtyPersistent = signal(false);
+  readonly publishInCurs = signal(false);
 
   readonly playerAudio = viewChild<ElementRef<HTMLAudioElement>>('playerAudio');
   readonly textareaEditor = viewChild<ElementRef<HTMLTextAreaElement>>('textareaEditor');
@@ -88,7 +90,11 @@ export class TranscriereTab implements OnInit, OnDestroy {
   readonly esteAdminSauSecretar = computed(() => this.auth.areOricareRol('Admin', 'Secretar'));
 
   readonly actiuni = computed(() =>
-    actiuniPermise(this.transcriere()?.status ?? null, this.esteAdmin(), this.esteAdminSauSecretar()));
+    actiuniPermise(
+      this.transcriere()?.status ?? null,
+      this.continut(),
+      this.esteAdmin(),
+      this.esteAdminSauSecretar()));
 
   readonly esteInLucru = computed(() => {
     const s = this.transcriere()?.status;
@@ -101,11 +107,17 @@ export class TranscriereTab implements OnInit, OnDestroy {
   readonly continutPentruConsilier = computed(() => {
     const c = this.continut();
     if (!c || c.status !== StatusTranscriere.Finalizata) return null;
-    return c.continutEditat;
+    return c.continutPublicat;
   });
 
   readonly esteDirty = computed(() =>
     this.valoareEditor() !== this.ultimaValoareSalvata());
+
+  readonly starePublicare = computed<'nepublicat' | 'publicat-curent' | 'publicat-modificari'>(() => {
+    const c = this.continut();
+    if (!c || c.continutPublicat == null) return 'nepublicat';
+    return c.continutEditat === c.continutPublicat ? 'publicat-curent' : 'publicat-modificari';
+  });
 
   readonly placeholderEditor = computed(() => {
     const c = this.continut();
@@ -124,13 +136,13 @@ export class TranscriereTab implements OnInit, OnDestroy {
   });
 
   readonly afiseazaIndicator = computed(() => {
-    if (this.seSalveaza()) {
-      return { clasa: 'stare-salvare', spinner: true, text: 'Se salvează...' };
-    }
     if (this.eroareSalvare()) {
       return { clasa: 'stare-eroare', spinner: false, text: 'Eroare la salvare. Reîncearcă.' };
     }
-    if (this.esteDirty()) {
+    if (this.seSalveaza()) {
+      return { clasa: 'stare-salvare', spinner: true, text: 'Se salvează...' };
+    }
+    if (this.dirtyPersistent()) {
       return { clasa: 'stare-dirty', spinner: false, text: 'Modificări nesalvate' };
     }
     const data = this.dataUltimeiSalvari();
@@ -139,6 +151,31 @@ export class TranscriereTab implements OnInit, OnDestroy {
       return { clasa: 'stare-salvat', spinner: false, text: `Salvat la ${ora}` };
     }
     return null;
+  });
+
+  readonly etichetaButonPublish = computed(() =>
+    this.starePublicare() === 'nepublicat'
+      ? 'Publică pentru consilieri'
+      : 'Actualizează versiunea publicată');
+
+  readonly butonPublishDezactivat = computed(() => {
+    if (this.publishInCurs()) return true;
+    if (!this.actiuni().poatePublica) return true;
+    return this.starePublicare() === 'publicat-curent';
+  });
+
+  readonly tooltipButonPublish = computed(() => {
+    if (!this.actiuni().poatePublica) {
+      const editat = this.continut()?.continutEditat;
+      if (editat == null || editat.trim().length === 0) {
+        return 'Conținutul editat este gol — nu poate fi publicat.';
+      }
+      return '';
+    }
+    if (this.starePublicare() === 'publicat-curent') {
+      return 'Versiunea editată coincide cu cea publicată. Modifică textul pentru a putea actualiza.';
+    }
+    return '';
   });
 
   readonly StatusTranscriere = StatusTranscriere;
@@ -153,7 +190,7 @@ export class TranscriereTab implements OnInit, OnDestroy {
     if (!(event.ctrlKey || event.metaKey)) return;
     if (event.key.toLowerCase() !== 's') return;
     event.preventDefault();
-    if (this.actiuni().poateEditaContinut) {
+    if (this.actiuni().poateEditaContinut && !this.publishInCurs()) {
       this.salveazaImediat(false);
     }
   };
@@ -206,9 +243,17 @@ export class TranscriereTab implements OnInit, OnDestroy {
     });
 
     effect((onCleanup) => {
-      if (!this.esteDirty() || this.seSalveaza()) return;
-      const timer = setTimeout(() => this.salveazaImediat(true), DEBOUNCE_AUTOSAVE_MS);
-      onCleanup(() => clearTimeout(timer));
+      if (this.publishInCurs()) return;
+      if (!this.esteDirty() || this.seSalveaza()) {
+        this.dirtyPersistent.set(false);
+        return;
+      }
+      const timerSave = setTimeout(() => this.salveazaImediat(true), DEBOUNCE_AUTOSAVE_MS);
+      const timerDirty = setTimeout(() => this.dirtyPersistent.set(true), 10_000);
+      onCleanup(() => {
+        clearTimeout(timerSave);
+        clearTimeout(timerDirty);
+      });
     });
   }
 
@@ -223,7 +268,7 @@ export class TranscriereTab implements OnInit, OnDestroy {
 
     this.vizibilitateHandler = () => {
       if (document.visibilityState === 'hidden') {
-        if (this.esteDirty() && !this.seSalveaza()) {
+        if (this.esteDirty() && !this.seSalveaza() && !this.publishInCurs()) {
           this.salveazaImediat(true);
         }
       } else if (document.visibilityState === 'visible'
@@ -385,7 +430,7 @@ export class TranscriereTab implements OnInit, OnDestroy {
   }
 
   async folosesteVersiuneaBruta(): Promise<void> {
-    if (this.seSalveaza()) return;
+    if (this.seSalveaza() || this.publishInCurs()) return;
 
     const c = this.continut();
     if (!c) return;
@@ -416,7 +461,83 @@ export class TranscriereTab implements OnInit, OnDestroy {
     const mesaj = areEditari
       ? 'Editorul a fost resetat la versiunea brută.'
       : 'Versiunea brută a fost adăugată în editor.';
-        this.snackBar.open(mesaj, 'Închide', { duration: 4000 });
+    this.snackBar.open(mesaj, 'Închide', { duration: 4000 });
+  }
+
+  async publica(): Promise<void> {
+    if (this.butonPublishDezactivat()) return;
+
+    const stare = this.starePublicare();
+    const date: DateConfirmare = stare === 'nepublicat'
+      ? {
+          titlu: 'Publică pentru consilieri',
+          mesaj: 'Toți consilierii vor putea vedea transcrierea în forma curentă. Modificările ulterioare vor rămâne invizibile pentru ei până la o nouă publicare.',
+          etichetaConfirmare: 'Publică'
+        }
+      : {
+          titlu: 'Actualizează versiunea publicată',
+          mesaj: 'Versiunea publicată va fi suprascrisă cu textul curent din editor.',
+          etichetaConfirmare: 'Actualizează'
+        };
+
+    const confirmat = await firstValueFrom(
+      this.dialog.open(ConfirmareDialog, { data: date, width: '520px', maxWidth: '95vw' })
+        .afterClosed());
+    if (!confirmat) return;
+
+    this.publishInCurs.set(true);
+    try {
+      if (this.esteDirty()) {
+        await this.salveazaImediat(true);
+        if (this.eroareSalvare() || this.esteDirty()) {
+          this.snackBar.open(
+            'Salvarea modificărilor a eșuat. Publicarea a fost anulată.',
+            'Închide', { duration: 5000 });
+          return;
+        }
+      }
+
+      const valoarePublicata = this.valoareEditor();
+      const rezultat = await this.api.publica(this.sedintaId());
+
+      this.transcriere.set(rezultat);
+      this.continut.update(c => c ? { ...c, continutPublicat: valoarePublicata } : null);
+
+      this.snackBar.open('Transcrierea a fost publicată pentru consilieri.',
+        'Închide', { duration: 4000 });
+    } catch (err) {
+      this.snackBar.open(extrageMesajEroare(err), 'Închide', { duration: 5000 });
+    } finally {
+      this.publishInCurs.set(false);
+    }
+  }
+
+  async retragePublicare(): Promise<void> {
+    if (this.publishInCurs() || !this.actiuni().poateRetragePublicare) return;
+
+    const date: DateConfirmare = {
+      titlu: 'Retragere publicare',
+      mesaj: 'Consilierii vor pierde accesul la transcriere. Textul editat rămâne intact și poate fi publicat din nou ulterior.',
+      etichetaConfirmare: 'Retrage',
+      periculos: true
+    };
+    const confirmat = await firstValueFrom(
+      this.dialog.open(ConfirmareDialog, { data: date, width: '520px', maxWidth: '95vw' })
+        .afterClosed());
+    if (!confirmat) return;
+
+    this.publishInCurs.set(true);
+    try {
+      const rezultat = await this.api.retragePublicare(this.sedintaId());
+      this.transcriere.set(rezultat);
+      this.continut.update(c => c ? { ...c, continutPublicat: null } : null);
+
+      this.snackBar.open('Publicarea a fost retrasă.', 'Închide', { duration: 4000 });
+    } catch (err) {
+      this.snackBar.open(extrageMesajEroare(err), 'Închide', { duration: 5000 });
+    } finally {
+      this.publishInCurs.set(false);
+    }
   }
 
   private citesteOptiuni(): { speaker: boolean; timestamp: boolean } {

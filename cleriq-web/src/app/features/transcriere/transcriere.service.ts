@@ -33,6 +33,16 @@ export class TranscriereService {
       this.http.put<Transcriere>(`${this.url(sedintaId)}/Continut`, cerere));
   }
 
+  publica(sedintaId: number): Promise<Transcriere> {
+    return firstValueFrom(
+      this.http.post<Transcriere>(`${this.url(sedintaId)}/Publica`, {}));
+  }
+
+  retragePublicare(sedintaId: number): Promise<Transcriere> {
+    return firstValueFrom(
+      this.http.delete<Transcriere>(`${this.url(sedintaId)}/Publica`));
+  }
+
   retry(sedintaId: number): Promise<Transcriere> {
     return firstValueFrom(
       this.http.post<Transcriere>(`${this.url(sedintaId)}/Retry`, {}));

@@ -14,6 +14,8 @@ export interface Transcriere {
   ultimaEroare: string | null;
   institutieId: number;
   creatLa: string;
+  dataPublicare: string | null;
+  publicataDe: number | null;
 }
 
 export interface TranscriereContinut {
@@ -22,6 +24,7 @@ export interface TranscriereContinut {
   status: StatusTranscriere;
   continutBrut: string | null;
   continutEditat: string | null;
+  continutPublicat: string | null;
 }
 
 export interface EditareTranscriere {

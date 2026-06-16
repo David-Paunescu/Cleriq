@@ -34,7 +34,7 @@
       } @else if (seIncarcaContinut() && transcriere()?.status === StatusTranscriere.Finalizata) {
         <div class="centru-mic"><mat-spinner diameter="32" /></div>
       } @else if (transcriere()?.status === StatusTranscriere.Finalizata) {
-        <p>Transcrierea este în curs de revizuire.</p>
+        <p>Transcrierea nu este încă publicată pentru consilieri.</p>
       } @else {
         <p>Transcrierea nu este încă disponibilă.</p>
       }
@@ -119,6 +119,11 @@
           <dt>Ultima editare</dt>
           <dd>{{ formateazaDataOra(t.dataUltimeiEditari) }}</dd>
         }
+
+        @if (t.dataPublicare) {
+          <dt>Publicat la</dt>
+          <dd>{{ formateazaDataOra(t.dataPublicare) }}</dd>
+        }
       </dl>
     </mat-card-content>
   </mat-card>
@@ -148,15 +153,23 @@
         Înlocuiește audio
       </button>
     }
-    @if (actiuni().poateSterge) {
+    @if (actiuni().poateSterge || actiuni().poateRetragePublicare) {
       <button mat-icon-button [matMenuTriggerFor]="meniu" matTooltip="Mai multe">
         <mat-icon>more_vert</mat-icon>
       </button>
       <mat-menu #meniu="matMenu">
-        <button mat-menu-item (click)="sterge()">
-          <mat-icon>delete</mat-icon>
-          <span>Șterge transcrierea</span>
-        </button>
+        @if (actiuni().poateRetragePublicare) {
+          <button mat-menu-item (click)="retragePublicare()" [disabled]="publishInCurs()">
+            <mat-icon>visibility_off</mat-icon>
+            <span>Retrage publicarea</span>
+          </button>
+        }
+        @if (actiuni().poateSterge) {
+          <button mat-menu-item (click)="sterge()">
+            <mat-icon>delete</mat-icon>
+            <span>Șterge transcrierea</span>
+          </button>
+        }
       </mat-menu>
     }
   </div>
@@ -166,24 +179,58 @@
       <mat-card class="card-editor">
         <mat-card-content>
           <div class="antet-editor">
-            <h3>Editor transcriere</h3>
-            <div class="antet-actiuni-editor">
-              @if (afiseazaIndicator(); as ind) {
-                <span class="indicator-stare" [class]="ind.clasa">
-                  @if (ind.spinner) {
-                    <mat-spinner diameter="14"></mat-spinner>
+            <div class="antet-editor-stanga">
+              <h3>Editor transcriere</h3>
+              <span class="badge-publicare" [class]="'badge-publicare-' + starePublicare()">
+                @switch (starePublicare()) {
+                  @case ('nepublicat') {
+                    <mat-icon class="icon-badge">visibility_off</mat-icon>
+                    <span>Nepublicat</span>
                   }
-                  <span>{{ ind.text }}</span>
-                </span>
-              }
+                  @case ('publicat-curent') {
+                    <mat-icon class="icon-badge">check_circle</mat-icon>
+                    <span>Publicat — versiune curentă</span>
+                  }
+                  @case ('publicat-modificari') {
+                    <mat-icon class="icon-badge">edit_note</mat-icon>
+                    <span>Publicat — modificări nepublicate</span>
+                  }
+                }
+              </span>
+              <span class="slot-indicator">
+                @if (afiseazaIndicator(); as ind) {
+                  <span class="indicator-stare" [class]="ind.clasa">
+                    @if (ind.spinner) {
+                      <mat-spinner diameter="12"></mat-spinner>
+                    }
+                    <span>{{ ind.text }}</span>
+                  </span>
+                }
+              </span>
+            </div>
+
+            <div class="antet-actiuni-editor">
               @if (segmente().length > 0) {
                 <button mat-stroked-button
                         (click)="folosesteVersiuneaBruta()"
-                        [disabled]="seSalveaza()">
+                        [disabled]="publishInCurs()">
                   <mat-icon>content_copy</mat-icon>
                   {{ etichetaBrut() }}
                 </button>
               }
+              <button mat-flat-button
+                      [class.buton-publish-actualizeaza]="starePublicare() === 'publicat-modificari'"
+                      (click)="publica()"
+                      [disabled]="butonPublishDezactivat()"
+                      [matTooltip]="tooltipButonPublish()"
+                      matTooltipPosition="below">
+                @if (publishInCurs()) {
+                  <mat-spinner diameter="16"></mat-spinner>
+                } @else {
+                  <mat-icon>{{ starePublicare() === 'publicat-modificari' ? 'sync' : 'send' }}</mat-icon>
+                }
+                {{ etichetaButonPublish() }}
+              </button>
             </div>
           </div>
 
@@ -192,6 +239,7 @@
             rows="15"
             class="textarea-editor"
             (input)="laInputEditor($event)"
+            [disabled]="publishInCurs()"
             [placeholder]="placeholderEditor()">
           </textarea>
           <div class="actiuni-editor">
