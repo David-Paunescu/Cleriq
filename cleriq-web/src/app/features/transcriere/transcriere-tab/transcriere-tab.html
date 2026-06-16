@@ -167,14 +167,24 @@
         <mat-card-content>
           <div class="antet-editor">
             <h3>Editor transcriere</h3>
-            @if (afiseazaIndicator(); as ind) {
-              <span class="indicator-stare" [class]="ind.clasa">
-                @if (ind.spinner) {
-                  <mat-spinner diameter="14"></mat-spinner>
-                }
-                <span>{{ ind.text }}</span>
-              </span>
-            }
+            <div class="antet-actiuni-editor">
+              @if (afiseazaIndicator(); as ind) {
+                <span class="indicator-stare" [class]="ind.clasa">
+                  @if (ind.spinner) {
+                    <mat-spinner diameter="14"></mat-spinner>
+                  }
+                  <span>{{ ind.text }}</span>
+                </span>
+              }
+              @if (segmente().length > 0) {
+                <button mat-stroked-button
+                        (click)="folosesteVersiuneaBruta()"
+                        [disabled]="seSalveaza()">
+                  <mat-icon>content_copy</mat-icon>
+                  {{ etichetaBrut() }}
+                </button>
+              }
+            </div>
           </div>
 
           <textarea

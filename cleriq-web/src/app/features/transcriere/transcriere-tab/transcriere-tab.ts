@@ -25,7 +25,7 @@ import { etichetaStatusTranscriere } from '../../../shared/etichete';
 import { ConfirmareDialog, DateConfirmare } from '../../../shared/confirmare/confirmare-dialog';
 import {
   Transcriere, TranscriereContinut, formateazaDurataAudio, formateazaMarimeAudio,
-  formateazaTimp, parseazaContinutBrut, valideazaAudio
+  formateazaSegmente, formateazaTimp, parseazaContinutBrut, valideazaAudio
 } from '../transcriere.models';
 import { actiuniPermise } from '../transcriere.permisiuni';
 import { ProgresUpload, TranscriereService } from '../transcriere.service';
@@ -109,10 +109,18 @@ export class TranscriereTab implements OnInit, OnDestroy {
 
   readonly placeholderEditor = computed(() => {
     const c = this.continut();
-    if (c && c.continutEditat === null) {
-      return 'Adaugă text aici sau folosește versiunea brută pentru a publica transcrierea.';
+    const editat = c?.continutEditat;
+    if (c && (editat == null || editat === '')) {
+      return 'Adaugă text aici sau folosește versiunea brută pentru a începe editarea.';
     }
     return '';
+  });
+
+  readonly etichetaBrut = computed(() => {
+    const editat = this.continut()?.continutEditat;
+    return (editat == null || editat === '')
+      ? 'Folosește versiunea brută'
+      : 'Resetează la versiunea brută';
   });
 
   readonly afiseazaIndicator = computed(() => {
@@ -374,6 +382,41 @@ export class TranscriereTab implements OnInit, OnDestroy {
     } finally {
       this.seSalveaza.set(false);
     }
+  }
+
+  async folosesteVersiuneaBruta(): Promise<void> {
+    if (this.seSalveaza()) return;
+
+    const c = this.continut();
+    if (!c) return;
+
+    const areEditari = c.continutEditat != null && c.continutEditat !== '';
+
+    if (areEditari) {
+      const date: DateConfirmare = {
+        titlu: 'Resetare la versiunea brută',
+        mesaj: 'Suprascrii conținutul editat cu versiunea brută. Munca de editare se va pierde definitiv.',
+        etichetaConfirmare: 'Resetează',
+        periculos: true
+      };
+      const confirmat = await firstValueFrom(
+        this.dialog.open(ConfirmareDialog, { data: date, width: '480px', maxWidth: '95vw' })
+          .afterClosed());
+      if (!confirmat) return;
+    }
+
+    const textBrut = formateazaSegmente(this.segmente(), {
+      speaker: this.afiseazaSpeaker(),
+      timestamp: this.afiseazaTimestamp()
+    });
+
+    this.valoareEditor.set(textBrut);
+    await this.salveazaImediat(true);
+
+    const mesaj = areEditari
+      ? 'Editorul a fost resetat la versiunea brută.'
+      : 'Versiunea brută a fost adăugată în editor.';
+        this.snackBar.open(mesaj, 'Închide', { duration: 4000 });
   }
 
   private citesteOptiuni(): { speaker: boolean; timestamp: boolean } {

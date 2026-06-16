@@ -49,7 +49,7 @@ public class TranscriereController : ControllerBase
         if (t is null) return NotFound();
 
         return Ok(new TranscriereContinutDto(
-            t.Id, t.SedintaId, t.Status, t.ContinutBrut, t.ContinutEditat));
+            t.Id, t.SedintaId, t.Status, t.ContinutBrut, t.ContinutEditat, t.ContinutPublicat));
     }
 
     [HttpGet("Audio")]
@@ -93,14 +93,11 @@ public class TranscriereController : ControllerBase
         var sedintaExista = await _context.Sedinte.AnyAsync(s => s.Id == sedintaId, ct);
         if (!sedintaExista) return NotFound("Ședința nu există.");
 
-        // Caut transcriere existentă (inclusiv soft-deleted din același tenant)
         var existenta = await _context.Transcrieri
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(t => t.SedintaId == sedintaId
                                    && t.InstitutieId == _context.InstitutieIdCurenta, ct);
 
-        // Activă (nu soft-deleted) + status diferit de Esuata → 409
-        // Pentru re-upload pe Esuata sau pe soft-deleted: restore complet.
         if (existenta is not null
             && !existenta.EsteSters
             && existenta.Status != StatusTranscriere.Esuata)
@@ -112,7 +109,6 @@ public class TranscriereController : ControllerBase
 
         var caleAudioVeche = existenta?.CaleStocareAudio;
 
-        // Salvare audio nou
         FisierAudio stocat;
         await using (var stream = fisier.OpenReadStream())
         {
@@ -136,7 +132,6 @@ public class TranscriereController : ControllerBase
         }
         else
         {
-            // Restore + reset complet (acoperă atât Esuata cât și soft-deleted)
             existenta.EsteSters = false;
             existenta.StersLa = null;
             existenta.StersDe = null;
@@ -146,6 +141,9 @@ public class TranscriereController : ControllerBase
             existenta.DurataAudioSecunde = null;
             existenta.ContinutBrut = null;
             existenta.ContinutEditat = null;
+            existenta.ContinutPublicat = null;
+            existenta.DataPublicare = null;
+            existenta.PublicataDe = null;
             existenta.DataPrimireBrut = null;
             existenta.DataUltimeiEditari = null;
             existenta.PromptFolosit = null;
@@ -158,7 +156,6 @@ public class TranscriereController : ControllerBase
 
         await _context.SaveChangesAsync(ct);
 
-        // Post-commit: ștergere audio vechi (dacă e diferit de cel nou)
         if (!string.IsNullOrEmpty(caleAudioVeche) && caleAudioVeche != stocat.Cheie)
         {
             try
@@ -167,7 +164,6 @@ public class TranscriereController : ControllerBase
             }
             catch
             {
-                // Audio vechi orfan acceptabil; cleanup viitor
             }
         }
 
@@ -215,6 +211,48 @@ public class TranscriereController : ControllerBase
         return Ok(MapeazaSpreDto(t));
     }
 
+    [HttpPost("Publica")]
+    [Authorize(Roles = "Admin,Secretar")]
+    public async Task<IActionResult> Publica(int sedintaId)
+    {
+        var t = await _context.Transcrieri
+            .FirstOrDefaultAsync(t => t.SedintaId == sedintaId);
+        if (t is null) return NotFound();
+
+        if (t.Status != StatusTranscriere.Finalizata)
+            return Conflict(
+                $"Publicarea e posibilă doar la status Finalizata (curent: {t.Status}).");
+
+        if (string.IsNullOrWhiteSpace(t.ContinutEditat))
+            return Conflict("Conținutul editat este gol. Nu se poate publica.");
+
+        t.ContinutPublicat = t.ContinutEditat;
+        t.DataPublicare = DateTime.UtcNow;
+        t.PublicataDe = _context.UserIdCurent;
+
+        await _context.SaveChangesAsync();
+        return Ok(MapeazaSpreDto(t));
+    }
+
+    [HttpDelete("Publica")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> RetragePublicare(int sedintaId)
+    {
+        var t = await _context.Transcrieri
+            .FirstOrDefaultAsync(t => t.SedintaId == sedintaId);
+        if (t is null) return NotFound();
+
+        if (t.DataPublicare is null)
+            return Conflict("Transcrierea nu este publicată.");
+
+        t.ContinutPublicat = null;
+        t.DataPublicare = null;
+        t.PublicataDe = null;
+
+        await _context.SaveChangesAsync();
+        return Ok(MapeazaSpreDto(t));
+    }
+
     [HttpDelete]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Sterge(int sedintaId)
@@ -223,8 +261,6 @@ public class TranscriereController : ControllerBase
             .FirstOrDefaultAsync(t => t.SedintaId == sedintaId);
         if (t is null) return NotFound();
 
-        // Soft-delete prin Remove; AplicaAuditSiSoftDelete face conversia.
-        // Audio NU se șterge fizic — cleanup orphans = job mentenanță viitor.
         _context.Transcrieri.Remove(t);
         await _context.SaveChangesAsync();
         return NoContent();
@@ -235,5 +271,6 @@ public class TranscriereController : ControllerBase
         t.DataPrimireBrut, t.DataUltimeiEditari,
         t.DimensiuneAudio, t.DurataAudioSecunde,
         t.ModelFolosit, t.NumarEsecuri, t.UrmatoareaIncercareDupa,
-        t.UltimaEroare, t.InstitutieId, t.CreatLa);
+        t.UltimaEroare, t.InstitutieId, t.CreatLa,
+        t.DataPublicare, t.PublicataDe);
 }

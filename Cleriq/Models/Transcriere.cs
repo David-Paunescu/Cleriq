@@ -14,6 +14,9 @@ public class Transcriere : EntitateDeBaza, IEntitateCuTenant
     public string? ContinutEditat { get; set; }     // Markdown editat de secretar
     public DateTime? DataPrimireBrut { get; set; }
     public DateTime? DataUltimeiEditari { get; set; }
+    public string? ContinutPublicat { get; set; }
+    public DateTime? DataPublicare { get; set; }
+    public int? PublicataDe { get; set; }
 
     // Metadate audio (pentru audit)
     [MaxLength(500)]

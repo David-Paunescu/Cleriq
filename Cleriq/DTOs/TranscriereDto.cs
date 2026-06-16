@@ -15,14 +15,17 @@ public record TranscriereDto(
     DateTime? UrmatoareaIncercareDupa,
     string? UltimaEroare,
     int InstitutieId,
-    DateTime CreatLa);
+    DateTime CreatLa,
+    DateTime? DataPublicare,
+    int? PublicataDe);
 
 public record TranscriereContinutDto(
     int Id,
     int SedintaId,
     StatusTranscriere Status,
     string? ContinutBrut,
-    string? ContinutEditat);
+    string? ContinutEditat,
+    string? ContinutPublicat);
 
 public record EditareTranscriereDto(string ContinutEditat);
 
