@@ -137,18 +137,23 @@ export class TranscriereTab implements OnInit, OnDestroy {
 
   readonly afiseazaIndicator = computed(() => {
     if (this.eroareSalvare()) {
-      return { clasa: 'stare-eroare', spinner: false, text: 'Eroare la salvare. Reîncearcă.' };
+      return { clasa: 'stare-eroare', icon: 'error_outline', spinner: false, text: 'Eroare la salvare. Reîncearcă.' };
     }
-    if (this.seSalveaza()) {
-      return { clasa: 'stare-salvare', spinner: true, text: 'Se salvează...' };
-    }
-    if (this.dirtyPersistent()) {
-      return { clasa: 'stare-dirty', spinner: false, text: 'Modificări nesalvate' };
+    if (this.dirtyPersistent() && !this.seSalveaza()) {
+      return { clasa: 'stare-dirty', icon: 'warning', spinner: false, text: 'Modificări nesalvate' };
     }
     const data = this.dataUltimeiSalvari();
     if (data) {
       const ora = data.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
-      return { clasa: 'stare-salvat', spinner: false, text: `Salvat la ${ora}` };
+      return {
+        clasa: 'stare-salvat',
+        icon: this.seSalveaza() ? null : 'check_circle',
+        spinner: this.seSalveaza(),
+        text: `Salvat la ${ora}`
+      };
+    }
+    if (this.seSalveaza()) {
+      return { clasa: 'stare-salvat', icon: null, spinner: true, text: 'Se salvează...' };
     }
     return null;
   });

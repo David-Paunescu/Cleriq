@@ -377,3 +377,11 @@
   align-items: center;
   min-width: 160px;
 }
+
+.icon-indicator,
+.indicator-stare mat-spinner {
+  flex-shrink: 0;
+  width: 14px !important;
+  height: 14px !important;
+  font-size: 14px;
+}
