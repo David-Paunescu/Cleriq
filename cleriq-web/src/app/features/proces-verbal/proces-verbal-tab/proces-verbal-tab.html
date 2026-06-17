@@ -1,0 +1,125 @@
+@if (seIncarca() && procesVerbal() === null) {
+  <div class="centru"><mat-spinner diameter="40" /></div>
+} @else if (eroare(); as mesaj) {
+  <div class="centru">
+    <p class="eroare">{{ mesaj }}</p>
+    <button mat-stroked-button (click)="incarca()">Reîncearcă</button>
+  </div>
+} @else if (procesVerbal() === null) {
+  @if (actiuni().poateGenera) {
+    <mat-card class="card-empty">
+      <mat-card-content>
+        <mat-icon class="icon-empty">description</mat-icon>
+        <h3>Procesul verbal nu a fost încă generat</h3>
+        <p>
+          Generarea creează un draft din ordinea de zi, voturi și prezența curentă.
+          Vei putea edita conținutul înainte de finalizare.
+        </p>
+        <button mat-flat-button (click)="genereaza()" [disabled]="seGenereaza()">
+          @if (seGenereaza()) {
+            <mat-spinner diameter="16"></mat-spinner>
+          } @else {
+            <mat-icon>auto_awesome</mat-icon>
+          }
+          {{ seGenereaza() ? 'Se generează...' : 'Generează procesul verbal' }}
+        </button>
+      </mat-card-content>
+    </mat-card>
+  } @else {
+    <p class="gol">Procesul verbal nu a fost încă generat.</p>
+  }
+} @else if (procesVerbal(); as pv) {
+  <mat-card class="card-status">
+    <mat-card-content>
+      <div class="status-text">
+        <div class="status-titlu">Status: {{ etichetaStatusProcesVerbal(pv.status) }}</div>
+        @if (pv.dataGenerare) {
+          <div class="status-sub">Generat la {{ formateazaDataOra(pv.dataGenerare) }}</div>
+        }
+        @if (pv.dataFinalizare) {
+          <div class="status-sub">Finalizat la {{ formateazaDataOra(pv.dataFinalizare) }}</div>
+        }
+        @if (pv.numeFisierSemnat) {
+          <div class="status-sub">PDF semnat: {{ pv.numeFisierSemnat }}</div>
+        }
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  @if (actiuni().poateEdita) {
+    <mat-card class="card-editor">
+      <mat-card-content>
+        <div class="antet-editor">
+          <div class="antet-editor-stanga">
+            <h3>Editor proces verbal</h3>
+            <span class="slot-indicator">
+              @if (afiseazaIndicator(); as ind) {
+                <span class="indicator-stare" [class]="ind.clasa">
+                  @if (ind.spinner) {
+                    <mat-spinner diameter="12"></mat-spinner>
+                  } @else if (ind.icon; as iconName) {
+                    <mat-icon class="icon-indicator">{{ iconName }}</mat-icon>
+                  }
+                  <span>{{ ind.text }}</span>
+                </span>
+              }
+            </span>
+          </div>
+
+          <div class="antet-actiuni-editor">
+            <button mat-icon-button [matMenuTriggerFor]="meniuEditor"
+                    [disabled]="actiuneInCurs()" matTooltip="Mai multe">
+              <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #meniuEditor="matMenu">
+              <button mat-menu-item (click)="regenereaza()" [disabled]="actiuneInCurs()">
+                <mat-icon>refresh</mat-icon>
+                <span>Regenerează din date</span>
+              </button>
+            </mat-menu>
+          </div>
+        </div>
+
+        <textarea
+          #textareaEditor
+          rows="20"
+          class="textarea-editor"
+          (input)="laInputEditor($event)"
+          [disabled]="actiuneInCurs()">
+        </textarea>
+        <div class="actiuni-editor">
+          <span class="hint-ctrls">Auto-save la 2 secunde · Ctrl+S pentru salvare imediată</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  } @else if (pv.continut) {
+    <mat-card class="card-continut">
+      <mat-card-content>
+        <pre class="continut-prose">{{ pv.continut }}</pre>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <div class="actiuni-pv">
+    @if (actiuni().poateDescarcaPdf) {
+      <button mat-stroked-button (click)="descarcaPdf()" [disabled]="seDescarcaPdf()">
+        @if (seDescarcaPdf()) {
+          <mat-spinner diameter="16"></mat-spinner>
+        } @else {
+          <mat-icon>download</mat-icon>
+        }
+        @if (pv.status === StatusProcesVerbal.Draft) {
+          Descarcă PDF (preview)
+        } @else {
+          Descarcă PDF generat
+        }
+      </button>
+    }
+    @if (actiuni().poateFinaliza) {
+      <button mat-flat-button (click)="finalizeaza()" [disabled]="actiuneInCurs()">
+        <mat-icon>flag</mat-icon>
+        Finalizează procesul verbal
+      </button>
+    }
+  </div>
+}

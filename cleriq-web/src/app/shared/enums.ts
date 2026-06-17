@@ -95,3 +95,8 @@ export enum StatusTranscriere {
   Finalizata = 3,
   Esuata = 4
 }
+
+export enum StatusProcesVerbal {
+  Draft = 1,
+  Finalizat = 2
+}

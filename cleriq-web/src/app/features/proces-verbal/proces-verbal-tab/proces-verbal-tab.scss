@@ -1,0 +1,186 @@
+.centru {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 0;
+}
+
+.eroare {
+  color: var(--mat-sys-error);
+  margin: 0;
+}
+
+.card-empty {
+  max-width: 600px;
+  margin: 32px auto;
+  text-align: center;
+
+  mat-card-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 24px;
+  }
+
+  h3 {
+    margin: 0;
+    font: var(--mat-sys-title-medium);
+  }
+
+  p {
+    margin: 0;
+    color: var(--mat-sys-on-surface-variant);
+    max-width: 480px;
+  }
+}
+
+.icon-empty {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+  color: var(--mat-sys-primary);
+}
+
+.card-status {
+  margin: 16px 0;
+}
+
+.status-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.status-titlu {
+  font: var(--mat-sys-title-small);
+  font-weight: 500;
+}
+
+.status-sub {
+  font-size: 13px;
+  margin-top: 2px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.gol {
+  color: var(--mat-sys-on-surface-variant);
+  text-align: center;
+  padding: 24px 0;
+  margin: 0;
+}
+
+.card-editor {
+  margin: 16px 0;
+}
+
+.antet-editor {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.antet-editor-stanga {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  h3 {
+    margin: 0;
+    font: var(--mat-sys-title-medium);
+  }
+}
+
+.slot-indicator {
+  display: inline-flex;
+  align-items: center;
+  min-width: 160px;
+}
+
+.antet-actiuni-editor {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.indicator-stare {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+
+  &.stare-salvare  { background: #e3f2fd; color: #1565c0; }
+  &.stare-eroare   { background: #fdecea; color: #c62828; }
+  &.stare-dirty    { background: #fff3e0; color: #e65100; }
+  &.stare-salvat   { background: #e6f4ea; color: #1e7e34; }
+}
+
+.icon-indicator,
+.indicator-stare mat-spinner {
+  flex-shrink: 0;
+  width: 14px !important;
+  height: 14px !important;
+  font-size: 14px;
+}
+
+.textarea-editor {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  line-height: 1.6;
+  padding: 12px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 4px;
+  resize: vertical;
+  min-height: 400px;
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+
+  &:focus {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: -1px;
+    border-color: transparent;
+  }
+}
+
+.actiuni-editor {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.hint-ctrls {
+  font-size: 12px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.card-continut {
+  margin: 16px 0;
+}
+
+.continut-prose {
+  margin: 0;
+  padding: 16px;
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  background: var(--mat-sys-surface-container-low);
+  border-radius: 4px;
+}
+
+.actiuni-pv {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 16px 0;
+  flex-wrap: wrap;
+}

@@ -25,6 +25,7 @@ import { VoturiTab } from '../../voturi/voturi-tab/voturi-tab';
 import { DocumenteTab } from '../../documente/documente-tab/documente-tab';
 import { ConvocariTab } from '../../convocari/convocari-tab/convocari-tab';
 import { TranscriereTab } from '../../transcriere/transcriere-tab/transcriere-tab';
+import { ProcesVerbalTab } from '../../proces-verbal/proces-verbal-tab/proces-verbal-tab';
 
 @Component({
   selector: 'app-sedinta-detalii',
@@ -32,7 +33,7 @@ import { TranscriereTab } from '../../transcriere/transcriere-tab/transcriere-ta
     MatCardModule, MatTabsModule, MatIconModule, MatButtonModule,
     MatMenuModule, MatTooltipModule, MatProgressSpinnerModule,
     PuncteTab, PrezentaTab, VoturiTab, DocumenteTab, ConvocariTab,
-    TranscriereTab
+    TranscriereTab, ProcesVerbalTab
   ],
   templateUrl: './sedinta-detalii.html',
   styleUrl: './sedinta-detalii.scss'
