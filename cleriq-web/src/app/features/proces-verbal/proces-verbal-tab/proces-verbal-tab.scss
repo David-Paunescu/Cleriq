@@ -47,6 +47,52 @@
   margin: 16px 0;
 }
 
+.card-semnat {
+  margin: 16px 0;
+  background: #e6f4ea;
+  border-left: 4px solid #1e7e34;
+}
+
+.semnat-randul {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.icon-semnat {
+  font-size: 32px;
+  width: 32px;
+  height: 32px;
+  color: #1e7e34;
+  flex-shrink: 0;
+}
+
+.semnat-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.semnat-titlu {
+  font: var(--mat-sys-title-small);
+  font-weight: 500;
+  color: #1e7e34;
+}
+
+.semnat-meta {
+  font-size: 13px;
+  margin-top: 4px;
+  color: var(--mat-sys-on-surface-variant);
+  word-break: break-word;
+}
+
+.semnat-actiuni {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 .status-text {
   flex: 1;
   min-width: 0;

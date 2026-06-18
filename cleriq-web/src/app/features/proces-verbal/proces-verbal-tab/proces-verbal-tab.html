@@ -1,3 +1,10 @@
+<input
+  #inputFisierSemnat
+  type="file"
+  accept=".pdf"
+  (change)="laFisierSemnatSelectat($event)"
+  hidden />
+
 @if (seIncarca() && procesVerbal() === null) {
   <div class="centru"><mat-spinner diameter="40" /></div>
 } @else if (eroare(); as mesaj) {
@@ -39,12 +46,63 @@
         @if (pv.dataFinalizare) {
           <div class="status-sub">Finalizat la {{ formateazaDataOra(pv.dataFinalizare) }}</div>
         }
-        @if (pv.numeFisierSemnat) {
-          <div class="status-sub">PDF semnat: {{ pv.numeFisierSemnat }}</div>
-        }
       </div>
     </mat-card-content>
   </mat-card>
+
+  @if (actiuni().poateDescarcaSemnat) {
+    <mat-card class="card-semnat">
+      <mat-card-content>
+        <div class="semnat-randul">
+          <mat-icon class="icon-semnat">verified</mat-icon>
+          <div class="semnat-text">
+            <div class="semnat-titlu">Variantă semnată oficial</div>
+            <div class="semnat-meta">
+              {{ pv.numeFisierSemnat }}
+              @if (pv.marimeSemnat) {
+                · {{ formateazaMarimePv(pv.marimeSemnat) }}
+              }
+              @if (pv.dataIncarcareSemnat) {
+                · Încărcat: {{ formateazaDataOra(pv.dataIncarcareSemnat) }}
+              }
+            </div>
+          </div>
+        </div>
+        <div class="semnat-actiuni">
+          <button mat-flat-button (click)="descarcaSemnat()" [disabled]="seDescarcaSemnat()">
+            @if (seDescarcaSemnat()) {
+              <mat-spinner diameter="16"></mat-spinner>
+            } @else {
+              <mat-icon>download</mat-icon>
+            }
+            Descarcă PDF semnat
+          </button>
+          @if (actiuni().poateIncarcaSemnat) {
+            <button mat-stroked-button (click)="incepInlocuireSemnat()"
+                    [disabled]="seIncarcaSemnat()">
+              @if (seIncarcaSemnat()) {
+                <mat-spinner diameter="16"></mat-spinner>
+              } @else {
+                <mat-icon>swap_horiz</mat-icon>
+              }
+              Înlocuiește
+            </button>
+          }
+          @if (actiuni().poateStergeSemnat) {
+            <button mat-icon-button [matMenuTriggerFor]="meniuSemnat" matTooltip="Mai multe">
+              <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #meniuSemnat="matMenu">
+              <button mat-menu-item (click)="stergeSemnat()">
+                <mat-icon>delete</mat-icon>
+                <span>Șterge varianta semnată</span>
+              </button>
+            </mat-menu>
+          }
+        </div>
+      </mat-card-content>
+    </mat-card>
+  }
 
   @if (actiuni().poateEdita) {
     <mat-card class="card-editor">
@@ -102,17 +160,39 @@
 
   <div class="actiuni-pv">
     @if (actiuni().poateDescarcaPdf) {
-      <button mat-stroked-button (click)="descarcaPdf()" [disabled]="seDescarcaPdf()">
-        @if (seDescarcaPdf()) {
+      @if (esteDownloadGeneratPrimar()) {
+        <button mat-flat-button (click)="descarcaPdf()" [disabled]="seDescarcaPdf()">
+          @if (seDescarcaPdf()) {
+            <mat-spinner diameter="16"></mat-spinner>
+          } @else {
+            <mat-icon>download</mat-icon>
+          }
+          Descarcă PDF generat
+        </button>
+      } @else {
+        <button mat-stroked-button (click)="descarcaPdf()" [disabled]="seDescarcaPdf()">
+          @if (seDescarcaPdf()) {
+            <mat-spinner diameter="16"></mat-spinner>
+          } @else {
+            <mat-icon>download</mat-icon>
+          }
+          @if (pv.status === StatusProcesVerbal.Draft) {
+            Descarcă PDF (preview)
+          } @else {
+            Descarcă PDF generat
+          }
+        </button>
+      }
+    }
+    @if (actiuni().poateIncarcaSemnat && !areSemnat()) {
+      <button mat-stroked-button (click)="incepIncarcareSemnat()"
+              [disabled]="seIncarcaSemnat()">
+        @if (seIncarcaSemnat()) {
           <mat-spinner diameter="16"></mat-spinner>
         } @else {
-          <mat-icon>download</mat-icon>
+          <mat-icon>upload_file</mat-icon>
         }
-        @if (pv.status === StatusProcesVerbal.Draft) {
-          Descarcă PDF (preview)
-        } @else {
-          Descarcă PDF generat
-        }
+        Încarcă PV semnat
       </button>
     }
     @if (actiuni().poateFinaliza) {

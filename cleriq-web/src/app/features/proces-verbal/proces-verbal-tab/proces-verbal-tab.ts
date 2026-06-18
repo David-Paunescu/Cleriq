@@ -21,7 +21,7 @@ import { ConfirmareDialog, DateConfirmare } from '../../../shared/confirmare/con
 import { formateazaDataOra } from '../../../shared/data';
 import { StatusProcesVerbal } from '../../../shared/enums';
 import { etichetaStatusProcesVerbal } from '../../../shared/etichete';
-import { ProcesVerbal } from '../proces-verbal.models';
+import { ProcesVerbal, formateazaMarimePv, valideazaPdfSemnat } from '../proces-verbal.models';
 import { actiuniPermise } from '../proces-verbal.permisiuni';
 import { ProcesVerbalService } from '../proces-verbal.service';
 
@@ -49,6 +49,8 @@ export class ProcesVerbalTab implements OnInit, OnDestroy {
   readonly seIncarca = signal(false);
   readonly seGenereaza = signal(false);
   readonly seDescarcaPdf = signal(false);
+  readonly seIncarcaSemnat = signal(false);
+  readonly seDescarcaSemnat = signal(false);
   readonly eroare = signal<string | null>(null);
   readonly procesVerbal = signal<ProcesVerbal | null>(null);
 
@@ -62,6 +64,7 @@ export class ProcesVerbalTab implements OnInit, OnDestroy {
   readonly actiuneInCurs = signal(false);
 
   readonly textareaEditor = viewChild<ElementRef<HTMLTextAreaElement>>('textareaEditor');
+  readonly inputFisierSemnat = viewChild<ElementRef<HTMLInputElement>>('inputFisierSemnat');
 
   private vizibilitateHandler: (() => void) | null = null;
   private proprietar!: ProprietarStareModificari;
@@ -78,6 +81,10 @@ export class ProcesVerbalTab implements OnInit, OnDestroy {
       this.areSemnat(),
       this.esteAdmin(),
       this.esteAdminSauSecretar()));
+
+  readonly esteDownloadGeneratPrimar = computed(() =>
+    this.procesVerbal()?.status === StatusProcesVerbal.Finalizat
+    && !this.areSemnat());
 
   readonly esteDirty = computed(() =>
     this.valoareEditor() !== this.ultimaValoareSalvata());
@@ -108,6 +115,7 @@ export class ProcesVerbalTab implements OnInit, OnDestroy {
   readonly StatusProcesVerbal = StatusProcesVerbal;
   readonly etichetaStatusProcesVerbal = etichetaStatusProcesVerbal;
   readonly formateazaDataOra = formateazaDataOra;
+  readonly formateazaMarimePv = formateazaMarimePv;
 
   private readonly handlerKeydown = (event: KeyboardEvent): void => {
     if (!this.tabActiv()) return;
@@ -339,6 +347,94 @@ export class ProcesVerbalTab implements OnInit, OnDestroy {
       this.snackBar.open(extrageMesajEroare(err), 'Închide', { duration: 5000 });
     } finally {
       this.seDescarcaPdf.set(false);
+    }
+  }
+
+  incepIncarcareSemnat(): void {
+    if (!this.actiuni().poateIncarcaSemnat || this.seIncarcaSemnat()) return;
+    this.inputFisierSemnat()?.nativeElement.click();
+  }
+
+  async incepInlocuireSemnat(): Promise<void> {
+    if (!this.actiuni().poateIncarcaSemnat || this.seIncarcaSemnat()) return;
+
+    const date: DateConfirmare = {
+      titlu: 'Înlocuire variantă semnată',
+      mesaj: 'Varianta semnată curentă va fi înlocuită cu noul fișier. Portalul public va afișa noua variantă imediat.',
+      etichetaConfirmare: 'Continuă'
+    };
+    const confirmat = await firstValueFrom(
+      this.dialog.open(ConfirmareDialog, { data: date, width: '480px', maxWidth: '95vw' })
+        .afterClosed());
+    if (!confirmat) return;
+
+    this.inputFisierSemnat()?.nativeElement.click();
+  }
+
+  async laFisierSemnatSelectat(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const fisier = input.files?.[0];
+    input.value = '';
+
+    if (!fisier) return;
+
+    const eroareValidare = valideazaPdfSemnat(fisier.name, fisier.size);
+    if (eroareValidare) {
+      this.snackBar.open(eroareValidare, 'Închide', { duration: 5000 });
+      return;
+    }
+
+    this.seIncarcaSemnat.set(true);
+    try {
+      const rezultat = await this.api.incarcaSemnat(this.sedintaId(), fisier);
+      this.procesVerbal.set(rezultat);
+      this.snackBar.open('Varianta semnată a fost încărcată.', 'Închide', { duration: 4000 });
+    } catch (err) {
+      this.snackBar.open(extrageMesajEroare(err), 'Închide', { duration: 5000 });
+    } finally {
+      this.seIncarcaSemnat.set(false);
+    }
+  }
+
+  async descarcaSemnat(): Promise<void> {
+    if (!this.actiuni().poateDescarcaSemnat || this.seDescarcaSemnat()) return;
+
+    this.seDescarcaSemnat.set(true);
+    try {
+      const data = new Date().toISOString().slice(0, 10);
+      await this.api.descarcaSemnat(this.sedintaId(), `proces-verbal-${data}-semnat.pdf`);
+    } catch (err) {
+      this.snackBar.open(extrageMesajEroare(err), 'Închide', { duration: 5000 });
+    } finally {
+      this.seDescarcaSemnat.set(false);
+    }
+  }
+
+  async stergeSemnat(): Promise<void> {
+    if (!this.actiuni().poateStergeSemnat) return;
+
+    const date: DateConfirmare = {
+      titlu: 'Ștergere variantă semnată',
+      mesaj: 'Varianta semnată va fi eliminată definitiv din această ședință. Portalul public va reveni la PDF-ul generat (nesemnat) până la încărcarea unei noi variante semnate.',
+      etichetaConfirmare: 'Șterge',
+      periculos: true
+    };
+    const confirmat = await firstValueFrom(
+      this.dialog.open(ConfirmareDialog, { data: date, width: '520px', maxWidth: '95vw' })
+        .afterClosed());
+    if (!confirmat) return;
+
+    try {
+      await this.api.stergeSemnat(this.sedintaId());
+      this.procesVerbal.update(pv => pv ? {
+        ...pv,
+        numeFisierSemnat: null,
+        marimeSemnat: null,
+        dataIncarcareSemnat: null
+      } : null);
+      this.snackBar.open('Varianta semnată a fost ștearsă.', 'Închide', { duration: 4000 });
+    } catch (err) {
+      this.snackBar.open(extrageMesajEroare(err), 'Închide', { duration: 5000 });
     }
   }
 }
