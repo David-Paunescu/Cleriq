@@ -232,6 +232,113 @@ public static class ExtensiiTeste
         return await factory.ClientAutentificatAsync(email, parola);
     }
 
+    public static async Task<int> CreeazaPersoanaAsync(
+    this HttpClient clientAdmin, string numeComplet,
+    string? email = null, string? telefon = null)
+    {
+        var raspuns = await clientAdmin.PostAsJsonAsync("/api/Persoane", new
+        {
+            numeComplet,
+            email,
+            telefon
+        });
+        await AsigurareSucces(raspuns, "Creare persoană");
+        var corp = await raspuns.Content.ReadFromJsonAsync<JsonElement>();
+        return corp.GetProperty("id").GetInt32();
+    }
+
+    public static async Task<int> CreeazaMandatFunctieAsync(
+        this HttpClient clientAdmin,
+        TipFunctie tipFunctie,
+        int? persoanaId,
+        int? consilierId,
+        DateOnly dataInceput,
+        DateOnly? dataSfarsit = null,
+        string? nrActNumire = null)
+    {
+        var raspuns = await clientAdmin.PostAsJsonAsync("/api/MandateFunctie", new
+        {
+            tipFunctie,
+            persoanaId,
+            consilierId,
+            dataInceput,
+            dataSfarsit,
+            nrActNumire
+        });
+        await AsigurareSucces(raspuns, "Creare mandat funcție");
+        var corp = await raspuns.Content.ReadFromJsonAsync<JsonElement>();
+        return corp.GetProperty("id").GetInt32();
+    }
+
+    public static async Task InchideMandatFunctieAsync(
+        this HttpClient clientAdmin, int mandatId, DateOnly dataSfarsit)
+    {
+        var raspuns = await clientAdmin.PostAsJsonAsync(
+            $"/api/MandateFunctie/{mandatId}/Inchide",
+            new { dataSfarsit });
+        await AsigurareSucces(raspuns, "Închidere mandat funcție");
+    }
+
+    public static async Task<int> CreeazaComisieAsync(
+        this HttpClient clientAdmin, string denumire, string? descriere = null)
+    {
+        var raspuns = await clientAdmin.PostAsJsonAsync("/api/Comisii", new { denumire, descriere });
+        await AsigurareSucces(raspuns, "Creare comisie");
+        var corp = await raspuns.Content.ReadFromJsonAsync<JsonElement>();
+        return corp.GetProperty("id").GetInt32();
+    }
+
+    public static async Task AdaugaMembruComisieAsync(
+        this HttpClient clientAdmin,
+        int comisieId, int consilierId, RolComisie rol, DateOnly dataInceput)
+    {
+        var raspuns = await clientAdmin.PostAsJsonAsync(
+            $"/api/Comisii/{comisieId}/Membri",
+            new { consilierId, rol, dataInceput });
+        await AsigurareSucces(raspuns, "Adăugare membru comisie");
+    }
+
+    public static async Task ScoateMembruComisieAsync(
+        this HttpClient clientAdmin,
+        int comisieId, int consilierId, DateOnly? dataSfarsit = null)
+    {
+        var url = $"/api/Comisii/{comisieId}/Membri/{consilierId}";
+        if (dataSfarsit.HasValue)
+            url += $"?dataSfarsit={dataSfarsit.Value:yyyy-MM-dd}";
+        var raspuns = await clientAdmin.DeleteAsync(url);
+        await AsigurareSucces(raspuns, "Scoatere membru comisie");
+    }
+
+    public static async Task<int> CreeazaMandatConsilierAsync(
+        this HttpClient clientAdmin,
+        int consilierId, DateOnly dataInceput,
+        DateOnly? dataSfarsit = null, string? grupPolitic = null)
+    {
+        var raspuns = await clientAdmin.PostAsJsonAsync("/api/Mandate", new
+        {
+            consilierId,
+            dataInceput,
+            dataSfarsit,
+            grupPolitic
+        });
+        await AsigurareSucces(raspuns, "Creare mandat consilier");
+        var corp = await raspuns.Content.ReadFromJsonAsync<JsonElement>();
+        return corp.GetProperty("id").GetInt32();
+    }
+
+    public static async Task ActualizeazaMandatConsilierAsync(
+        this HttpClient clientAdmin, int mandatId,
+        DateOnly dataInceput, DateOnly? dataSfarsit = null, string? grupPolitic = null)
+    {
+        var raspuns = await clientAdmin.PutAsJsonAsync($"/api/Mandate/{mandatId}", new
+        {
+            dataInceput,
+            dataSfarsit,
+            grupPolitic
+        });
+        await AsigurareSucces(raspuns, "Actualizare mandat consilier");
+    }
+
     private static async Task AsigurareSucces(HttpResponseMessage raspuns, string operatiune)
     {
         if (raspuns.IsSuccessStatusCode) return;
