@@ -4,10 +4,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cleriq.Data;
 
-// Rulează DOAR în Development. Idempotență per instituție, cheia = slug
-// (IgnoreQueryFilters: slug-urile soft-deleted sunt „arse" — nu recreăm).
 public static class SeedDevelopment
 {
+    private static readonly DateOnly DataInceputMandate = new(2024, 10, 27);
+
     public static async Task RuleazaAsync(IServiceProvider sp, ILogger logger)
     {
         var db = sp.GetRequiredService<AppDbContext>();
@@ -40,7 +40,6 @@ public static class SeedDevelopment
         await CreeazaUtilizatorAsync(userManager,
             "secretar.slobozia@cleriq.ro", "Secretar1234!", "Secretar Slobozia", "Secretar", institutie.Id);
 
-        // InstitutieId explicit: la startup nu există tenant în context (pattern services system).
         var ion = new Consilier
         {
             NumeComplet = "Ion Popescu",
@@ -64,12 +63,64 @@ public static class SeedDevelopment
         db.Consilieri.AddRange(ion, vasile, testFiltru);
         await db.SaveChangesAsync();
 
+        // Mandate de consilier — precondiție logică pentru viceprimar (acoperă perioada)
+        db.Mandate.AddRange(
+            CreeazaMandatConsilier(ion.Id, institutie.Id),
+            CreeazaMandatConsilier(vasile.Id, institutie.Id),
+            CreeazaMandatConsilier(testFiltru.Id, institutie.Id));
+        await db.SaveChangesAsync();
+
         await CreeazaUtilizatorAsync(userManager,
             "ion.popescu.cont@slobozia.ro", "Consilier1!", ion.NumeComplet, "Consilier",
             institutie.Id, consilierId: ion.Id);
 
+        // Persoane pentru funcții ne-consilier (Primar, Secretar UAT)
+        var primarSlobozia = new Persoana
+        {
+            NumeComplet = "Andrei Mihalache",
+            Email = "primar@slobozia.ro",
+            InstitutieId = institutie.Id
+        };
+        var secretarUatSlobozia = new Persoana
+        {
+            NumeComplet = "Maria Ionescu",
+            Email = "secretar.uat@slobozia.ro",
+            InstitutieId = institutie.Id
+        };
+        db.Persoane.AddRange(primarSlobozia, secretarUatSlobozia);
+        await db.SaveChangesAsync();
+
+        // Mandate de funcție active: Primar, Secretar UAT, Viceprimar (Ion)
+        db.MandateFunctie.AddRange(
+            new MandatFunctie
+            {
+                TipFunctie = TipFunctie.Primar,
+                PersoanaId = primarSlobozia.Id,
+                DataInceput = DataInceputMandate,
+                NrActNumire = "HCL 1/2024",
+                InstitutieId = institutie.Id
+            },
+            new MandatFunctie
+            {
+                TipFunctie = TipFunctie.SecretarUat,
+                PersoanaId = secretarUatSlobozia.Id,
+                DataInceput = DataInceputMandate,
+                NrActNumire = "Ordin Prefect 123/2024",
+                InstitutieId = institutie.Id
+            },
+            new MandatFunctie
+            {
+                TipFunctie = TipFunctie.Viceprimar,
+                ConsilierId = ion.Id,
+                DataInceput = DataInceputMandate,
+                NrActNumire = "HCL 2/2024",
+                InstitutieId = institutie.Id
+            });
+        await db.SaveChangesAsync();
+
         logger.LogInformation(
-            "Seed Development: creată {Slug} (Admin, Secretar, 3 consilieri, 1 cont consilier).", slug);
+            "Seed Development: creată {Slug} (Admin, Secretar, 3 consilieri + mandate, 1 cont consilier, 2 persoane, 3 mandate de funcție).",
+            slug);
     }
 
     private static async Task SeedFocsaniAsync(
@@ -93,8 +144,38 @@ public static class SeedDevelopment
         await CreeazaUtilizatorAsync(userManager,
             "admin.focsani@cleriq.ro", "AdminFocsani1!", "Admin Focșani", "Admin", institutie.Id);
 
-        logger.LogInformation("Seed Development: creată {Slug} (Admin).", slug);
+        // Primar diferit la Focșani — util pentru testul de izolare tenant pe FunctiiIstorice
+        var primarFocsani = new Persoana
+        {
+            NumeComplet = "Costel Voinea",
+            Email = "primar@focsani.ro",
+            InstitutieId = institutie.Id
+        };
+        db.Persoane.Add(primarFocsani);
+        await db.SaveChangesAsync();
+
+        db.MandateFunctie.Add(new MandatFunctie
+        {
+            TipFunctie = TipFunctie.Primar,
+            PersoanaId = primarFocsani.Id,
+            DataInceput = DataInceputMandate,
+            NrActNumire = "HCL 1/2024",
+            InstitutieId = institutie.Id
+        });
+        await db.SaveChangesAsync();
+
+        logger.LogInformation(
+            "Seed Development: creată {Slug} (Admin, 1 persoană, 1 mandat de funcție).", slug);
     }
+
+    private static Mandat CreeazaMandatConsilier(int consilierId, int institutieId) => new()
+    {
+        ConsilierId = consilierId,
+        DataInceput = DataInceputMandate,
+        DataSfarsit = null,
+        GrupPolitic = "Independent",
+        InstitutieId = institutieId
+    };
 
     private static async Task CreeazaUtilizatorAsync(
         UserManager<Utilizator> userManager, string email, string parola,

@@ -29,20 +29,30 @@ public class ComisiiController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> Detalii(int id)
+    public async Task<IActionResult> Detalii(int id, [FromQuery] bool includeIstoric = false)
     {
-        var comisie = await _context.Comisii
-            .Include(c => c.Membri)
-                .ThenInclude(m => m.Consilier)
-            .FirstOrDefaultAsync(c => c.Id == id);
+        var comisie = await _context.Comisii.FirstOrDefaultAsync(c => c.Id == id);
+        if (comisie is null) return NotFound();
 
-        if (comisie is null)
-            return NotFound();
+        var query = _context.ComisieMembri
+            .Include(m => m.Consilier)
+            .Where(m => m.ComisieId == id);
 
-        var membri = comisie.Membri
-            .Where(m => m.Consilier is not null) // defensiv: ignoră membri al căror consilier e soft-deleted
-            .Select(m => new MembruComisieDto(m.ConsilierId, m.Consilier!.NumeComplet, m.Rol))
-            .ToList();
+        if (!includeIstoric)
+            query = query.Where(m => m.DataSfarsit == null);
+
+        var membri = await query
+            .Where(m => m.Consilier != null)
+            .OrderBy(m => m.DataInceput)
+            .ThenBy(m => m.Id)
+            .Select(m => new MembruComisieDto(
+                m.ConsilierId,
+                m.Consilier!.NumeComplet,
+                m.Rol,
+                m.DataInceput,
+                m.DataSfarsit,
+                m.DataInceputEstimata))
+            .ToListAsync();
 
         return Ok(new ComisieDto(
             comisie.Id, comisie.Denumire, comisie.Descriere,
@@ -113,48 +123,52 @@ public class ComisiiController : ControllerBase
         if (consilier is null)
             return NotFound("Consilierul nu există.");
 
-        // Caută și printre cei soft-deleted din același tenant, ca să restaurăm dacă găsim
-        var existent = await _context.ComisieMembri
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(m => m.ComisieId == id
-                                   && m.ConsilierId == dto.ConsilierId
-                                   && m.InstitutieId == _context.InstitutieIdCurenta);
+        // Excepție conștientă de la pattern-ul restore-on-re-add (plan2.md): la ComisieMembru,
+        // re-adăugarea creează rând nou pentru a păstra istoricul ca două mandate distincte.
+        var areMembrieActiva = await _context.ComisieMembri
+            .AnyAsync(m => m.ComisieId == id
+                        && m.ConsilierId == dto.ConsilierId
+                        && m.DataSfarsit == null);
 
-        if (existent is not null && !existent.EsteSters)
-            return Conflict("Consilierul este deja membru al comisiei.");
+        if (areMembrieActiva)
+            return Conflict("Consilierul este deja membru activ al comisiei.");
 
-        if (existent is not null && existent.EsteSters)
+        var membru = new ComisieMembru
         {
-            // Restaurăm vechea apartenență
-            existent.EsteSters = false;
-            existent.StersLa = null;
-            existent.Rol = dto.Rol;
-        }
-        else
-        {
-            _context.ComisieMembri.Add(new ComisieMembru
-            {
-                ComisieId = id,
-                ConsilierId = dto.ConsilierId,
-                Rol = dto.Rol
-            });
-        }
+            ComisieId = id,
+            ConsilierId = dto.ConsilierId,
+            Rol = dto.Rol,
+            DataInceput = dto.DataInceput,
+            DataInceputEstimata = false
+        };
 
+        _context.ComisieMembri.Add(membru);
         await _context.SaveChangesAsync();
-        return Ok(new MembruComisieDto(consilier.Id, consilier.NumeComplet, dto.Rol));
+
+        return Ok(new MembruComisieDto(
+            consilier.Id, consilier.NumeComplet, dto.Rol,
+            membru.DataInceput, membru.DataSfarsit, membru.DataInceputEstimata));
     }
 
     [HttpDelete("{id}/Membri/{consilierId}")]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> ScoateMembru(int id, int consilierId)
+    public async Task<IActionResult> ScoateMembru(
+        int id, int consilierId, [FromQuery] DateOnly? dataSfarsit = null)
     {
+        // Scoaterea = setare DataSfarsit (închidere normală a membriei), NU soft-delete.
+        // Caut DOAR membria activă; cele istorice cu DataSfarsit setat nu se reșterg.
         var membru = await _context.ComisieMembri
-            .FirstOrDefaultAsync(m => m.ComisieId == id && m.ConsilierId == consilierId);
+            .FirstOrDefaultAsync(m => m.ComisieId == id
+                                   && m.ConsilierId == consilierId
+                                   && m.DataSfarsit == null);
 
-        if (membru is null)
-            return NotFound();
+        if (membru is null) return NotFound();
 
-        _context.ComisieMembri.Remove(membru);
+        var ds = dataSfarsit ?? DateOnly.FromDateTime(DateTime.UtcNow.Date);
+        if (ds < membru.DataInceput)
+            return BadRequest("DataSfarsit nu poate fi anterioară DataInceput a membriei.");
+
+        membru.DataSfarsit = ds;
         await _context.SaveChangesAsync();
         return NoContent();
     }

@@ -66,4 +66,12 @@ public static class ExtensiiEnumuri
         TipDocument.Altele => "Alt document",
         _ => t.ToString()
     };
+
+    public static string Eticheta(this TipFunctie t) => t switch
+    {
+        TipFunctie.Primar => "Primar",
+        TipFunctie.Viceprimar => "Viceprimar",
+        TipFunctie.SecretarUat => "Secretar UAT",
+        _ => t.ToString()
+    };
 }

@@ -137,3 +137,10 @@ public enum StatusTranscriere
     Finalizata = 3,
     Esuata = 4
 }
+
+public enum TipFunctie
+{
+    Primar = 1,
+    Viceprimar = 2,
+    SecretarUat = 3
+}

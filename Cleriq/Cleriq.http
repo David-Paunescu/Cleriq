@@ -103,3 +103,73 @@ Content-Type: application/json
 {
   "refreshToken": "{{refreshAdmin.response.body.$.refreshToken}}"
 }
+
+
+
+// ----------- // ----------- /
+
+### -- FAZA 2 SMOKE TEST --
+
+### Lista persoane (verificare seed)
+GET {{host}}/api/Persoane
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### Detalii persoană (presupun id=1 = Andrei Mihalache, primar Slobozia)
+GET {{host}}/api/Persoane/1
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### Lista MandateFunctie
+GET {{host}}/api/MandateFunctie
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### Lista MandateFunctie — filtru pe Primar
+GET {{host}}/api/MandateFunctie?tipFunctie=1
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+### Creare Persoană nouă
+POST {{host}}/api/Persoane
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "numeComplet": "Persoană Test Nouă",
+  "email": "test.nou@example.com",
+  "telefon": "0720123456"
+}
+
+### Tentativă creare al 2-lea Primar pe Slobozia — așteptăm 409 (suprapunere)
+POST {{host}}/api/MandateFunctie
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "tipFunctie": 1,
+  "persoanaId": 2,
+  "dataInceput": "2024-10-27",
+  "nrActNumire": "HCL test conflict"
+}
+
+### Tentativă viceprimar pe consilier fără mandat (Test Filtru = consilier 3 are mandat, deci ar trebui să meargă)
+POST {{host}}/api/MandateFunctie
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "tipFunctie": 2,
+  "consilierId": 2,
+  "dataInceput": "2024-10-27",
+  "nrActNumire": "HCL Vasile vp"
+}
+
+### Închidere mandat (presupun id=3 = viceprimarul Ion seedat)
+POST {{host}}/api/MandateFunctie/3/Inchide
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "dataSfarsit": "2025-06-15"
+}
+
+### Detalii comisie cu includeIstoric (nu e crucial — verifică doar parser query param)
+GET {{host}}/api/Comisii/1?includeIstoric=true
+Authorization: Bearer {{loginAdmin.response.body.$.token}}

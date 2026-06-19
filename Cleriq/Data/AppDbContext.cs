@@ -79,7 +79,6 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
         // Restrict (NU Cascade) pentru două motive:
         //  1. SQL Server interzice multiple cascade paths spre aceeași entitate;
         //  2. Filosofia proiectului: soft-delete peste tot, niciodată DELETE fizic pe Institutie.
-        // Protecție defensivă DB: un DELETE fizic accidental e refuzat de DB.
 
         modelBuilder.Entity<Consilier>()
             .HasOne(x => x.Institutie)
@@ -165,6 +164,18 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             .HasForeignKey(x => x.InstitutieId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        modelBuilder.Entity<Persoana>()
+            .HasOne(x => x.Institutie)
+            .WithMany()
+            .HasForeignKey(x => x.InstitutieId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<MandatFunctie>()
+            .HasOne(x => x.Institutie)
+            .WithMany()
+            .HasForeignKey(x => x.InstitutieId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         modelBuilder.Entity<Transcriere>()
             .HasOne(t => t.Sedinta)
             .WithOne(s => s.Transcriere)
@@ -228,10 +239,45 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             .HasForeignKey(u => u.ConsilierId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // MandatFunctie: FK polimorfic spre Persoana SAU Consilier (XOR).
+        // Ambele FK Restrict — istoricul rămâne în DB chiar dacă persoana sau
+        // consilierul ar fi șterși fizic (imposibil oricum prin app).
+        modelBuilder.Entity<MandatFunctie>()
+            .HasOne(mf => mf.Persoana)
+            .WithMany(p => p.MandateFunctie)
+            .HasForeignKey(mf => mf.PersoanaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<MandatFunctie>()
+            .HasOne(mf => mf.Consilier)
+            .WithMany()
+            .HasForeignKey(mf => mf.ConsilierId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // 3 check constraints — defense in depth la nivel DB pentru regulile
+        // de mapare TipFunctie↔FK (din OUG 57/2019) și perioadă validă.
+        modelBuilder.Entity<MandatFunctie>()
+            .ToTable(t =>
+            {
+                t.HasCheckConstraint(
+                    "CK_MandatFunctie_ExactUnSubject",
+                    "(CASE WHEN [PersoanaId] IS NULL THEN 0 ELSE 1 END + " +
+                    " CASE WHEN [ConsilierId] IS NULL THEN 0 ELSE 1 END) = 1");
+
+                t.HasCheckConstraint(
+                    "CK_MandatFunctie_FkCorectaPerTip",
+                    "([TipFunctie] IN (1, 3) AND [PersoanaId] IS NOT NULL AND [ConsilierId] IS NULL) " +
+                    "OR ([TipFunctie] = 2 AND [ConsilierId] IS NOT NULL AND [PersoanaId] IS NULL)");
+
+                t.HasCheckConstraint(
+                    "CK_MandatFunctie_PerioadaValida",
+                    "[DataSfarsit] IS NULL OR [DataSfarsit] >= [DataInceput]");
+            });
+
         modelBuilder.Entity<ComisieMembru>()
             .HasIndex(cm => new { cm.ComisieId, cm.ConsilierId })
             .IsUnique()
-            .HasFilter("[EsteSters] = 0");
+            .HasFilter("[EsteSters] = 0 AND [DataSfarsit] IS NULL");
 
         modelBuilder.Entity<Prezenta>()
             .HasIndex(p => new { p.SedintaId, p.ConsilierId })
@@ -257,6 +303,30 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             .HasIndex(t => t.SedintaId)
             .IsUnique()
             .HasFilter("[EsteSters] = 0");
+
+        // MandatFunctie — 3 filtered unique distincte (Primar=1, Viceprimar=2, SecretarUat=3):
+        //  - Primar / SecretarUat: exclusiv per tenant la un moment dat
+        //  - Viceprimar: același consilier nu poate fi viceprimar de două ori simultan
+        //    (pot fi totuși 2-3 viceprimari diferiți activi în paralel)
+        modelBuilder.Entity<MandatFunctie>()
+            .HasIndex(mf => mf.InstitutieId, "IX_MandatFunctie_PrimarActiv")
+            .IsUnique()
+            .HasFilter("[EsteSters] = 0 AND [DataSfarsit] IS NULL AND [TipFunctie] = 1");
+
+        modelBuilder.Entity<MandatFunctie>()
+            .HasIndex(mf => mf.InstitutieId, "IX_MandatFunctie_SecretarUatActiv")
+            .IsUnique()
+            .HasFilter("[EsteSters] = 0 AND [DataSfarsit] IS NULL AND [TipFunctie] = 3");
+
+        modelBuilder.Entity<MandatFunctie>()
+            .HasIndex(mf => new { mf.InstitutieId, mf.ConsilierId }, "IX_MandatFunctie_ViceprimarActivPerConsilier")
+            .IsUnique()
+            .HasFilter("[EsteSters] = 0 AND [DataSfarsit] IS NULL AND [TipFunctie] = 2");
+
+        // Index secundar pentru picker UI (alegere persoană la creare mandat).
+        // NU unique — pot exista doi „Ion Popescu" în aceeași instituție.
+        modelBuilder.Entity<Persoana>()
+            .HasIndex(p => new { p.InstitutieId, p.NumeComplet });
 
         modelBuilder.Entity<RefreshToken>()
             .HasIndex(rt => rt.TokenHash)
@@ -321,7 +391,7 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
     {
         var acum = DateTime.UtcNow;
         var userId = UserIdCurent;
-        var institutieId = InstitutieIdCurenta;  // citește o singură dată per SaveChanges
+        var institutieId = InstitutieIdCurenta;
 
         var intrari = ChangeTracker.Entries<EntitateDeBaza>().ToList();
         var coadaCascada = new Queue<EntitateDeBaza>();
@@ -383,7 +453,14 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
 
             case PunctOrdineZi p:
                 CascadaPeColectie(Voturi.Where(v => v.PunctId == p.Id), acum, userId, coada);
-                CascadaPeColectie(Documente.Where(d => d.PunctId == p.Id), acum, userId, coada);   // NOU
+                CascadaPeColectie(Documente.Where(d => d.PunctId == p.Id), acum, userId, coada);
+                break;
+
+            // Defense in depth: garda din PersoaneController.Sterge blochează oricum
+            // ștergerea unei Persoane care are mandate. Cascadă acoperă scenariile
+            // în care cineva ar marca Persoana ca Deleted direct prin DbContext.
+            case Persoana pers:
+                CascadaPeColectie(MandateFunctie.Where(mf => mf.PersoanaId == pers.Id), acum, userId, coada);
                 break;
         }
     }
@@ -418,4 +495,6 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
     public DbSet<IncercareTrimitere> IncercariTrimitere { get; set; }
     public DbSet<Transcriere> Transcrieri { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
+    public DbSet<Persoana> Persoane { get; set; }
+    public DbSet<MandatFunctie> MandateFunctie { get; set; }
 }

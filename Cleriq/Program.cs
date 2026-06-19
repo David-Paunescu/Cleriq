@@ -100,6 +100,8 @@ builder.Services.AddScoped<IFurnizorUtilizator, FurnizorUtilizator>();
 builder.Services.AddScoped<IServiciuRefreshTokens, ServiciuRefreshTokens>();
 builder.Services.AddScoped<IGeneratorConvocare, GeneratorConvocare>();
 builder.Services.AddScoped<IGeneratorPdfProcesVerbal, GeneratorPdfProcesVerbal>();
+builder.Services.AddScoped<IServiciuValidareMandate, ServiciuValidareMandate>();
+builder.Services.AddScoped<IServiciuFunctiiIstorice, ServiciuFunctiiIstorice>();
 builder.Services.AddScoped<NotificareLogger>();
 builder.Services.AddScoped<IServiciuNotificareEmail, NotificareSmtp>();
 
