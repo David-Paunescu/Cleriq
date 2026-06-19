@@ -1,0 +1,69 @@
+<h2 mat-dialog-title>Marcare aprobare oficială</h2>
+
+<mat-dialog-content class="continut">
+  <p class="introducere">
+    Conform OUG 57/2019 art. 138, procesul verbal devine act oficial după aprobarea
+    prin vot într-o ședință ulterioară a consiliului.
+  </p>
+
+  @if (seIncarca()) {
+    <div class="centru"><mat-spinner diameter="32" /></div>
+  } @else if (eroare(); as mesaj) {
+    <p class="eroare">{{ mesaj }}</p>
+  } @else if (sedinteDisponibile().length === 0) {
+    <p class="info-gol">
+      Nu există ședințe convocate, în desfășurare sau finalizate. Pentru a marca
+      aprobarea, creează și convoacă ședința în care s-a votat aprobarea.
+    </p>
+  } @else {
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>Ședința în care s-a aprobat</mat-label>
+      <mat-select [value]="sedintaSelectataId()"
+                  (valueChange)="sedintaSelectataId.set($event)">
+        @for (s of sedinteDisponibile(); track s.id) {
+          <mat-option [value]="s.id">
+            {{ formateazaDataOra(s.dataOra) }} — {{ s.titlu }}
+            ({{ etichetaStatusSedinta(s.status) }})
+          </mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    @if (avertismentCronologic()) {
+      <div class="avertisment">
+        <mat-icon>warning</mat-icon>
+        <span>
+          Ședința aleasă este cronologic anterioară procesului verbal. Aceasta e
+          o situație neobișnuită — folosește-o doar pentru date istorice.
+        </span>
+      </div>
+    }
+
+    @if (avertismentConvocata()) {
+      <div class="avertisment">
+        <mat-icon>warning</mat-icon>
+        <span>
+          Ședința aleasă nu este încă marcată ca începută sau finalizată. Continuă
+          doar dacă votul a avut deja loc.
+        </span>
+      </div>
+    }
+
+    @if (sedintaSelectataId()) {
+      <p class="confirmare-finala">
+        După confirmare, procesul verbal devine intangibil: varianta semnată nu
+        mai poate fi înlocuită sau ștearsă. Pentru corecții ulterioare, un Admin
+        poate anula aprobarea.
+      </p>
+    }
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="renunta()">Renunță</button>
+  <button mat-flat-button
+          [disabled]="!sedintaSelectataId() || seIncarca()"
+          (click)="confirma()">
+    Marchează ca aprobat
+  </button>
+</mat-dialog-actions>

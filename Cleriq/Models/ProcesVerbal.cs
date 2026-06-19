@@ -8,6 +8,10 @@ public class ProcesVerbal : EntitateDeBaza, IEntitateCuTenant
     public StatusProcesVerbal Status { get; set; } = StatusProcesVerbal.Draft;
     public DateTime? DataGenerare { get; set; }
     public DateTime? DataFinalizare { get; set; }
+    public DateTime? DataAprobare { get; set; }
+    public int? AprobatDe { get; set; }
+    public int? AprobatInSedintaId { get; set; }
+    public Sedinta? AprobatInSedinta { get; set; }
 
     // Varianta semnată (Nivel 1 semnătură): PDF semnat extern (PAdES cu token sau
     // scan al originalului semnat pe hârtie), încărcat de Admin/Secretar.

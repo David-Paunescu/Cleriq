@@ -1,0 +1,67 @@
+.continut {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 480px;
+}
+
+.introducere {
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 14px;
+}
+
+.full {
+  width: 100%;
+}
+
+.centru {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0;
+}
+
+.eroare {
+  color: var(--mat-sys-error);
+  margin: 0;
+}
+
+.info-gol {
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.avertisment {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px;
+  background: #fff3e0;
+  border-radius: 4px;
+
+  mat-icon {
+    color: #e65100;
+    flex-shrink: 0;
+  }
+
+  span {
+    color: #5d4037;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+}
+
+.confirmare-finala {
+  margin: 0;
+  padding: 12px;
+  background: var(--mat-sys-surface-container-low);
+  border-radius: 4px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+@media (max-width: 599px) {
+  .continut {
+    min-width: 0;
+  }
+}

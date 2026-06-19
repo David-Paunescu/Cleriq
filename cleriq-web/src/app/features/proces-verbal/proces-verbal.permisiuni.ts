@@ -8,12 +8,15 @@ export interface ActiuniProcesVerbal {
   poateIncarcaSemnat: boolean;
   poateDescarcaSemnat: boolean;
   poateStergeSemnat: boolean;
+  poateAproba: boolean;
+  poateDezaproba: boolean;
   esteReadOnly: boolean;
 }
 
 export function actiuniPermise(
   status: StatusProcesVerbal | null,
   areSemnat: boolean,
+  areAprobare: boolean,
   esteAdmin: boolean,
   esteAdminSauSecretar: boolean
 ): ActiuniProcesVerbal {
@@ -29,6 +32,8 @@ export function actiuniPermise(
       poateIncarcaSemnat: false,
       poateDescarcaSemnat: status !== null && areSemnat,
       poateStergeSemnat: false,
+      poateAproba: false,
+      poateDezaproba: false,
       esteReadOnly: true
     };
   }
@@ -38,9 +43,11 @@ export function actiuniPermise(
     poateEdita: esteDraft,
     poateFinaliza: esteDraft,
     poateDescarcaPdf: status !== null,
-    poateIncarcaSemnat: esteFinalizat,
+    poateIncarcaSemnat: esteFinalizat && !areAprobare,
     poateDescarcaSemnat: status !== null && areSemnat,
-    poateStergeSemnat: esteFinalizat && areSemnat && esteAdmin,
+    poateStergeSemnat: esteFinalizat && areSemnat && !areAprobare && esteAdmin,
+    poateAproba: esteFinalizat && !areAprobare,
+    poateDezaproba: areAprobare && esteAdmin,
     esteReadOnly: false
   };
 }

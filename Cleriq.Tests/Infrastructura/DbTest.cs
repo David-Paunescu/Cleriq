@@ -77,6 +77,14 @@ public static class DbTest
         await ctx.SaveChangesAsync();
     }
 
+    public static async Task SeteazaStatusSedintaAsync(int sedintaId, StatusSedinta status)
+    {
+        await using var ctx = CreeazaContext();
+        var s = await ctx.Sedinte.IgnoreQueryFilters().FirstAsync(x => x.Id == sedintaId);
+        s.Status = status;
+        await ctx.SaveChangesAsync();
+    }
+
     public static async Task<string?> CitesteCaleStocareSemnatAsync(int sedintaId)
     {
         await using var ctx = CreeazaContext();

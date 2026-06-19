@@ -12,10 +12,18 @@ export interface ProcesVerbal {
   numeFisierSemnat: string | null;
   marimeSemnat: number | null;
   dataIncarcareSemnat: string | null;
+  dataAprobare: string | null;
+  aprobatInSedintaId: number | null;
+  aprobatInSedintaTitlu: string | null;
+  aprobatInSedintaDataOra: string | null;
 }
 
 export interface EditareProcesVerbal {
   continut: string;
+}
+
+export interface AprobareProcesVerbal {
+  aprobatInSedintaId: number;
 }
 
 export const MARIME_MAXIMA_PV = 25 * 1024 * 1024;

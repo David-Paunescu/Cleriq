@@ -21,6 +21,8 @@ import { ConfirmareDialog, DateConfirmare } from '../../../shared/confirmare/con
 import { formateazaDataOra } from '../../../shared/data';
 import { StatusProcesVerbal } from '../../../shared/enums';
 import { etichetaStatusProcesVerbal } from '../../../shared/etichete';
+import { SedinteService } from '../../sedinte/sedinte.service';
+import { AprobareDialog, DateAprobareDialog } from '../aprobare-dialog/aprobare-dialog';
 import { ProcesVerbal, formateazaMarimePv, valideazaPdfSemnat } from '../proces-verbal.models';
 import { actiuniPermise } from '../proces-verbal.permisiuni';
 import { ProcesVerbalService } from '../proces-verbal.service';
@@ -38,6 +40,7 @@ const DEBOUNCE_AUTOSAVE_MS = 2000;
 })
 export class ProcesVerbalTab implements OnInit, OnDestroy {
   private readonly api = inject(ProcesVerbalService);
+  private readonly sedinteApi = inject(SedinteService);
   private readonly auth = inject(AuthService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
@@ -51,6 +54,7 @@ export class ProcesVerbalTab implements OnInit, OnDestroy {
   readonly seDescarcaPdf = signal(false);
   readonly seIncarcaSemnat = signal(false);
   readonly seDescarcaSemnat = signal(false);
+  readonly seAproba = signal(false);
   readonly eroare = signal<string | null>(null);
   readonly procesVerbal = signal<ProcesVerbal | null>(null);
 
@@ -75,10 +79,14 @@ export class ProcesVerbalTab implements OnInit, OnDestroy {
   readonly areSemnat = computed(() =>
     this.procesVerbal()?.numeFisierSemnat != null);
 
+  readonly areAprobare = computed(() =>
+    this.procesVerbal()?.dataAprobare != null);
+
   readonly actiuni = computed(() =>
     actiuniPermise(
       this.procesVerbal()?.status ?? null,
       this.areSemnat(),
+      this.areAprobare(),
       this.esteAdmin(),
       this.esteAdminSauSecretar()));
 
@@ -433,6 +441,65 @@ export class ProcesVerbalTab implements OnInit, OnDestroy {
         dataIncarcareSemnat: null
       } : null);
       this.snackBar.open('Varianta semnată a fost ștearsă.', 'Închide', { duration: 4000 });
+    } catch (err) {
+      this.snackBar.open(extrageMesajEroare(err), 'Închide', { duration: 5000 });
+    }
+  }
+
+  async marchezaCaAprobat(): Promise<void> {
+    if (!this.actiuni().poateAproba || this.seAproba()) return;
+
+    let dataSedintaPv: string;
+    try {
+      const sedinta = await this.sedinteApi.detalii(this.sedintaId());
+      dataSedintaPv = sedinta.dataOra;
+    } catch (err) {
+      this.snackBar.open(extrageMesajEroare(err), 'Închide', { duration: 5000 });
+      return;
+    }
+
+    const date: DateAprobareDialog = {
+      sedintaPvId: this.sedintaId(),
+      dataSedintaPv
+    };
+
+    const aprobatInSedintaId = await firstValueFrom(
+      this.dialog.open<AprobareDialog, DateAprobareDialog, number | null>(
+        AprobareDialog, { data: date, width: '560px', maxWidth: '95vw' })
+        .afterClosed());
+
+    if (!aprobatInSedintaId) return;
+
+    this.seAproba.set(true);
+    try {
+      const rezultat = await this.api.aproba(this.sedintaId(), aprobatInSedintaId);
+      this.procesVerbal.set(rezultat);
+      this.snackBar.open('Procesul verbal a fost marcat ca aprobat oficial.', 'Închide', { duration: 4000 });
+    } catch (err) {
+      this.snackBar.open(extrageMesajEroare(err), 'Închide', { duration: 5000 });
+    } finally {
+      this.seAproba.set(false);
+    }
+  }
+
+  async anuleazaAprobarea(): Promise<void> {
+    if (!this.actiuni().poateDezaproba) return;
+
+    const date: DateConfirmare = {
+      titlu: 'Anulare aprobare oficială',
+      mesaj: 'Anulezi marcarea de aprobare oficială? Badge-ul „Aprobat oficial" va dispărea de pe portalul public imediat. Această acțiune se folosește doar pentru corecții administrative (de exemplu, marcare în ședința greșită).',
+      etichetaConfirmare: 'Anulează aprobarea',
+      periculos: true
+    };
+    const confirmat = await firstValueFrom(
+      this.dialog.open(ConfirmareDialog, { data: date, width: '520px', maxWidth: '95vw' })
+        .afterClosed());
+    if (!confirmat) return;
+
+    try {
+      const rezultat = await this.api.dezaproba(this.sedintaId());
+      this.procesVerbal.set(rezultat);
+      this.snackBar.open('Aprobarea a fost anulată.', 'Închide', { duration: 4000 });
     } catch (err) {
       this.snackBar.open(extrageMesajEroare(err), 'Închide', { duration: 5000 });
     }

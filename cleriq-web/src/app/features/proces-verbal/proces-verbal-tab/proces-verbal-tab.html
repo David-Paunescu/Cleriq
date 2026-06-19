@@ -36,15 +36,46 @@
     <p class="gol">Procesul verbal nu a fost încă generat.</p>
   }
 } @else if (procesVerbal(); as pv) {
-  <mat-card class="card-status">
+  <mat-card class="card-status" [class.card-status-aprobat]="areAprobare()">
     <mat-card-content>
-      <div class="status-text">
-        <div class="status-titlu">Status: {{ etichetaStatusProcesVerbal(pv.status) }}</div>
-        @if (pv.dataGenerare) {
-          <div class="status-sub">Generat la {{ formateazaDataOra(pv.dataGenerare) }}</div>
-        }
-        @if (pv.dataFinalizare) {
-          <div class="status-sub">Finalizat la {{ formateazaDataOra(pv.dataFinalizare) }}</div>
+      <div class="status-randul">
+        <div class="status-text">
+          <div class="status-titlu">
+            Status: {{ etichetaStatusProcesVerbal(pv.status) }}
+            @if (areAprobare()) {
+              <span class="badge-aprobat">
+                <mat-icon class="icon-aprobat">verified</mat-icon>
+                Aprobat oficial
+              </span>
+            }
+          </div>
+          @if (pv.dataGenerare) {
+            <div class="status-sub">Generat la {{ formateazaDataOra(pv.dataGenerare) }}</div>
+          }
+          @if (pv.dataFinalizare) {
+            <div class="status-sub">Finalizat la {{ formateazaDataOra(pv.dataFinalizare) }}</div>
+          }
+          @if (pv.dataAprobare && pv.aprobatInSedintaDataOra) {
+            <div class="status-sub status-aprobat-detalii">
+              Aprobat oficial la {{ formateazaDataOra(pv.dataAprobare) }},
+              în ședința din {{ formateazaDataOra(pv.aprobatInSedintaDataOra) }}
+              @if (pv.aprobatInSedintaTitlu) {
+                — {{ pv.aprobatInSedintaTitlu }}
+              }
+            </div>
+          }
+        </div>
+        @if (actiuni().poateDezaproba) {
+          <button mat-icon-button [matMenuTriggerFor]="meniuAprobare"
+                  matTooltip="Mai multe">
+            <mat-icon>more_vert</mat-icon>
+          </button>
+          <mat-menu #meniuAprobare="matMenu">
+            <button mat-menu-item (click)="anuleazaAprobarea()">
+              <mat-icon>cancel</mat-icon>
+              <span>Anulează aprobarea</span>
+            </button>
+          </mat-menu>
         }
       </div>
     </mat-card-content>
@@ -199,6 +230,16 @@
       <button mat-flat-button (click)="finalizeaza()" [disabled]="actiuneInCurs()">
         <mat-icon>flag</mat-icon>
         Finalizează procesul verbal
+      </button>
+    }
+    @if (actiuni().poateAproba) {
+      <button mat-flat-button (click)="marchezaCaAprobat()" [disabled]="seAproba()">
+        @if (seAproba()) {
+          <mat-spinner diameter="16"></mat-spinner>
+        } @else {
+          <mat-icon>verified</mat-icon>
+        }
+        Marchează ca aprobat
       </button>
     }
   </div>

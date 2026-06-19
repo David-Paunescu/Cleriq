@@ -70,6 +70,16 @@ public class SedinteController : ControllerBase
         if (sedinta.Status == StatusSedinta.Finalizata)
             return Conflict("O ședință finalizată nu poate fi ștearsă (cerință de transparență și audit legal).");
 
+        var esteSedintaDeAprobare = await _context.ProceseVerbale
+            .AnyAsync(pv => pv.AprobatInSedintaId == id);
+        if (esteSedintaDeAprobare)
+            return Conflict("Această ședință nu poate fi ștearsă: în ea s-au aprobat oficial procese verbale (act legal conform OUG 57/2019).");
+
+        var arePvAprobat = await _context.ProceseVerbale
+            .AnyAsync(pv => pv.SedintaId == id && pv.DataAprobare != null);
+        if (arePvAprobat)
+            return Conflict("Această ședință nu poate fi ștearsă: procesul verbal aferent a fost aprobat oficial (act legal conform OUG 57/2019).");
+
         _context.Sedinte.Remove(sedinta);
         await _context.SaveChangesAsync();
         return NoContent();

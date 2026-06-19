@@ -250,4 +250,339 @@ public class TesteProcesVerbal
             Assert.Equal(HttpStatusCode.NotFound, semnat.StatusCode);
         }
     }
+
+    // === Aproba ===
+
+    [Fact]
+    public async Task Aproba_SedintaFinalizata_200SiCampurileSetate()
+    {
+        var (admin, sedintaPvId) = await ScenariuPvFinalizatAsync();
+        using (admin)
+        {
+            var sedintaAprobareId = await CreeazaSedintaInStatusAsync(admin, StatusSedinta.Finalizata);
+            var raspuns = await admin.PostAsJsonAsync(
+                $"/api/Sedinte/{sedintaPvId}/ProcesVerbal/Aproba",
+                new { aprobatInSedintaId = sedintaAprobareId });
+
+            Assert.Equal(HttpStatusCode.OK, raspuns.StatusCode);
+            var pv = await raspuns.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.NotEqual(JsonValueKind.Null, pv.GetProperty("dataAprobare").ValueKind);
+            Assert.Equal(sedintaAprobareId, pv.GetProperty("aprobatInSedintaId").GetInt32());
+            Assert.False(string.IsNullOrEmpty(pv.GetProperty("aprobatInSedintaTitlu").GetString()));
+            Assert.NotEqual(JsonValueKind.Null, pv.GetProperty("aprobatInSedintaDataOra").ValueKind);
+        }
+    }
+
+    [Fact]
+    public async Task Aproba_SedintaConvocata_200()
+    {
+        var (admin, sedintaPvId) = await ScenariuPvFinalizatAsync();
+        using (admin)
+        {
+            var sedintaAprobareId = await CreeazaSedintaInStatusAsync(admin, StatusSedinta.Convocata);
+            var raspuns = await admin.PostAsJsonAsync(
+                $"/api/Sedinte/{sedintaPvId}/ProcesVerbal/Aproba",
+                new { aprobatInSedintaId = sedintaAprobareId });
+            Assert.Equal(HttpStatusCode.OK, raspuns.StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task Aproba_SedintaInDesfasurare_200()
+    {
+        var (admin, sedintaPvId) = await ScenariuPvFinalizatAsync();
+        using (admin)
+        {
+            var sedintaAprobareId = await CreeazaSedintaInStatusAsync(admin, StatusSedinta.InDesfasurare);
+            var raspuns = await admin.PostAsJsonAsync(
+                $"/api/Sedinte/{sedintaPvId}/ProcesVerbal/Aproba",
+                new { aprobatInSedintaId = sedintaAprobareId });
+            Assert.Equal(HttpStatusCode.OK, raspuns.StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task Aproba_PvDraft_409()
+    {
+        var (admin, sedintaPvId, _) = await ScenariuAsync(1);
+        using (admin)
+        {
+            await admin.GenereazaProcesVerbalAsync(sedintaPvId);
+            var sedintaAprobareId = await CreeazaSedintaInStatusAsync(admin, StatusSedinta.Finalizata);
+            var raspuns = await admin.PostAsJsonAsync(
+                $"/api/Sedinte/{sedintaPvId}/ProcesVerbal/Aproba",
+                new { aprobatInSedintaId = sedintaAprobareId });
+            Assert.Equal(HttpStatusCode.Conflict, raspuns.StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task Aproba_PvDejaAprobat_409()
+    {
+        var (admin, sedintaPvId) = await ScenariuPvFinalizatAsync();
+        using (admin)
+        {
+            var sedintaAprobareId = await CreeazaSedintaInStatusAsync(admin, StatusSedinta.Finalizata);
+            var prima = await admin.PostAsJsonAsync(
+                $"/api/Sedinte/{sedintaPvId}/ProcesVerbal/Aproba",
+                new { aprobatInSedintaId = sedintaAprobareId });
+            Assert.Equal(HttpStatusCode.OK, prima.StatusCode);
+
+            var aDoua = await admin.PostAsJsonAsync(
+                $"/api/Sedinte/{sedintaPvId}/ProcesVerbal/Aproba",
+                new { aprobatInSedintaId = sedintaAprobareId });
+            Assert.Equal(HttpStatusCode.Conflict, aDoua.StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task Aproba_AceeasiSedinta_409()
+    {
+        var (admin, sedintaPvId) = await ScenariuPvFinalizatAsync();
+        using (admin)
+        {
+            var raspuns = await admin.PostAsJsonAsync(
+                $"/api/Sedinte/{sedintaPvId}/ProcesVerbal/Aproba",
+                new { aprobatInSedintaId = sedintaPvId });
+            Assert.Equal(HttpStatusCode.Conflict, raspuns.StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task Aproba_SedintaAltTenant_404()
+    {
+        var (admin1, sedintaPvId) = await ScenariuPvFinalizatAsync();
+        using (admin1)
+        {
+            var inst2 = await _factory.ProvisioneazaInstitutieAsync();
+            using var admin2 = await _factory.ClientAutentificatAsync(inst2.EmailAdmin, inst2.ParolaAdmin);
+            var sedintaAltTenant = await CreeazaSedintaInStatusAsync(admin2, StatusSedinta.Finalizata);
+
+            var raspuns = await admin1.PostAsJsonAsync(
+                $"/api/Sedinte/{sedintaPvId}/ProcesVerbal/Aproba",
+                new { aprobatInSedintaId = sedintaAltTenant });
+            Assert.Equal(HttpStatusCode.NotFound, raspuns.StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task Aproba_SedintaPlanificata_409()
+    {
+        var (admin, sedintaPvId) = await ScenariuPvFinalizatAsync();
+        using (admin)
+        {
+            var sedintaAprobareId = await CreeazaSedintaInStatusAsync(admin, StatusSedinta.Planificata);
+            var raspuns = await admin.PostAsJsonAsync(
+                $"/api/Sedinte/{sedintaPvId}/ProcesVerbal/Aproba",
+                new { aprobatInSedintaId = sedintaAprobareId });
+            Assert.Equal(HttpStatusCode.Conflict, raspuns.StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task Aproba_SedintaAnulata_409()
+    {
+        var (admin, sedintaPvId) = await ScenariuPvFinalizatAsync();
+        using (admin)
+        {
+            var sedintaAprobareId = await CreeazaSedintaInStatusAsync(admin, StatusSedinta.Anulata);
+            var raspuns = await admin.PostAsJsonAsync(
+                $"/api/Sedinte/{sedintaPvId}/ProcesVerbal/Aproba",
+                new { aprobatInSedintaId = sedintaAprobareId });
+            Assert.Equal(HttpStatusCode.Conflict, raspuns.StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task Aproba_CaSecretar_200()
+    {
+        var (admin, sedintaPvId) = await ScenariuPvFinalizatAsync();
+        using (admin)
+        {
+            using var secretar = await CreeazaSecretarAsync(admin);
+            var sedintaAprobareId = await CreeazaSedintaInStatusAsync(admin, StatusSedinta.Finalizata);
+            var raspuns = await secretar.PostAsJsonAsync(
+                $"/api/Sedinte/{sedintaPvId}/ProcesVerbal/Aproba",
+                new { aprobatInSedintaId = sedintaAprobareId });
+            Assert.Equal(HttpStatusCode.OK, raspuns.StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task Aproba_CaConsilier_403()
+    {
+        var (admin, sedintaPvId, consilieri) = await ScenariuAsync(1);
+        using (admin)
+        {
+            await admin.GenereazaProcesVerbalAsync(sedintaPvId);
+            await admin.FinalizeazaProcesVerbalAsync(sedintaPvId);
+            var sedintaAprobareId = await CreeazaSedintaInStatusAsync(admin, StatusSedinta.Finalizata);
+
+            using var consilier = await _factory.ClientConsilierAsync(admin, consilieri[0]);
+            var raspuns = await consilier.PostAsJsonAsync(
+                $"/api/Sedinte/{sedintaPvId}/ProcesVerbal/Aproba",
+                new { aprobatInSedintaId = sedintaAprobareId });
+            Assert.Equal(HttpStatusCode.Forbidden, raspuns.StatusCode);
+        }
+    }
+
+    // === Dezaproba ===
+
+    [Fact]
+    public async Task Dezaproba_CaAdmin_200()
+    {
+        var (admin, sedintaPvId) = await ScenariuPvFinalizatAsync();
+        using (admin)
+        {
+            var sedintaAprobareId = await CreeazaSedintaInStatusAsync(admin, StatusSedinta.Finalizata);
+            await admin.PostAsJsonAsync(
+                $"/api/Sedinte/{sedintaPvId}/ProcesVerbal/Aproba",
+                new { aprobatInSedintaId = sedintaAprobareId });
+
+            var dezaprobare = await admin.DeleteAsync(
+                $"/api/Sedinte/{sedintaPvId}/ProcesVerbal/Aproba");
+            Assert.Equal(HttpStatusCode.OK, dezaprobare.StatusCode);
+
+            var pv = await dezaprobare.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Equal(JsonValueKind.Null, pv.GetProperty("dataAprobare").ValueKind);
+            Assert.Equal(JsonValueKind.Null, pv.GetProperty("aprobatInSedintaId").ValueKind);
+            Assert.Equal(JsonValueKind.Null, pv.GetProperty("aprobatInSedintaTitlu").ValueKind);
+            Assert.Equal(JsonValueKind.Null, pv.GetProperty("aprobatInSedintaDataOra").ValueKind);
+        }
+    }
+
+    [Fact]
+    public async Task Dezaproba_PvNeaprobat_409()
+    {
+        var (admin, sedintaPvId) = await ScenariuPvFinalizatAsync();
+        using (admin)
+        {
+            var raspuns = await admin.DeleteAsync(
+                $"/api/Sedinte/{sedintaPvId}/ProcesVerbal/Aproba");
+            Assert.Equal(HttpStatusCode.Conflict, raspuns.StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task Dezaproba_CaSecretar_403()
+    {
+        var (admin, sedintaPvId) = await ScenariuPvFinalizatAsync();
+        using (admin)
+        {
+            var sedintaAprobareId = await CreeazaSedintaInStatusAsync(admin, StatusSedinta.Finalizata);
+            await admin.PostAsJsonAsync(
+                $"/api/Sedinte/{sedintaPvId}/ProcesVerbal/Aproba",
+                new { aprobatInSedintaId = sedintaAprobareId });
+
+            using var secretar = await CreeazaSecretarAsync(admin);
+            var raspuns = await secretar.DeleteAsync(
+                $"/api/Sedinte/{sedintaPvId}/ProcesVerbal/Aproba");
+            Assert.Equal(HttpStatusCode.Forbidden, raspuns.StatusCode);
+        }
+    }
+
+    // === Gărzi pe acțiuni distructive după aprobare ===
+
+    [Fact]
+    public async Task IncarcaSemnat_DupaAprobare_409()
+    {
+        var (admin, sedintaPvId) = await ScenariuPvFinalizatAsync();
+        using (admin)
+        {
+            var sedintaAprobareId = await CreeazaSedintaInStatusAsync(admin, StatusSedinta.Finalizata);
+            await admin.PostAsJsonAsync(
+                $"/api/Sedinte/{sedintaPvId}/ProcesVerbal/Aproba",
+                new { aprobatInSedintaId = sedintaAprobareId });
+
+            var raspuns = await admin.IncarcaPvSemnatAsync(
+                sedintaPvId, Encoding.UTF8.GetBytes("%PDF-1.4 semnat"), "pv-semnat.pdf");
+            Assert.Equal(HttpStatusCode.Conflict, raspuns.StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task StergeSemnat_DupaAprobare_409()
+    {
+        var (admin, sedintaPvId) = await ScenariuPvFinalizatAsync();
+        using (admin)
+        {
+            var upload = await admin.IncarcaPvSemnatAsync(
+                sedintaPvId, Encoding.UTF8.GetBytes("%PDF-1.4 semnat"), "pv-semnat.pdf");
+            Assert.Equal(HttpStatusCode.OK, upload.StatusCode);
+
+            var sedintaAprobareId = await CreeazaSedintaInStatusAsync(admin, StatusSedinta.Finalizata);
+            await admin.PostAsJsonAsync(
+                $"/api/Sedinte/{sedintaPvId}/ProcesVerbal/Aproba",
+                new { aprobatInSedintaId = sedintaAprobareId });
+
+            var stergere = await admin.DeleteAsync(
+                $"/api/Sedinte/{sedintaPvId}/ProcesVerbal/Semnat");
+            Assert.Equal(HttpStatusCode.Conflict, stergere.StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task StergeSedinta_CareAprobaPv_409()
+    {
+        var (admin, sedintaPvId) = await ScenariuPvFinalizatAsync();
+        using (admin)
+        {
+            var sedintaAprobareId = await CreeazaSedintaInStatusAsync(admin, StatusSedinta.Convocata);
+            await admin.PostAsJsonAsync(
+                $"/api/Sedinte/{sedintaPvId}/ProcesVerbal/Aproba",
+                new { aprobatInSedintaId = sedintaAprobareId });
+
+            var stergere = await admin.DeleteAsync($"/api/Sedinte/{sedintaAprobareId}");
+            Assert.Equal(HttpStatusCode.Conflict, stergere.StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task StergeSedinta_AlCareiPvEsteAprobat_409()
+    {
+        var (admin, sedintaPvId) = await ScenariuPvFinalizatAsync();
+        using (admin)
+        {
+            var sedintaAprobareId = await CreeazaSedintaInStatusAsync(admin, StatusSedinta.Finalizata);
+            await admin.PostAsJsonAsync(
+                $"/api/Sedinte/{sedintaPvId}/ProcesVerbal/Aproba",
+                new { aprobatInSedintaId = sedintaAprobareId });
+
+            var stergere = await admin.DeleteAsync($"/api/Sedinte/{sedintaPvId}");
+            Assert.Equal(HttpStatusCode.Conflict, stergere.StatusCode);
+        }
+    }
+
+    // === Helpere private pentru aprobare PV ===
+
+    private async Task<(HttpClient Admin, int SedintaId)> ScenariuPvFinalizatAsync()
+    {
+        var (admin, sedintaId, _) = await ScenariuAsync(1);
+        await admin.GenereazaProcesVerbalAsync(sedintaId);
+        await admin.FinalizeazaProcesVerbalAsync(sedintaId);
+        return (admin, sedintaId);
+    }
+
+    private async Task<int> CreeazaSedintaInStatusAsync(HttpClient admin, StatusSedinta status)
+    {
+        var sedintaId = await admin.CreeazaSedintaAsync();
+        if (status != StatusSedinta.Planificata)
+            await DbTest.SeteazaStatusSedintaAsync(sedintaId, status);
+        return sedintaId;
+    }
+
+    private async Task<HttpClient> CreeazaSecretarAsync(HttpClient admin)
+    {
+        var email = $"secretar-{Guid.NewGuid():N}@test.ro";
+        const string parola = "Secretar1!";
+        var register = await admin.PostAsJsonAsync("/api/Auth/register", new
+        {
+            email,
+            parola,
+            numeComplet = "Secretar Test",
+            rol = "Secretar"
+        });
+        Assert.True(register.IsSuccessStatusCode, await register.Content.ReadAsStringAsync());
+        return await _factory.ClientAutentificatAsync(email, parola);
+    }
 }

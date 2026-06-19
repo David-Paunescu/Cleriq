@@ -40,7 +40,9 @@ public class ProcesVerbalController : ControllerBase
         if (!sedintaExista)
             return NotFound("Ședința nu există.");
 
-        var pv = await _context.ProceseVerbale.FirstOrDefaultAsync(p => p.SedintaId == sedintaId);
+        var pv = await _context.ProceseVerbale
+            .Include(p => p.AprobatInSedinta)
+            .FirstOrDefaultAsync(p => p.SedintaId == sedintaId);
         if (pv is null)
             return NotFound("Nu există proces verbal pentru această ședință.");
 
@@ -165,6 +167,63 @@ public class ProcesVerbalController : ControllerBase
         return Ok(MapeazaSpreDto(pv));
     }
 
+    [HttpPost("Aproba")]
+    [Authorize(Roles = "Admin,Secretar")]
+    public async Task<IActionResult> Aproba(int sedintaId, AprobareProcesVerbalDto dto)
+    {
+        var pv = await _context.ProceseVerbale
+            .FirstOrDefaultAsync(p => p.SedintaId == sedintaId);
+        if (pv is null)
+            return NotFound("Nu există proces verbal pentru această ședință.");
+
+        if (pv.Status != StatusProcesVerbal.Finalizat)
+            return Conflict("Doar un proces verbal finalizat poate fi marcat ca aprobat.");
+
+        if (pv.DataAprobare is not null)
+            return Conflict("Procesul verbal este deja marcat ca aprobat oficial.");
+
+        if (dto.AprobatInSedintaId == sedintaId)
+            return Conflict("Un proces verbal nu poate fi aprobat în propria ședință.");
+
+        var sedintaDeAprobare = await _context.Sedinte
+            .FirstOrDefaultAsync(s => s.Id == dto.AprobatInSedintaId);
+        if (sedintaDeAprobare is null)
+            return NotFound("Ședința de aprobare nu există.");
+
+        if (sedintaDeAprobare.Status != StatusSedinta.Convocata
+            && sedintaDeAprobare.Status != StatusSedinta.InDesfasurare
+            && sedintaDeAprobare.Status != StatusSedinta.Finalizata)
+            return Conflict("Ședința de aprobare trebuie să fie convocată, în desfășurare sau finalizată.");
+
+        pv.DataAprobare = DateTime.UtcNow;
+        pv.AprobatDe = _context.UserIdCurent;
+        pv.AprobatInSedinta = sedintaDeAprobare;
+
+        await _context.SaveChangesAsync();
+        return Ok(MapeazaSpreDto(pv));
+    }
+
+    [HttpDelete("Aproba")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Dezaproba(int sedintaId)
+    {
+        var pv = await _context.ProceseVerbale
+            .FirstOrDefaultAsync(p => p.SedintaId == sedintaId);
+        if (pv is null)
+            return NotFound("Nu există proces verbal pentru această ședință.");
+
+        if (pv.DataAprobare is null)
+            return Conflict("Procesul verbal nu este marcat ca aprobat.");
+
+        pv.DataAprobare = null;
+        pv.AprobatDe = null;
+        pv.AprobatInSedintaId = null;
+        pv.AprobatInSedinta = null;
+
+        await _context.SaveChangesAsync();
+        return Ok(MapeazaSpreDto(pv));
+    }
+
     // ============= PV semnat (Nivel 1 semnătură) =============
     // Fluxul real: secretarul descarcă PDF-ul generat, îl semnează extern
     // (PAdES cu token, SAU print → semnături olografe → scan), apoi îl încarcă aici.
@@ -186,7 +245,8 @@ public class ProcesVerbalController : ControllerBase
         // diverge de textul încă editabil. Finalizat e ireversibil → invariant solid.
         if (pv.Status != StatusProcesVerbal.Finalizat)
             return Conflict("Doar un proces verbal finalizat poate primi varianta semnată.");
-
+        if (pv.DataAprobare is not null)
+            return Conflict("PV-ul a fost aprobat oficial. Varianta semnată nu mai poate fi înlocuită.");
         if (fisier is null || fisier.Length == 0)
             return BadRequest("Fișier lipsă.");
         if (fisier.Length > ValidareDocument.MarimeMaxima)
@@ -268,6 +328,8 @@ public class ProcesVerbalController : ControllerBase
             return NotFound("Nu există proces verbal pentru această ședință.");
         if (string.IsNullOrEmpty(pv.CaleStocareSemnat))
             return NotFound("Nu există variantă semnată încărcată.");
+        if (pv.DataAprobare is not null)
+            return Conflict("PV-ul a fost aprobat oficial. Varianta semnată nu mai poate fi ștearsă.");
 
         pv.CaleStocareSemnat = null;
         pv.NumeFisierSemnat = null;
@@ -419,5 +481,7 @@ public class ProcesVerbalController : ControllerBase
     private static ProcesVerbalDto MapeazaSpreDto(ProcesVerbal pv) => new(
         pv.Id, pv.SedintaId, pv.Continut, pv.Status,
         pv.DataGenerare, pv.DataFinalizare, pv.InstitutieId, pv.CreatLa,
-        pv.NumeFisierSemnat, pv.MarimeSemnat, pv.DataIncarcareSemnat);
+        pv.NumeFisierSemnat, pv.MarimeSemnat, pv.DataIncarcareSemnat,
+        pv.DataAprobare, pv.AprobatInSedintaId,
+        pv.AprobatInSedinta?.Titlu, pv.AprobatInSedinta?.DataOra);
 }

@@ -30,6 +30,16 @@ export class ProcesVerbalService {
       this.http.post<ProcesVerbal>(`${this.url(sedintaId)}/Finalizeaza`, {}));
   }
 
+  aproba(sedintaId: number, aprobatInSedintaId: number): Promise<ProcesVerbal> {
+    return firstValueFrom(
+      this.http.post<ProcesVerbal>(`${this.url(sedintaId)}/Aproba`, { aprobatInSedintaId }));
+  }
+
+  dezaproba(sedintaId: number): Promise<ProcesVerbal> {
+    return firstValueFrom(
+      this.http.delete<ProcesVerbal>(`${this.url(sedintaId)}/Aproba`));
+  }
+
   async descarcaPdf(sedintaId: number, numeAfisat: string): Promise<void> {
     const blob = await firstValueFrom(
       this.http.get(`${this.url(sedintaId)}/Pdf`, { responseType: 'blob' }));

@@ -135,6 +135,12 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             .HasForeignKey(x => x.InstitutieId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        modelBuilder.Entity<ProcesVerbal>()
+            .HasOne(pv => pv.AprobatInSedinta)
+            .WithMany()
+            .HasForeignKey(pv => pv.AprobatInSedintaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         modelBuilder.Entity<Convocare>()
             .HasOne(x => x.Institutie)
             .WithMany()

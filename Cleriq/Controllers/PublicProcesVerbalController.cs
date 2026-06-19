@@ -46,7 +46,10 @@ public class PublicProcesVerbalController : ControllerBase
 
         return Ok(new PublicProcesVerbalDto(
             pv.SedintaId, pv.Continut, pv.DataFinalizare,
-            !string.IsNullOrEmpty(pv.CaleStocareSemnat)));
+            !string.IsNullOrEmpty(pv.CaleStocareSemnat),
+            pv.AprobatInSedintaId,
+            pv.AprobatInSedinta?.Titlu,
+            pv.AprobatInSedinta?.DataOra));
     }
 
     // GET /public/{slug}/sedinte/{sedintaId}/procesverbal/markdown
@@ -120,9 +123,11 @@ public class PublicProcesVerbalController : ControllerBase
             && s.Status != StatusSedinta.Anulata);
         if (!sedintaPublica) return null;
 
-        return await _context.ProceseVerbale.FirstOrDefaultAsync(p =>
-            p.SedintaId == sedintaId
-            && p.Status == StatusProcesVerbal.Finalizat);
+        return await _context.ProceseVerbale
+            .Include(p => p.AprobatInSedinta)
+            .FirstOrDefaultAsync(p =>
+                p.SedintaId == sedintaId
+                && p.Status == StatusProcesVerbal.Finalizat);
     }
 
     private async Task<byte[]?> CitestePdfDinCacheAsync(string cheie, CancellationToken ct)

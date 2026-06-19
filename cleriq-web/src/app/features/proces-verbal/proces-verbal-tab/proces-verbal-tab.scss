@@ -230,3 +230,37 @@
   margin: 16px 0;
   flex-wrap: wrap;
 }
+
+.status-randul {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.card-status-aprobat {
+  border-left: 4px solid #1e7e34;
+}
+
+.badge-aprobat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  background: #e6f4ea;
+  color: #1e7e34;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.icon-aprobat {
+  font-size: 14px !important;
+  width: 14px !important;
+  height: 14px !important;
+}
+
+.status-aprobat-detalii {
+  color: #1e7e34;
+  font-weight: 500;
+}
