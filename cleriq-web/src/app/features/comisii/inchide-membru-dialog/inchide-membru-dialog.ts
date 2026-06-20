@@ -44,7 +44,7 @@ export class InchideMembruDialog {
 
     const v = this.form.getRawValue();
     if (v.dataSfarsit < this.date.dataInceput) {
-      this.eroare.set('Data sfârșit nu poate fi anterioară datei de început a membriei.');
+      this.eroare.set('Data sfârșit nu poate fi anterioară datei de început.');
       return;
     }
 

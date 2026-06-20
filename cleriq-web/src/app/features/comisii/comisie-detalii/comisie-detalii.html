@@ -68,13 +68,13 @@
                 <span>{{ formateazaData(m.dataInceput) }}</span>
                 @if (m.dataInceputEstimata && esteAdmin()) {
                   <button type="button" class="badge-estimata"
-                          matTooltip="Această dată e proxy de migrare. Click pentru a o corecta."
+                          matTooltip="Această dată este aproximativă. Click pentru a o corecta."
                           (click)="corecteazaDataInceput(m)">
                     estimată
                   </button>
                 } @else if (m.dataInceputEstimata) {
                   <span class="badge-estimata badge-estimata-readonly"
-                        matTooltip="Această dată e proxy de migrare. Cere unui Admin să o corecteze.">
+                        matTooltip="Această dată este aproximativă. Cere unui Admin să o corecteze.">
                     estimată
                   </span>
                 }

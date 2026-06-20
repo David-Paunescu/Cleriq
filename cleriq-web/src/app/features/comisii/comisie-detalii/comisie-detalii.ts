@@ -160,7 +160,7 @@ export class ComisieDetalii {
         .afterClosed());
     if (!rezultat) return;
 
-    this.snackBar.open('Membrie închisă.', 'Închide', { duration: 4000 });
+    this.snackBar.open('Membru scos din comisie.', 'Închide', { duration: 4000 });
     await this.incarca();
   }
 
