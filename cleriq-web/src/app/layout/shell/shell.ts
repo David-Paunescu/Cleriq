@@ -9,19 +9,35 @@ import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatDividerModule } from '@angular/material/divider';
 import { AuthService } from '../../core/auth/auth.service';
 
 interface ElementMeniu {
   eticheta: string;
   icon: string;
   ruta: string;
-  roluri?: string[];   // undefined = vizibil pentru orice utilizator autentificat
+  roluri?: string[];
 }
 
-const MENIU: ElementMeniu[] = [
-  { eticheta: 'Acasă', icon: 'home', ruta: '/' },
-  { eticheta: 'Consilieri', icon: 'groups', ruta: '/consilieri' },
-  { eticheta: 'Ședințe', icon: 'event', ruta: '/sedinte' }
+interface GrupMeniu {
+  elemente: ElementMeniu[];
+}
+
+const GRUPURI: GrupMeniu[] = [
+  {
+    elemente: [
+      { eticheta: 'Acasă', icon: 'home', ruta: '/' },
+      { eticheta: 'Ședințe', icon: 'event', ruta: '/sedinte' }
+    ]
+  },
+  {
+    elemente: [
+      { eticheta: 'Consilieri', icon: 'groups', ruta: '/consilieri' },
+      { eticheta: 'Persoane', icon: 'badge', ruta: '/persoane' },
+      { eticheta: 'Funcții oficiale', icon: 'workspace_premium', ruta: '/functii-oficiale' },
+      { eticheta: 'Comisii', icon: 'groups_3', ruta: '/comisii' }
+    ]
+  }
 ];
 
 @Component({
@@ -29,7 +45,7 @@ const MENIU: ElementMeniu[] = [
   imports: [
     RouterOutlet, RouterLink, RouterLinkActive,
     MatToolbarModule, MatSidenavModule, MatListModule,
-    MatIconModule, MatButtonModule, MatMenuModule
+    MatIconModule, MatButtonModule, MatMenuModule, MatDividerModule
   ],
   templateUrl: './shell.html',
   styleUrl: './shell.scss'
@@ -42,6 +58,10 @@ export class Shell {
     this.breakpoints.observe('(max-width: 959.98px)').pipe(map(r => r.matches)),
     { initialValue: false });
 
-  readonly elementeMeniu = computed(() =>
-    MENIU.filter(e => !e.roluri || this.auth.areOricareRol(...e.roluri)));
+  readonly grupuriMeniu = computed(() =>
+    GRUPURI
+      .map(g => ({
+        elemente: g.elemente.filter(e => !e.roluri || this.auth.areOricareRol(...e.roluri))
+      }))
+      .filter(g => g.elemente.length > 0));
 }

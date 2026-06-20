@@ -173,3 +173,38 @@ Content-Type: application/json
 ### Detalii comisie cu includeIstoric (nu e crucial — verifică doar parser query param)
 GET {{host}}/api/Comisii/1?includeIstoric=true
 Authorization: Bearer {{loginAdmin.response.body.$.token}}
+
+
+////
+
+
+### Setare SMTP Slobozia (Mailtrap sandbox)
+PUT https://localhost:7006/api/Smtp
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "host": "sandbox.smtp.mailtrap.io",
+  "port": 2525,
+  "utilizator": "b6f4711dbd2bfb",
+  "parola": "0c0be1bb71a7a5",
+  "emailFrom": "no-reply@slobozia.ro",
+  "numeFrom": "Primăria Slobozia",
+  "securitate": 1
+}
+
+
+### Setare SMTP Slobozia (Mailtrap sandbox)
+PUT https://localhost:7006/api/Institutii/Smtp
+Authorization: Bearer {{loginAdmin.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "host": "sandbox.smtp.mailtrap.io",
+  "port": 2525,
+  "utilizator": "b6f4711dbd2bfb",
+  "parola": "0c0be1bb71a7a5",
+  "emailFrom": "no-reply@slobozia.ro",
+  "numeFrom": "Primăria Slobozia",
+  "securitate": 1
+}

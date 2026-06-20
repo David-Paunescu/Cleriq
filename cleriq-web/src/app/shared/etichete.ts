@@ -1,6 +1,7 @@
 import { ModDesfasurare, StatusSedinta, TipSedinta, OptiuneVot, RezultatPunct, StatusPrezenta, 
          TipMajoritate, TipPunct, TipVot, TipDocument, StatusTrimitere, StatusConvocare,
-         CanalNotificare, StatusIncercare, StatusTranscriere, StatusProcesVerbal } from './enums';
+         CanalNotificare, StatusIncercare, StatusTranscriere, StatusProcesVerbal, TipFunctie,
+         RolComisie  } from './enums';
 
 export function etichetaTipSedinta(t: TipSedinta): string {
   switch (t) {
@@ -136,5 +137,21 @@ export function etichetaStatusProcesVerbal(s: StatusProcesVerbal): string {
   switch (s) {
     case StatusProcesVerbal.Draft: return 'Draft';
     case StatusProcesVerbal.Finalizat: return 'Finalizat';
+  }
+}
+
+export function etichetaTipFunctie(t: TipFunctie): string {
+  switch (t) {
+    case TipFunctie.Primar: return 'Primar';
+    case TipFunctie.Viceprimar: return 'Viceprimar';
+    case TipFunctie.SecretarUat: return 'Secretar UAT';
+  }
+}
+
+export function etichetaRolComisie(r: RolComisie): string {
+  switch (r) {
+    case RolComisie.Presedinte: return 'Președinte';
+    case RolComisie.Secretar: return 'Secretar';
+    case RolComisie.Membru: return 'Membru';
   }
 }

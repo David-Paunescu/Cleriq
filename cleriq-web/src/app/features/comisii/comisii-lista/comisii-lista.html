@@ -1,0 +1,60 @@
+<div class="antet">
+  <h1>Comisii</h1>
+  @if (esteAdmin()) {
+    <button mat-flat-button (click)="adauga()">
+      <mat-icon>add</mat-icon>
+      Comisie nouă
+    </button>
+  }
+</div>
+
+<mat-form-field appearance="outline" class="cautare">
+  <mat-label>Caută</mat-label>
+  <input matInput type="search" (input)="laCautare($event)" placeholder="Denumire sau descriere" />
+  <mat-icon matSuffix>search</mat-icon>
+</mat-form-field>
+
+@if (seIncarca()) {
+  <div class="centru"><mat-spinner diameter="40" /></div>
+} @else if (eroare()) {
+  <div class="centru">
+    <p class="eroare">{{ eroare() }}</p>
+    <button mat-stroked-button (click)="incarca()">Reîncearcă</button>
+  </div>
+} @else {
+  <div class="tabel-container">
+    <table mat-table [dataSource]="comisiiFiltrate()" class="tabel">
+      <ng-container matColumnDef="denumire">
+        <th mat-header-cell *matHeaderCellDef>Denumire</th>
+        <td mat-cell *matCellDef="let c" class="titlu-principal">{{ c.denumire }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="descriere">
+        <th mat-header-cell *matHeaderCellDef>Descriere</th>
+        <td mat-cell *matCellDef="let c">{{ c.descriere ?? '—' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="actiuni">
+        <th mat-header-cell *matHeaderCellDef class="col-actiuni"></th>
+        <td mat-cell *matCellDef="let c" class="col-actiuni">
+          <button mat-icon-button matTooltip="Editează" (click)="editeaza(c, $event)">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button mat-icon-button matTooltip="Șterge" (click)="sterge(c, $event)">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="coloane()"></tr>
+      <tr mat-row *matRowDef="let row; columns: coloane()"
+          class="rand-clickabil" (click)="deschide(row)"></tr>
+    </table>
+  </div>
+
+  @if (comisiiFiltrate().length === 0) {
+    <p class="gol">
+      {{ filtru() ? 'Nicio comisie nu corespunde căutării.' : 'Nu există comisii înregistrate.' }}
+    </p>
+  }
+}

@@ -1,0 +1,122 @@
+<div class="antet">
+  <button mat-icon-button (click)="inapoiLaLista()" aria-label="Înapoi">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  @if (comisie(); as c) {
+    <div class="antet-text">
+      <h1>{{ c.denumire }}</h1>
+      @if (c.descriere) {
+        <p class="descriere">{{ c.descriere }}</p>
+      }
+    </div>
+
+    @if (esteAdmin()) {
+      <div class="antet-actiuni">
+        <button mat-stroked-button (click)="editeazaComisie()">
+          <mat-icon>edit</mat-icon> Editează
+        </button>
+        <button mat-icon-button matTooltip="Șterge comisia" (click)="stergeComisie()">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </div>
+    }
+  }
+</div>
+
+@if (seIncarca()) {
+  <div class="centru"><mat-spinner diameter="40" /></div>
+} @else if (eroare(); as mesaj) {
+  <div class="centru">
+    <p class="eroare">{{ mesaj }}</p>
+    <button mat-stroked-button (click)="incarca()">Reîncearcă</button>
+  </div>
+} @else if (comisie()) {
+  <mat-card class="card-membri">
+    <mat-card-header class="antet-membri">
+      <mat-card-title>Membri</mat-card-title>
+      <div class="actiuni-membri">
+        <mat-slide-toggle
+          [checked]="includeIstoric()"
+          (change)="toggleIstoric()">
+          Include istoric
+        </mat-slide-toggle>
+        @if (esteAdmin()) {
+          <button mat-flat-button (click)="adaugaMembru()">
+            <mat-icon>person_add</mat-icon>
+            Adaugă membru
+          </button>
+        }
+      </div>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="tabel-container">
+        <table mat-table [dataSource]="membriSortati()" class="tabel">
+          <ng-container matColumnDef="consilier">
+            <th mat-header-cell *matHeaderCellDef>Consilier</th>
+            <td mat-cell *matCellDef="let m">{{ m.numeComplet }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="rol">
+            <th mat-header-cell *matHeaderCellDef>Rol</th>
+            <td mat-cell *matCellDef="let m">{{ etichetaRol(m.rol) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="dataInceput">
+            <th mat-header-cell *matHeaderCellDef>Început</th>
+            <td mat-cell *matCellDef="let m">
+              <div class="data-cu-badge">
+                <span>{{ formateazaData(m.dataInceput) }}</span>
+                @if (m.dataInceputEstimata && esteAdmin()) {
+                  <button type="button" class="badge-estimata"
+                          matTooltip="Această dată e proxy de migrare. Click pentru a o corecta."
+                          (click)="corecteazaDataInceput(m)">
+                    estimată
+                  </button>
+                } @else if (m.dataInceputEstimata) {
+                  <span class="badge-estimata badge-estimata-readonly"
+                        matTooltip="Această dată e proxy de migrare. Cere unui Admin să o corecteze.">
+                    estimată
+                  </span>
+                }
+              </div>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="dataSfarsit">
+            <th mat-header-cell *matHeaderCellDef>Sfârșit</th>
+            <td mat-cell *matCellDef="let m">
+              @if (m.dataSfarsit) {
+                <span class="data-sfarsit">{{ formateazaData(m.dataSfarsit) }}</span>
+              } @else {
+                <span class="badge-activ">activ</span>
+              }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="actiuni">
+            <th mat-header-cell *matHeaderCellDef class="col-actiuni"></th>
+            <td mat-cell *matCellDef="let m" class="col-actiuni">
+              @if (!m.dataSfarsit) {
+                <button mat-icon-button matTooltip="Scoate din comisie"
+                        (click)="inchideMembrie(m)">
+                  <mat-icon>person_remove</mat-icon>
+                </button>
+              }
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="coloane()"></tr>
+          <tr mat-row *matRowDef="let row; columns: coloane()"></tr>
+        </table>
+      </div>
+
+      @if (membriSortati().length === 0) {
+        <p class="gol">
+          {{ includeIstoric()
+            ? 'Comisia nu are membri.'
+            : 'Comisia nu are membri activi. Activează „Include istoric" pentru a vedea cei care au făcut parte în trecut.' }}
+        </p>
+      }
+    </mat-card-content>
+  </mat-card>
+}

@@ -1,0 +1,19 @@
+.continut {
+  display: flex;
+  flex-direction: column;
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+.centru {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0;
+}
+
+.eroare {
+  color: var(--mat-sys-error);
+  margin: 0;
+}

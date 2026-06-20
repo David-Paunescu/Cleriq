@@ -1,0 +1,30 @@
+<h2 mat-dialog-title>Corectează data început</h2>
+
+<form [formGroup]="form" (ngSubmit)="salveaza()">
+  <mat-dialog-content class="continut">
+    <p class="descriere">
+      Data curentă de început pentru „{{ date.numeComplet }}" e marcată ca estimată
+      (proxy de migrare). Setează data reală la care a devenit membru al comisiei.
+    </p>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Data început reală</mat-label>
+      <input matInput type="date" formControlName="dataInceput"
+             [max]="date.dataSfarsit ?? ''" />
+      @if (form.controls.dataInceput.hasError('required')) {
+        <mat-error>Data este obligatorie.</mat-error>
+      }
+    </mat-form-field>
+
+    @if (eroare(); as mesaj) {
+      <p class="eroare">{{ mesaj }}</p>
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" mat-dialog-close>Renunță</button>
+    <button mat-flat-button type="submit" [disabled]="seSalveaza()">
+      {{ seSalveaza() ? 'Se salvează...' : 'Salvează' }}
+    </button>
+  </mat-dialog-actions>
+</form>

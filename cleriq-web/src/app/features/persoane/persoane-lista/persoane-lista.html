@@ -1,0 +1,86 @@
+<div class="antet">
+  <h1>Persoane</h1>
+  @if (esteAdmin()) {
+    <button mat-flat-button (click)="adauga()">
+      <mat-icon>add</mat-icon>
+      Adaugă persoană
+    </button>
+  }
+</div>
+
+<p class="descriere-pagina">
+  Persoane fizice care pot deține funcții oficiale (primar, secretar UAT).
+  Viceprimarii sunt aleși dintre consilieri și se gestionează din pagina
+  <strong>Funcții oficiale</strong>.
+</p>
+
+<mat-form-field appearance="outline" class="cautare">
+  <mat-label>Caută</mat-label>
+  <input matInput type="search" (input)="laCautare($event)" placeholder="Nume sau email" />
+  <mat-icon matSuffix>search</mat-icon>
+</mat-form-field>
+
+@if (seIncarca()) {
+  <div class="centru"><mat-spinner diameter="40" /></div>
+} @else if (eroare()) {
+  <div class="centru">
+    <p class="eroare">{{ eroare() }}</p>
+    <button mat-stroked-button (click)="incarca()">Reîncearcă</button>
+  </div>
+} @else {
+  <div class="tabel-container">
+    <table mat-table [dataSource]="persoaneFiltrate()" class="tabel">
+      <ng-container matColumnDef="numeComplet">
+        <th mat-header-cell *matHeaderCellDef>Nume complet</th>
+        <td mat-cell *matCellDef="let p">{{ p.numeComplet }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="email">
+        <th mat-header-cell *matHeaderCellDef>Email</th>
+        <td mat-cell *matCellDef="let p">{{ p.email ?? '—' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="telefon">
+        <th mat-header-cell *matHeaderCellDef>Telefon</th>
+        <td mat-cell *matCellDef="let p">{{ p.telefon ?? '—' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="mandate">
+        <th mat-header-cell *matHeaderCellDef>Mandate</th>
+        <td mat-cell *matCellDef="let p">
+          <span class="badge"
+                [class.badge-are]="p.areMandate"
+                [class.badge-fara]="!p.areMandate"
+                [matTooltip]="p.areMandate
+                  ? 'Persoana are mandate de funcție în istoric — ștergerea este blocată'
+                  : 'Persoana nu apare în niciun mandat — poate fi ștearsă'">
+            {{ p.areMandate ? 'Are mandate' : 'Neutilizată' }}
+          </span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="actiuni">
+        <th mat-header-cell *matHeaderCellDef class="col-actiuni"></th>
+        <td mat-cell *matCellDef="let p" class="col-actiuni">
+          <button mat-icon-button matTooltip="Editează" (click)="editeaza(p)">
+            <mat-icon>edit</mat-icon>
+          </button>
+          @if (permisiuni(p).poateSterge) {
+            <button mat-icon-button matTooltip="Șterge" (click)="sterge(p)">
+              <mat-icon>delete</mat-icon>
+            </button>
+          }
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="coloane()"></tr>
+      <tr mat-row *matRowDef="let row; columns: coloane()"></tr>
+    </table>
+  </div>
+
+  @if (persoaneFiltrate().length === 0) {
+    <p class="gol">
+      {{ filtru() ? 'Nicio persoană nu corespunde căutării.' : 'Nu există persoane înregistrate.' }}
+    </p>
+  }
+}

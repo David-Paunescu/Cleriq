@@ -100,3 +100,15 @@ export enum StatusProcesVerbal {
   Draft = 1,
   Finalizat = 2
 }
+
+export enum TipFunctie {
+  Primar = 1,
+  Viceprimar = 2,
+  SecretarUat = 3
+}
+
+export enum RolComisie {
+  Presedinte = 1,
+  Secretar = 2,
+  Membru = 3
+}

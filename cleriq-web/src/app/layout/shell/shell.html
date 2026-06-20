@@ -4,20 +4,25 @@
     [mode]="esteIngust() ? 'over' : 'side'"
     [opened]="!esteIngust()"
     class="shell-sidenav">
-    <mat-nav-list>
-      @for (element of elementeMeniu(); track element.ruta) {
-        <a mat-list-item
-           [routerLink]="element.ruta"
-           routerLinkActive
-           #rla="routerLinkActive"
-           [routerLinkActiveOptions]="{ exact: element.ruta === '/' }"
-           [activated]="rla.isActive"
-           (click)="esteIngust() && sidenav.close()">
-          <mat-icon matListItemIcon>{{ element.icon }}</mat-icon>
-          <span matListItemTitle>{{ element.eticheta }}</span>
-        </a>
-      }
-    </mat-nav-list>
+<mat-nav-list>
+  @for (grup of grupuriMeniu(); track $index; let isLast = $last) {
+    @for (element of grup.elemente; track element.ruta) {
+      <a mat-list-item
+         [routerLink]="element.ruta"
+         routerLinkActive
+         #rla="routerLinkActive"
+         [routerLinkActiveOptions]="{ exact: element.ruta === '/' }"
+         [activated]="rla.isActive"
+         (click)="esteIngust() && sidenav.close()">
+        <mat-icon matListItemIcon>{{ element.icon }}</mat-icon>
+        <span matListItemTitle>{{ element.eticheta }}</span>
+      </a>
+    }
+    @if (!isLast) {
+      <mat-divider />
+    }
+  }
+</mat-nav-list>
   </mat-sidenav>
 
   <mat-sidenav-content>

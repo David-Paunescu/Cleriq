@@ -1,0 +1,29 @@
+<h2 mat-dialog-title>Închidere membrie</h2>
+
+<form [formGroup]="form" (ngSubmit)="salveaza()">
+  <mat-dialog-content class="continut">
+    <p class="descriere">
+      Setezi data la care „{{ date.numeComplet }}" a încetat să mai fie membru
+      al comisiei. Implicit, data este astăzi; modifică doar pentru închideri retroactive.
+    </p>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Data sfârșit</mat-label>
+      <input matInput type="date" formControlName="dataSfarsit" [min]="date.dataInceput" />
+      @if (form.controls.dataSfarsit.hasError('required')) {
+        <mat-error>Data este obligatorie.</mat-error>
+      }
+    </mat-form-field>
+
+    @if (eroare(); as mesaj) {
+      <p class="eroare">{{ mesaj }}</p>
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" mat-dialog-close>Renunță</button>
+    <button mat-flat-button type="submit" class="btn-periculos" [disabled]="seSalveaza()">
+      {{ seSalveaza() ? 'Se închide...' : 'Închide membria' }}
+    </button>
+  </mat-dialog-actions>
+</form>

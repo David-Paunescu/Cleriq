@@ -1,0 +1,55 @@
+<h2 mat-dialog-title>Adaugă membru</h2>
+
+<form [formGroup]="form" (ngSubmit)="salveaza()">
+  <mat-dialog-content class="continut">
+    @if (seIncarcaConsilieri()) {
+      <div class="centru"><mat-spinner diameter="32" /></div>
+    } @else {
+      <mat-form-field appearance="outline">
+        <mat-label>Consilier</mat-label>
+        <mat-select formControlName="consilierId">
+          @for (c of consilieriDisponibili(); track c.id) {
+            <mat-option [value]="c.id">{{ c.numeComplet }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.consilierId.hasError('required')) {
+          <mat-error>Selectează un consilier.</mat-error>
+        }
+        @if (consilieriDisponibili().length === 0) {
+          <mat-hint>
+            Toți consilierii activi sunt deja membri activi ai comisiei.
+          </mat-hint>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Rol</mat-label>
+        <mat-select formControlName="rol">
+          @for (r of roluri; track r) {
+            <mat-option [value]="r">{{ etichetaRol(r) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Data început</mat-label>
+        <input matInput type="date" formControlName="dataInceput" />
+        @if (form.controls.dataInceput.hasError('required')) {
+          <mat-error>Data este obligatorie.</mat-error>
+        }
+      </mat-form-field>
+    }
+
+    @if (eroare(); as mesaj) {
+      <p class="eroare">{{ mesaj }}</p>
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" mat-dialog-close>Renunță</button>
+    <button mat-flat-button type="submit"
+            [disabled]="seSalveaza() || seIncarcaConsilieri()">
+      {{ seSalveaza() ? 'Se adaugă...' : 'Adaugă' }}
+    </button>
+  </mat-dialog-actions>
+</form>

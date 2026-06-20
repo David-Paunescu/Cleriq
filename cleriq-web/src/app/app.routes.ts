@@ -23,6 +23,24 @@ export const routes: Routes = [
             .then(m => m.ConsilieriLista)
       },
       {
+        path: 'persoane',
+        loadComponent: () =>
+          import('./features/persoane/persoane-lista/persoane-lista')
+            .then(m => m.PersoaneLista)
+      },
+      {
+        path: 'comisii',
+        loadComponent: () =>
+          import('./features/comisii/comisii-lista/comisii-lista')
+            .then(m => m.ComisiiLista)
+      },
+      {
+        path: 'comisii/:id',
+        loadComponent: () =>
+          import('./features/comisii/comisie-detalii/comisie-detalii')
+            .then(m => m.ComisieDetalii)
+      },
+      {
       path: 'sedinte',
       loadComponent: () =>
         import('./features/sedinte/sedinte-lista/sedinte-lista')

@@ -1,6 +1,7 @@
 ﻿using Cleriq.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Cleriq.Services;
 
 namespace Cleriq.Data;
 
@@ -12,9 +13,13 @@ public static class SeedDevelopment
     {
         var db = sp.GetRequiredService<AppDbContext>();
         var userManager = sp.GetRequiredService<UserManager<Utilizator>>();
+        var config = sp.GetRequiredService<IConfiguration>();
+        var criptare = sp.GetRequiredService<ICriptareSecreta>();
 
         await SeedSloboziaAsync(db, userManager, logger);
         await SeedFocsaniAsync(db, userManager, logger);
+
+        await ConfigureazaSmtpSloboziaAsync(db, config, criptare, logger);
     }
 
     private static async Task SeedSloboziaAsync(
@@ -166,6 +171,48 @@ public static class SeedDevelopment
 
         logger.LogInformation(
             "Seed Development: creată {Slug} (Admin, 1 persoană, 1 mandat de funcție).", slug);
+    }
+
+    private static async Task ConfigureazaSmtpSloboziaAsync(
+    AppDbContext db,
+    IConfiguration config,
+    ICriptareSecreta criptare,
+    ILogger logger)
+    {
+        const string slug = "primaria-slobozia";
+
+        var slobozia = await db.Institutii
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(i => i.Slug == slug);
+
+        if (slobozia is null) return;
+
+        if (!string.IsNullOrEmpty(slobozia.SmtpHost)) return;
+
+        var utilizator = config["Mailtrap:Utilizator"];
+        var parola = config["Mailtrap:Parola"];
+
+        if (string.IsNullOrWhiteSpace(utilizator) || string.IsNullOrWhiteSpace(parola))
+        {
+            logger.LogWarning(
+                "Seed Development: Mailtrap:Utilizator sau Mailtrap:Parola lipsesc din user-secrets. " +
+                "SMTP-ul pentru {Slug} nu va fi configurat.", slug);
+            return;
+        }
+
+        slobozia.SmtpHost = "sandbox.smtp.mailtrap.io";
+        slobozia.SmtpPort = 2525;
+        slobozia.SmtpUtilizator = utilizator;
+        slobozia.SmtpParolaCriptata = criptare.Cripteaza(parola);
+        slobozia.SmtpEmailFrom = "no-reply@slobozia.ro";
+        slobozia.SmtpNumeFrom = slobozia.Denumire;
+        slobozia.SmtpSecuritate = SmtpSecuritate.StartTls;
+
+        await db.SaveChangesAsync();
+
+        logger.LogInformation(
+            "Seed Development: SMTP configurat pentru {Slug} ({Host}:{Port}).",
+            slug, slobozia.SmtpHost, slobozia.SmtpPort);
     }
 
     private static Mandat CreeazaMandatConsilier(int consilierId, int institutieId) => new()

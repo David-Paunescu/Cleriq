@@ -1,0 +1,30 @@
+<h2 mat-dialog-title>{{ esteEditare ? 'Editează comisie' : 'Adaugă comisie' }}</h2>
+
+<form [formGroup]="form" (ngSubmit)="salveaza()">
+  <mat-dialog-content class="continut">
+    <mat-form-field appearance="outline">
+      <mat-label>Denumire</mat-label>
+      <input matInput formControlName="denumire" maxlength="200" />
+      @if (form.controls.denumire.hasError('required')) {
+        <mat-error>Denumirea este obligatorie.</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Descriere</mat-label>
+      <textarea matInput formControlName="descriere" maxlength="1000" rows="3"></textarea>
+      <mat-hint>Opțional</mat-hint>
+    </mat-form-field>
+
+    @if (eroare(); as mesaj) {
+      <p class="eroare">{{ mesaj }}</p>
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" mat-dialog-close>Renunță</button>
+    <button mat-flat-button type="submit" [disabled]="seSalveaza()">
+      {{ seSalveaza() ? 'Se salvează...' : 'Salvează' }}
+    </button>
+  </mat-dialog-actions>
+</form>
