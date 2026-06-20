@@ -172,4 +172,36 @@ public class ComisiiController : ControllerBase
         await _context.SaveChangesAsync();
         return NoContent();
     }
+
+    [HttpPut("{comisieId}/Membri/{consilierId}/DataInceput")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> ActualizeazaDataInceputMembru(
+    int comisieId, int consilierId,
+    [FromBody] ActualizareDataInceputMembruDto dto,
+    CancellationToken ct)
+    {
+        var membru = await _context.ComisieMembri
+            .Include(m => m.Consilier)
+            .FirstOrDefaultAsync(
+                m => m.ComisieId == comisieId && m.ConsilierId == consilierId, ct);
+
+        if (membru is null)
+            return NotFound("Membrie inexistentă.");
+
+        if (membru.DataSfarsit.HasValue && dto.DataInceput > membru.DataSfarsit.Value)
+            return BadRequest("Data început nu poate fi după data sfârșit.");
+
+        membru.DataInceput = dto.DataInceput;
+        membru.DataInceputEstimata = false;
+
+        await _context.SaveChangesAsync(ct);
+
+        return Ok(new MembruComisieDto(
+            membru.ConsilierId,
+            membru.Consilier!.NumeComplet,
+            membru.Rol,
+            membru.DataInceput,
+            membru.DataSfarsit,
+            membru.DataInceputEstimata));
+    }
 }

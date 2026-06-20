@@ -309,6 +309,16 @@ public static class ExtensiiTeste
         await AsigurareSucces(raspuns, "Scoatere membru comisie");
     }
 
+    public static async Task ActualizeazaDataInceputMembruComisieAsync(
+    this HttpClient clientAdmin,
+    int comisieId, int consilierId, DateOnly dataInceput)
+    {
+        var raspuns = await clientAdmin.PutAsJsonAsync(
+            $"/api/Comisii/{comisieId}/Membri/{consilierId}/DataInceput",
+            new { dataInceput });
+        await AsigurareSucces(raspuns, "Actualizare data început membru");
+    }
+
     public static async Task<int> CreeazaMandatConsilierAsync(
         this HttpClient clientAdmin,
         int consilierId, DateOnly dataInceput,

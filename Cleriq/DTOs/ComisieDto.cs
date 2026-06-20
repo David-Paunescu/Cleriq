@@ -23,3 +23,5 @@ public record ComisieDto(
     int InstitutieId,
     DateTime CreatLa,
     List<MembruComisieDto> Membri);
+
+public record ActualizareDataInceputMembruDto(DateOnly DataInceput);

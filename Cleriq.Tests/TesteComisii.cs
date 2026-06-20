@@ -256,6 +256,84 @@ public class TesteComisii
         Assert.Equal(HttpStatusCode.BadRequest, raspuns.StatusCode);
     }
 
+    // === ActualizeazaDataInceputMembru ===
+
+    [Fact]
+    public async Task ActualizeazaDataInceputMembru_Corecteaza_SiReseteazaEstimata()
+    {
+        using var admin = await AdminAsync();
+        var comisieId = await admin.CreeazaComisieAsync("Comisie");
+        var c = await admin.CreeazaConsilierAsync("C");
+        await admin.AdaugaMembruComisieAsync(
+            comisieId, c, RolComisie.Membru, new DateOnly(2024, 1, 1));
+
+        var raspuns = await admin.PutAsJsonAsync(
+            $"/api/Comisii/{comisieId}/Membri/{c}/DataInceput",
+            new { dataInceput = new DateOnly(2023, 6, 15) });
+
+        Assert.Equal(HttpStatusCode.OK, raspuns.StatusCode);
+        var dto = await raspuns.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("2023-06-15", dto.GetProperty("dataInceput").GetString());
+        Assert.False(dto.GetProperty("dataInceputEstimata").GetBoolean());
+
+        var cuIstoric = await admin.GetFromJsonAsync<JsonElement>(
+            $"/api/Comisii/{comisieId}?includeIstoric=true");
+        var membru = cuIstoric.GetProperty("membri")[0];
+        Assert.Equal("2023-06-15", membru.GetProperty("dataInceput").GetString());
+        Assert.False(membru.GetProperty("dataInceputEstimata").GetBoolean());
+    }
+
+    [Fact]
+    public async Task ActualizeazaDataInceputMembru_DataDupaDataSfarsit_400()
+    {
+        using var admin = await AdminAsync();
+        var comisieId = await admin.CreeazaComisieAsync("Comisie");
+        var c = await admin.CreeazaConsilierAsync("C");
+        await admin.AdaugaMembruComisieAsync(
+            comisieId, c, RolComisie.Membru, new DateOnly(2024, 1, 1));
+        await admin.ScoateMembruComisieAsync(comisieId, c, new DateOnly(2024, 12, 31));
+
+        var raspuns = await admin.PutAsJsonAsync(
+            $"/api/Comisii/{comisieId}/Membri/{c}/DataInceput",
+            new { dataInceput = new DateOnly(2025, 6, 15) });
+
+        Assert.Equal(HttpStatusCode.BadRequest, raspuns.StatusCode);
+    }
+
+    [Fact]
+    public async Task ActualizeazaDataInceputMembru_MembrieInexistenta_404()
+    {
+        using var admin = await AdminAsync();
+        var comisieId = await admin.CreeazaComisieAsync("Comisie");
+        var c = await admin.CreeazaConsilierAsync("Niciodată membru");
+
+        var raspuns = await admin.PutAsJsonAsync(
+            $"/api/Comisii/{comisieId}/Membri/{c}/DataInceput",
+            new { dataInceput = new DateOnly(2024, 1, 1) });
+
+        Assert.Equal(HttpStatusCode.NotFound, raspuns.StatusCode);
+    }
+
+    [Fact]
+    public async Task ActualizeazaDataInceputMembru_PeMembrieDinAltTenant_404()
+    {
+        var instA = await _factory.ProvisioneazaInstitutieAsync();
+        var instB = await _factory.ProvisioneazaInstitutieAsync();
+        using var adminA = await _factory.ClientAutentificatAsync(instA.EmailAdmin, instA.ParolaAdmin);
+        using var adminB = await _factory.ClientAutentificatAsync(instB.EmailAdmin, instB.ParolaAdmin);
+
+        var comisieB = await adminB.CreeazaComisieAsync("Comisie B");
+        var cB = await adminB.CreeazaConsilierAsync("C B");
+        await adminB.AdaugaMembruComisieAsync(
+            comisieB, cB, RolComisie.Membru, new DateOnly(2024, 1, 1));
+
+        var raspuns = await adminA.PutAsJsonAsync(
+            $"/api/Comisii/{comisieB}/Membri/{cB}/DataInceput",
+            new { dataInceput = new DateOnly(2023, 6, 15) });
+
+        Assert.Equal(HttpStatusCode.NotFound, raspuns.StatusCode);
+    }
+
     // === Cross-tenant ===
 
     [Fact]
