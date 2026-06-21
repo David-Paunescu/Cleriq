@@ -29,6 +29,12 @@ export const routes: Routes = [
             .then(m => m.PersoaneLista)
       },
       {
+        path: 'functii-oficiale',
+        loadComponent: () =>
+          import('./features/functii-oficiale/functii-oficiale-pagina/functii-oficiale-pagina')
+            .then(m => m.FunctiiOficialePagina)
+      },
+      {
         path: 'comisii',
         loadComponent: () =>
           import('./features/comisii/comisii-lista/comisii-lista')

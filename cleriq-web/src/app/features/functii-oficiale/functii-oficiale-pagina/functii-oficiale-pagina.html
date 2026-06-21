@@ -1,0 +1,179 @@
+<div class="antet">
+  <h1>Funcții oficiale</h1>
+  <mat-slide-toggle [checked]="includeIstoric()" (change)="toggleIstoric()">
+    Include istoric
+  </mat-slide-toggle>
+</div>
+
+<p class="descriere-pagina">
+  Mandate oficiale ale instituției — primar, viceprimari și secretar UAT —
+  folosite pentru semnăturile derivate pe acte administrative.
+</p>
+
+@if (seIncarca()) {
+  <div class="centru"><mat-spinner diameter="40" /></div>
+} @else if (eroare(); as mesaj) {
+  <div class="centru">
+    <p class="eroare">{{ mesaj }}</p>
+    <button mat-stroked-button (click)="incarca()">Reîncearcă</button>
+  </div>
+} @else {
+  <mat-card class="card-functie">
+    <mat-card-header>
+      <div class="antet-card">
+        <div class="titlu-card">
+          <mat-icon class="icon-titlu">person</mat-icon>
+          <mat-card-title>Primar</mat-card-title>
+        </div>
+        @if (esteAdmin()) {
+          <span [matTooltip]="tooltipButonAdauga(TipFunctie.Primar)" matTooltipPosition="left">
+            <button mat-stroked-button
+                    [disabled]="esteButonAdaugaDezactivat(TipFunctie.Primar)"
+                    (click)="adauga(TipFunctie.Primar)">
+              <mat-icon>add</mat-icon> Adaugă mandat
+            </button>
+          </span>
+        }
+      </div>
+    </mat-card-header>
+    <mat-card-content>
+      @if (mandatePrimar().active.length === 0) {
+        <p class="gol">
+          @if (includeIstoric()) {
+            Nu există mandat activ de Primar.
+          } @else {
+            Nu există mandat activ de Primar. Activează „Include istoric" pentru mandatele anterioare.
+          }
+        </p>
+      } @else {
+        <ng-container *ngTemplateOutlet="listaMandate;
+          context: { mandate: mandatePrimar().active, cuStareActiva: true }">
+        </ng-container>
+      }
+
+      @if (includeIstoric() && mandatePrimar().istorice.length > 0) {
+        <h3 class="subtitlu-istoric">Istoric</h3>
+        <ng-container *ngTemplateOutlet="listaMandate;
+          context: { mandate: mandatePrimar().istorice, cuStareActiva: false }">
+        </ng-container>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="card-functie">
+    <mat-card-header>
+      <div class="antet-card">
+        <div class="titlu-card">
+          <mat-icon class="icon-titlu">supervisor_account</mat-icon>
+          <mat-card-title>Viceprimari</mat-card-title>
+        </div>
+        @if (esteAdmin()) {
+          <span [matTooltip]="tooltipButonAdauga(TipFunctie.Viceprimar)" matTooltipPosition="left">
+            <button mat-stroked-button
+                    [disabled]="esteButonAdaugaDezactivat(TipFunctie.Viceprimar)"
+                    (click)="adauga(TipFunctie.Viceprimar)">
+              <mat-icon>add</mat-icon> Adaugă mandat
+            </button>
+          </span>
+        }
+      </div>
+    </mat-card-header>
+    <mat-card-content>
+      @if (mandateViceprimar().active.length === 0) {
+        <p class="gol">
+          @if (includeIstoric()) {
+            Nu există viceprimari activi.
+          } @else {
+            Nu există viceprimari activi. Activează „Include istoric" pentru mandatele anterioare.
+          }
+        </p>
+      } @else {
+        <ng-container *ngTemplateOutlet="listaMandate;
+          context: { mandate: mandateViceprimar().active, cuStareActiva: true }">
+        </ng-container>
+      }
+
+      @if (includeIstoric() && mandateViceprimar().istorice.length > 0) {
+        <h3 class="subtitlu-istoric">Istoric</h3>
+        <ng-container *ngTemplateOutlet="listaMandate;
+          context: { mandate: mandateViceprimar().istorice, cuStareActiva: false }">
+        </ng-container>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="card-functie">
+    <mat-card-header>
+      <div class="antet-card">
+        <div class="titlu-card">
+          <mat-icon class="icon-titlu">verified_user</mat-icon>
+          <mat-card-title>Secretar UAT</mat-card-title>
+        </div>
+        @if (esteAdmin()) {
+          <span [matTooltip]="tooltipButonAdauga(TipFunctie.SecretarUat)" matTooltipPosition="left">
+            <button mat-stroked-button
+                    [disabled]="esteButonAdaugaDezactivat(TipFunctie.SecretarUat)"
+                    (click)="adauga(TipFunctie.SecretarUat)">
+              <mat-icon>add</mat-icon> Adaugă mandat
+            </button>
+          </span>
+        }
+      </div>
+    </mat-card-header>
+    <mat-card-content>
+      @if (mandateSecretarUat().active.length === 0) {
+        <p class="gol">
+          @if (includeIstoric()) {
+            Nu există mandat activ de Secretar UAT.
+          } @else {
+            Nu există mandat activ de Secretar UAT. Activează „Include istoric" pentru mandatele anterioare.
+          }
+        </p>
+      } @else {
+        <ng-container *ngTemplateOutlet="listaMandate;
+          context: { mandate: mandateSecretarUat().active, cuStareActiva: true }">
+        </ng-container>
+      }
+
+      @if (includeIstoric() && mandateSecretarUat().istorice.length > 0) {
+        <h3 class="subtitlu-istoric">Istoric</h3>
+        <ng-container *ngTemplateOutlet="listaMandate;
+          context: { mandate: mandateSecretarUat().istorice, cuStareActiva: false }">
+        </ng-container>
+      }
+    </mat-card-content>
+  </mat-card>
+}
+
+<ng-template #listaMandate let-mandate="mandate" let-cuStareActiva="cuStareActiva">
+  <div class="lista-mandate">
+    @for (m of mandate; track m.id) {
+      <div class="rand-mandat"
+           [class.este-activ]="cuStareActiva"
+           [class.este-fantoma]="cuStareActiva && esteFantoma(m.id)">
+        <div class="info-mandat">
+          <strong class="nume">{{ numeleMandatului(m) }}</strong>
+          <div class="meta">
+            <span>{{ formateazaPerioada(m.dataInceput, m.dataSfarsit) }}</span>
+            @if (m.nrActNumire) {
+              <span class="separator">·</span>
+              <span>{{ m.nrActNumire }}</span>
+            }
+          </div>
+        </div>
+        @if (cuStareActiva) {
+          <div class="badge-stari">
+            @if (esteFantoma(m.id)) {
+              <span class="badge badge-fantoma"
+                    matTooltip="Consilierul nu mai are mandat de consilier valid. Închide mandatul de viceprimar pentru a corecta.">
+                consilier expirat
+              </span>
+            } @else {
+              <span class="badge badge-activ">activ</span>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+</ng-template>
