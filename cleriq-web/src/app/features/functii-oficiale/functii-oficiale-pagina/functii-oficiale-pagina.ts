@@ -16,6 +16,9 @@ import { FunctiiIstoriceService } from '../functii-istorice.service';
 import { DateMandatDialog, MandatDialog } from '../mandat-dialog/mandat-dialog';
 import { MandatFunctie } from '../mandate-functie.models';
 import { MandateFunctieService } from '../mandate-functie.service';
+import { DateInchideMandatDialog, InchideMandatDialog } from '../inchide-mandat-dialog/inchide-mandat-dialog';
+import { DateEditeazaMandatDialog, EditeazaMandatDialog } from '../editeaza-mandat-dialog/editeaza-mandat-dialog';
+
 
 interface ClasificareMandate {
   active: MandatFunctie[];
@@ -157,6 +160,33 @@ export class FunctiiOficialePagina {
     if (!rezultat) return;
 
     this.snackBar.open('Mandat adăugat.', 'Închide', { duration: 4000 });
+    await this.incarca();
+  }
+
+  async inchide(m: MandatFunctie): Promise<void> {
+    const data: DateInchideMandatDialog = {
+      mandatId: m.id,
+      tipFunctie: m.tipFunctie,
+      numeSubiect: this.numeleMandatului(m),
+      dataInceput: m.dataInceput
+    };
+    const rezultat = await firstValueFrom(
+      this.dialog.open(InchideMandatDialog, { data, width: '460px', maxWidth: '95vw' })
+        .afterClosed());
+    if (!rezultat) return;
+
+    this.snackBar.open('Mandat închis.', 'Închide', { duration: 4000 });
+    await this.incarca();
+  }
+
+  async editeaza(m: MandatFunctie): Promise<void> {
+    const data: DateEditeazaMandatDialog = { mandat: m };
+    const rezultat = await firstValueFrom(
+      this.dialog.open(EditeazaMandatDialog, { data, width: '520px', maxWidth: '95vw' })
+        .afterClosed());
+    if (!rezultat) return;
+
+    this.snackBar.open('Mandat actualizat.', 'Închide', { duration: 4000 });
     await this.incarca();
   }
 

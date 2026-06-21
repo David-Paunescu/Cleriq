@@ -1,0 +1,30 @@
+<h2 mat-dialog-title>Închidere mandat</h2>
+
+<form [formGroup]="form" (ngSubmit)="salveaza()">
+  <mat-dialog-content class="continut">
+    <p class="descriere">
+      Setezi data la care mandatul de <strong>{{ etichetaTipFunctie(date.tipFunctie) }}</strong>
+      al lui <strong>{{ date.numeSubiect }}</strong> a încetat. Mandatul rămâne în istoric
+      cu perioada specificată — nu se șterge.
+    </p>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Data sfârșit</mat-label>
+      <input matInput type="date" formControlName="dataSfarsit" [min]="date.dataInceput" />
+      @if (form.controls.dataSfarsit.hasError('required')) {
+        <mat-error>Data este obligatorie.</mat-error>
+      }
+    </mat-form-field>
+
+    @if (eroare(); as mesaj) {
+      <p class="eroare">{{ mesaj }}</p>
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" mat-dialog-close>Renunță</button>
+    <button mat-flat-button type="submit" class="btn-periculos" [disabled]="seSalveaza()">
+      {{ seSalveaza() ? 'Se închide...' : 'Confirmă închiderea' }}
+    </button>
+  </mat-dialog-actions>
+</form>

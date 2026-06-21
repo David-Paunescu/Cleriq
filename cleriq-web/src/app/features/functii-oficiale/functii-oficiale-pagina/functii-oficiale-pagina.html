@@ -161,15 +161,29 @@
             }
           </div>
         </div>
-        @if (cuStareActiva) {
-          <div class="badge-stari">
-            @if (esteFantoma(m.id)) {
-              <span class="badge badge-fantoma"
-                    matTooltip="Consilierul nu mai are mandat de consilier valid. Închide mandatul de viceprimar pentru a corecta.">
-                consilier expirat
-              </span>
-            } @else {
-              <span class="badge badge-activ">activ</span>
+        @if (cuStareActiva || esteAdmin()) {
+          <div class="parte-dreapta">
+            @if (cuStareActiva) {
+              <div class="badge-stari">
+                @if (esteFantoma(m.id)) {
+                  <span class="badge badge-fantoma"
+                        matTooltip="Consilierul nu mai are mandat de consilier valid. Închide mandatul de viceprimar pentru a corecta.">
+                    consilier expirat
+                  </span>
+                } @else {
+                  <span class="badge badge-activ">activ</span>
+                }
+              </div>
+            }
+            @if (esteAdmin()) {
+              <button mat-icon-button matTooltip="Editează mandatul" (click)="editeaza(m)">
+                <mat-icon>edit</mat-icon>
+              </button>
+              @if (cuStareActiva) {
+                <button mat-icon-button matTooltip="Închide mandatul" (click)="inchide(m)">
+                  <mat-icon>event_busy</mat-icon>
+                </button>
+              }
             }
           </div>
         }
