@@ -144,3 +144,69 @@ public enum TipFunctie
     Viceprimar = 2,
     SecretarUat = 3
 }
+
+public enum StatusHclRedactional
+{
+    Draft = 1,
+    Numerotat = 2,
+    Semnat = 3
+}
+
+public enum TipHcl
+{
+    Normativ = 1,
+    Individual = 2
+}
+
+public enum TipRelatieHcl
+{
+    Modifica = 1,
+    Abroga = 2,
+    Suspenda = 3,
+    PuneInAplicare = 4,
+    Completeaza = 5,
+    Republica = 6
+}
+
+public enum CanalTransmiterePrefect
+{
+    Posta = 1,
+    EmailOficial = 2,
+    Curier = 3,
+    Prezentare = 4,
+    ePoartal = 5,
+    Altul = 6
+}
+
+public enum RolSemnatar
+{
+    PresedinteSedinta = 1,
+    SecretarUat = 2,
+    SemnatarAlternativArt140 = 3
+}
+
+public enum MotivInvalidare
+{
+    AnulatPrefect = 1,
+    AnulatInstanta = 2,
+    AbrogatHclUlterior = 3,
+    Retractat = 4
+}
+
+public enum TipDocumentHcl
+{
+    Anexa = 1,
+    RaportSpecialitate = 2,
+    ExpunereDeMotive = 3,
+    AvizComisie = 4,
+    Justificativ = 5,
+    Altul = 6
+}
+
+public enum RaspunsPrefect
+{
+    Acceptat = 1,
+    RespinsLegalitate = 2,
+    CereClarificari = 3,
+    FaraRaspuns = 4
+}

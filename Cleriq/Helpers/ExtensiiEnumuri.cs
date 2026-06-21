@@ -46,6 +46,8 @@ public static class ExtensiiEnumuri
         _ => t.ToString()!
     };
 
+    public static string Eticheta(this TipMajoritate t) => ((TipMajoritate?)t).Eticheta();
+
     public static string Eticheta(this RezultatPunct? r) => r switch
     {
         RezultatPunct.Adoptat => "Adoptat",
@@ -73,5 +75,82 @@ public static class ExtensiiEnumuri
         TipFunctie.Viceprimar => "Viceprimar",
         TipFunctie.SecretarUat => "Secretar UAT",
         _ => t.ToString()
+    };
+
+    public static string Eticheta(this StatusHclRedactional s) => s switch
+    {
+        StatusHclRedactional.Draft => "Draft",
+        StatusHclRedactional.Numerotat => "Numerotat",
+        StatusHclRedactional.Semnat => "Semnat",
+        _ => s.ToString()
+    };
+
+    public static string Eticheta(this TipHcl t) => t switch
+    {
+        TipHcl.Normativ => "Normativ",
+        TipHcl.Individual => "Individual",
+        _ => t.ToString()
+    };
+
+    public static string Eticheta(this TipRelatieHcl t) => t switch
+    {
+        TipRelatieHcl.Modifica => "Modifică",
+        TipRelatieHcl.Abroga => "Abrogă",
+        TipRelatieHcl.Suspenda => "Suspendă",
+        TipRelatieHcl.PuneInAplicare => "Pune în aplicare",
+        TipRelatieHcl.Completeaza => "Completează",
+        TipRelatieHcl.Republica => "Republică",
+        _ => t.ToString()
+    };
+
+    public static string Eticheta(this CanalTransmiterePrefect c) => c switch
+    {
+        CanalTransmiterePrefect.Posta => "Poștă",
+        CanalTransmiterePrefect.EmailOficial => "Email oficial",
+        CanalTransmiterePrefect.Curier => "Curier",
+        CanalTransmiterePrefect.Prezentare => "Prezentare directă",
+        CanalTransmiterePrefect.ePoartal => "ePoartal",
+        CanalTransmiterePrefect.Altul => "Altul",
+        _ => c.ToString()
+    };
+
+    public static string Eticheta(this RolSemnatar r) => r switch
+    {
+        RolSemnatar.PresedinteSedinta => "Președinte de ședință",
+        RolSemnatar.SecretarUat => "Secretar UAT",
+        RolSemnatar.SemnatarAlternativArt140 => "Semnatar alternativ (art. 140 alin. 2)",
+        _ => r.ToString()
+    };
+
+    public static string Eticheta(this MotivInvalidare? m) => m switch
+    {
+        MotivInvalidare.AnulatPrefect => "Anulat de prefect",
+        MotivInvalidare.AnulatInstanta => "Anulat de instanță",
+        MotivInvalidare.AbrogatHclUlterior => "Abrogat de HCL ulterior",
+        MotivInvalidare.Retractat => "Retractat",
+        null => "—",
+        _ => m.ToString()!
+    };
+
+    public static string Eticheta(this TipDocumentHcl? t) => t switch
+    {
+        TipDocumentHcl.Anexa => "Anexă",
+        TipDocumentHcl.RaportSpecialitate => "Raport de specialitate",
+        TipDocumentHcl.ExpunereDeMotive => "Expunere de motive",
+        TipDocumentHcl.AvizComisie => "Aviz comisie",
+        TipDocumentHcl.Justificativ => "Justificativ",
+        TipDocumentHcl.Altul => "Altul",
+        null => "—",
+        _ => t.ToString()!
+    };
+
+    public static string Eticheta(this RaspunsPrefect? r) => r switch
+    {
+        RaspunsPrefect.Acceptat => "Acceptat",
+        RaspunsPrefect.RespinsLegalitate => "Respins (legalitate)",
+        RaspunsPrefect.CereClarificari => "Cere clarificări",
+        RaspunsPrefect.FaraRaspuns => "Fără răspuns",
+        null => "—",
+        _ => r.ToString()!
     };
 }

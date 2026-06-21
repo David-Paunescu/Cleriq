@@ -15,6 +15,8 @@ public class Sedinta : EntitateDeBaza, IEntitateCuTenant
     public ModDesfasurare ModDesfasurare { get; set; } = ModDesfasurare.Fizic;
     public StatusSedinta Status { get; set; } = StatusSedinta.Planificata;
     public DateTime? ConvocareTrimisaLa { get; set; }
+    public int? PresedinteSedintaConsilierId { get; set; }
+    public Consilier? PresedinteSedinta { get; set; }
     public int InstitutieId { get; set; }
     public Institutie Institutie { get; set; } = null!;
     public List<PunctOrdineZi> Puncte { get; set; } = new();

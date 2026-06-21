@@ -204,10 +204,18 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Document>()
-            .ToTable(t => t.HasCheckConstraint(
-                "CK_Document_ExactUnContext",
-                "(CASE WHEN [SedintaId] IS NULL THEN 0 ELSE 1 END + " +
-                " CASE WHEN [PunctId] IS NULL THEN 0 ELSE 1 END) = 1"));
+            .ToTable(t =>
+            {
+                t.HasCheckConstraint(
+                    "CK_Document_ExactUnContext",
+                    "(CASE WHEN [SedintaId] IS NULL THEN 0 ELSE 1 END + " +
+                    " CASE WHEN [PunctId] IS NULL THEN 0 ELSE 1 END + " +
+                    " CASE WHEN [HclId] IS NULL THEN 0 ELSE 1 END) = 1");
+
+                t.HasCheckConstraint(
+                    "CK_Document_AnexaMetadata",
+                    "[TipDocumentHcl] IS NULL OR [TipDocumentHcl] != 1 OR [NumarOrdinAnexa] IS NOT NULL");
+            });
 
         modelBuilder.Entity<ComisieMembru>()
             .HasOne(cm => cm.Consilier)
@@ -341,6 +349,157 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             .HasForeignKey(rt => rt.UtilizatorId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        // === FK Institutie cu Restrict — Modul A HCL ===
+        modelBuilder.Entity<Hcl>()
+            .HasOne(x => x.Institutie)
+            .WithMany()
+            .HasForeignKey(x => x.InstitutieId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<SemnatarHcl>()
+            .HasOne(x => x.Institutie)
+            .WithMany()
+            .HasForeignKey(x => x.InstitutieId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ComunicareHclPrefect>()
+            .HasOne(x => x.Institutie)
+            .WithMany()
+            .HasForeignKey(x => x.InstitutieId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<RelatieHcl>()
+            .HasOne(x => x.Institutie)
+            .WithMany()
+            .HasForeignKey(x => x.InstitutieId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // === Hcl → PunctOrdineZi (FK Restrict, IMUTABIL post-Numerotat) ===
+        modelBuilder.Entity<Hcl>()
+            .HasOne(h => h.PunctOrdineZi)
+            .WithMany()
+            .HasForeignKey(h => h.PunctOrdineZiId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // === SemnatarHcl → Hcl + XOR Persoana/Consilier ===
+        modelBuilder.Entity<SemnatarHcl>()
+            .HasOne(s => s.Hcl)
+            .WithMany(h => h.Semnatari)
+            .HasForeignKey(s => s.HclId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<SemnatarHcl>()
+            .HasOne(s => s.Persoana)
+            .WithMany()
+            .HasForeignKey(s => s.PersoanaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<SemnatarHcl>()
+            .HasOne(s => s.Consilier)
+            .WithMany()
+            .HasForeignKey(s => s.ConsilierId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // === ComunicareHclPrefect → Hcl ===
+        modelBuilder.Entity<ComunicareHclPrefect>()
+            .HasOne(c => c.Hcl)
+            .WithMany(h => h.Comunicari)
+            .HasForeignKey(c => c.HclId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // === RelatieHcl → HclSursa NOT NULL + HclTinta? (NU cascadează la HCL) ===
+        modelBuilder.Entity<RelatieHcl>()
+            .HasOne(r => r.HclSursa)
+            .WithMany(h => h.RelatiiSursa)
+            .HasForeignKey(r => r.HclSursaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<RelatieHcl>()
+            .HasOne(r => r.HclTinta)
+            .WithMany(h => h.RelatiiTinta)
+            .HasForeignKey(r => r.HclTintaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // === Document → Hcl? (cascade soft-delete prin AplicaCascadaSoftDelete) ===
+        modelBuilder.Entity<Document>()
+            .HasOne(d => d.Hcl)
+            .WithMany(h => h.Documente)
+            .HasForeignKey(d => d.HclId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // === Sedinta → PresedinteSedinta (Consilier, FK Restrict) ===
+        modelBuilder.Entity<Sedinta>()
+            .HasOne(s => s.PresedinteSedinta)
+            .WithMany()
+            .HasForeignKey(s => s.PresedinteSedintaConsilierId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // === Filtered unique — Modul A HCL ===
+
+        // Numerotare unică per (Institutie, AnNumerotare, Numar) — compare-and-swap atomic
+        modelBuilder.Entity<Hcl>()
+            .HasIndex(h => new { h.InstitutieId, h.AnNumerotare, h.Numar })
+            .IsUnique()
+            .HasFilter("[EsteSters] = 0 AND [Numar] IS NOT NULL");
+
+        // Un punct → maxim un HCL activ (filtered unique pe PunctOrdineZiId)
+        modelBuilder.Entity<Hcl>()
+            .HasIndex(h => h.PunctOrdineZiId)
+            .IsUnique()
+            .HasFilter("[EsteSters] = 0");
+
+        // Registru cronologic comunicări prefect per (Institutie, AnRegistru)
+        modelBuilder.Entity<ComunicareHclPrefect>()
+            .HasIndex(c => new { c.InstitutieId, c.AnRegistru, c.NumarOrdineInRegistru })
+            .IsUnique()
+            .HasFilter("[EsteSters] = 0");
+
+        // Anexă unică per HCL (TipDocumentHcl = 1 = Anexa)
+        modelBuilder.Entity<Document>()
+            .HasIndex(d => new { d.HclId, d.NumarOrdinAnexa })
+            .IsUnique()
+            .HasFilter("[EsteSters] = 0 AND [TipDocumentHcl] = 1 AND [HclId] IS NOT NULL");
+
+        // RelatieHcl — unic pe țintă internă (sursa, ținta, tip); textul extern nu intră
+        modelBuilder.Entity<RelatieHcl>()
+            .HasIndex(r => new { r.HclSursaId, r.HclTintaId, r.TipRelatie })
+            .IsUnique()
+            .HasFilter("[EsteSters] = 0 AND [HclTintaId] IS NOT NULL");
+
+        // SemnatarHcl — max 1 PresedinteSedinta activ per HCL (RolSemnatar = 1)
+        modelBuilder.Entity<SemnatarHcl>()
+            .HasIndex(s => s.HclId, "IX_SemnatarHcl_PresedinteSedintaActiv")
+            .IsUnique()
+            .HasFilter("[EsteSters] = 0 AND [RolSemnatar] = 1");
+
+        // SemnatarHcl — max 1 SecretarUat activ per HCL (RolSemnatar = 2)
+        modelBuilder.Entity<SemnatarHcl>()
+            .HasIndex(s => s.HclId, "IX_SemnatarHcl_SecretarUatActiv")
+            .IsUnique()
+            .HasFilter("[EsteSters] = 0 AND [RolSemnatar] = 2");
+
+        // === Check constraints — Modul A HCL ===
+
+        modelBuilder.Entity<RelatieHcl>()
+            .ToTable(t => t.HasCheckConstraint(
+                "CK_RelatieHcl_ExactUnaTinta",
+                "(CASE WHEN [HclTintaId] IS NULL THEN 0 ELSE 1 END + " +
+                " CASE WHEN [ReferintaActExternText] IS NULL THEN 0 ELSE 1 END) = 1"));
+
+        modelBuilder.Entity<SemnatarHcl>()
+            .ToTable(t =>
+            {
+                t.HasCheckConstraint(
+                    "CK_SemnatarHcl_ExactUnSubject",
+                    "(CASE WHEN [PersoanaId] IS NULL THEN 0 ELSE 1 END + " +
+                    " CASE WHEN [ConsilierId] IS NULL THEN 0 ELSE 1 END) = 1");
+
+                t.HasCheckConstraint(
+                    "CK_SemnatarHcl_FkCorectaPerRol",
+                    "([RolSemnatar] = 2 AND [PersoanaId] IS NOT NULL AND [ConsilierId] IS NULL) " +
+                    "OR ([RolSemnatar] IN (1, 3) AND [ConsilierId] IS NOT NULL AND [PersoanaId] IS NULL)");
+            });
+
         // Filtru global automat: soft-delete + tenant
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
@@ -440,6 +599,7 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             case Consilier c:
                 CascadaPeColectie(ComisieMembri.Where(m => m.ConsilierId == c.Id), acum, userId, coada);
                 CascadaPeColectie(Mandate.Where(m => m.ConsilierId == c.Id), acum, userId, coada);
+                CascadaPeColectie(SemnatariHcl.Where(s => s.ConsilierId == c.Id), acum, userId, coada);
                 break;
 
             case Sedinta s:
@@ -456,11 +616,15 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
                 CascadaPeColectie(Documente.Where(d => d.PunctId == p.Id), acum, userId, coada);
                 break;
 
-            // Defense in depth: garda din PersoaneController.Sterge blochează oricum
-            // ștergerea unei Persoane care are mandate. Cascadă acoperă scenariile
-            // în care cineva ar marca Persoana ca Deleted direct prin DbContext.
+            case Hcl h:
+                CascadaPeColectie(SemnatariHcl.Where(s => s.HclId == h.Id), acum, userId, coada);
+                CascadaPeColectie(ComunicariHclPrefect.Where(c => c.HclId == h.Id), acum, userId, coada);
+                CascadaPeColectie(Documente.Where(d => d.HclId == h.Id), acum, userId, coada);
+                break;
+
             case Persoana pers:
                 CascadaPeColectie(MandateFunctie.Where(mf => mf.PersoanaId == pers.Id), acum, userId, coada);
+                CascadaPeColectie(SemnatariHcl.Where(s => s.PersoanaId == pers.Id), acum, userId, coada);
                 break;
         }
     }
@@ -497,4 +661,8 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<Persoana> Persoane { get; set; }
     public DbSet<MandatFunctie> MandateFunctie { get; set; }
+    public DbSet<Hcl> Hcluri { get; set; }
+    public DbSet<SemnatarHcl> SemnatariHcl { get; set; }
+    public DbSet<ComunicareHclPrefect> ComunicariHclPrefect { get; set; }
+    public DbSet<RelatieHcl> RelatiiHcl { get; set; }
 }

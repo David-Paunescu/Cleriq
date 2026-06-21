@@ -35,6 +35,11 @@ public class Document : EntitateDeBaza, IEntitateCuTenant
 
     public int? PunctId { get; set; }
     public PunctOrdineZi? Punct { get; set; }
+    public int? HclId { get; set; }
+    public Hcl? Hcl { get; set; }
+
+    public TipDocumentHcl? TipDocumentHcl { get; set; }
+    public int? NumarOrdinAnexa { get; set; }
 
     public int InstitutieId { get; set; }
     public Institutie Institutie { get; set; } = null!;
