@@ -15,12 +15,17 @@ public record DocumentDto(
     int Ordine,
     int? SedintaId,
     int? PunctId,
-    DateTime CreatLa);
+    DateTime CreatLa,
+    int? HclId,
+    TipDocumentHcl? TipDocumentHcl,
+    int? NumarOrdinAnexa);
 
 public record ActualizareDocumentDto(
     string Denumire,
     string? Descriere,
     TipDocument TipDocument,
-    int Ordine);
+    int Ordine,
+    TipDocumentHcl? TipDocumentHcl,
+    int? NumarOrdinAnexa);
 
 public record SetareVizibilitateDto(bool EstePublic);

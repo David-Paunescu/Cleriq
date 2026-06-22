@@ -42,17 +42,19 @@ public class SedinteController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> Lista()
     {
-        var rezultat = await _context.Sedinte
-            .Select(s => MapeazaSpreDto(s))
+        var sedinte = await _context.Sedinte
+            .Include(s => s.PresedinteSedinta)
             .ToListAsync();
 
-        return Ok(rezultat);
+        return Ok(sedinte.Select(MapeazaSpreDto));
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> Detalii(int id)
     {
-        var sedinta = await _context.Sedinte.FirstOrDefaultAsync(s => s.Id == id);
+        var sedinta = await _context.Sedinte
+            .Include(s => s.PresedinteSedinta)
+            .FirstOrDefaultAsync(s => s.Id == id);
         if (sedinta is null)
             return NotFound();
 
@@ -80,6 +82,13 @@ public class SedinteController : ControllerBase
         if (arePvAprobat)
             return Conflict("Această ședință nu poate fi ștearsă: procesul verbal aferent a fost aprobat oficial (act legal conform OUG 57/2019).");
 
+        // Gardă nouă (extensie D7): HCL Status >= Numerotat generat din punctele acestei ședințe.
+        var areHclNumerotat = await _context.Hcluri
+            .AnyAsync(h => h.PunctOrdineZi.SedintaId == id
+                        && h.Status >= StatusHclRedactional.Numerotat);
+        if (areHclNumerotat)
+            return Conflict("Această ședință nu poate fi ștearsă: din punctele ei au fost generate HCL-uri cu Status >= Numerotat (act administrativ adoptat conform OUG 57/2019).");
+
         _context.Sedinte.Remove(sedinta);
         await _context.SaveChangesAsync();
         return NoContent();
@@ -104,6 +113,42 @@ public class SedinteController : ControllerBase
         sedinta.Loc = dto.Loc;
         sedinta.ModDesfasurare = dto.ModDesfasurare;
 
+        await _context.SaveChangesAsync();
+        return Ok(MapeazaSpreDto(sedinta));
+    }
+
+    // === Președinte de ședință (semnatar HCL art. 140 — setat înainte de generare) ===
+
+    [HttpPost("{id}/PresedinteSedinta")]
+    [Authorize(Roles = "Admin,Secretar")]
+    public async Task<IActionResult> SeteazaPresedinte(int id, SetarePresedinteSedintaDto dto)
+    {
+        var sedinta = await _context.Sedinte.FirstOrDefaultAsync(s => s.Id == id);
+        if (sedinta is null)
+            return NotFound("Ședința nu există.");
+
+        var consilier = await _context.Consilieri
+            .FirstOrDefaultAsync(c => c.Id == dto.ConsilierId);
+        if (consilier is null)
+            return NotFound("Consilierul nu există.");
+        if (!consilier.Activ)
+            return BadRequest("Consilierul nu este activ.");
+
+        sedinta.PresedinteSedinta = consilier; // setează și FK, și nav (mapper-ul ia numele)
+        await _context.SaveChangesAsync();
+
+        return Ok(MapeazaSpreDto(sedinta));
+    }
+
+    [HttpDelete("{id}/PresedinteSedinta")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> StergePresedinte(int id)
+    {
+        var sedinta = await _context.Sedinte.FirstOrDefaultAsync(s => s.Id == id);
+        if (sedinta is null)
+            return NotFound("Ședința nu există.");
+
+        sedinta.PresedinteSedintaConsilierId = null;
         await _context.SaveChangesAsync();
         return Ok(MapeazaSpreDto(sedinta));
     }
@@ -140,8 +185,6 @@ public class SedinteController : ControllerBase
         return Ok(MapeazaSpreDto(sedinta));
     }
 
-    // Matricea tranzițiilor permise manual prin acest controller.
-    // Planificata → Convocata se face prin ConvocareController, nu aici.
     private static string? ValideazaTranzitie(StatusSedinta curent, StatusSedinta nou)
     {
         var permis = (curent, nou) switch
@@ -160,5 +203,6 @@ public class SedinteController : ControllerBase
 
     private static SedintaDto MapeazaSpreDto(Sedinta s) => new(
         s.Id, s.Titlu, s.Numar, s.Tip, s.DataOra,
-        s.Loc, s.ModDesfasurare, s.Status, s.InstitutieId, s.CreatLa, s.ConvocareTrimisaLa);
+        s.Loc, s.ModDesfasurare, s.Status, s.InstitutieId, s.CreatLa, s.ConvocareTrimisaLa,
+        s.PresedinteSedintaConsilierId, s.PresedinteSedinta?.NumeComplet);
 }

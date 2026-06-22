@@ -5,6 +5,7 @@ using Cleriq.Models;
 using Cleriq.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cleriq.Controllers;
@@ -14,6 +15,9 @@ namespace Cleriq.Controllers;
 [Authorize]
 public class DocumenteController : ControllerBase
 {
+    private const int SqlServerErrorUniqueConstraint = 2601;
+    private const int SqlServerErrorDuplicateKey = 2627;
+
     private readonly AppDbContext _context;
     private readonly IStocareDocumente _stocare;
 
@@ -24,14 +28,17 @@ public class DocumenteController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> Lista([FromQuery] int? sedintaId, [FromQuery] int? punctId)
+    public async Task<IActionResult> Lista(
+        [FromQuery] int? sedintaId, [FromQuery] int? punctId, [FromQuery] int? hclId)
     {
-        if (sedintaId.HasValue == punctId.HasValue)
-            return BadRequest("Furnizează exact unul dintre sedintaId sau punctId.");
+        var contexte = new[] { sedintaId.HasValue, punctId.HasValue, hclId.HasValue }.Count(x => x);
+        if (contexte != 1)
+            return BadRequest("Furnizează exact unul dintre sedintaId, punctId sau hclId.");
 
         var query = _context.Documente.AsQueryable();
         if (sedintaId.HasValue) query = query.Where(d => d.SedintaId == sedintaId.Value);
-        if (punctId.HasValue) query = query.Where(d => d.PunctId == punctId.Value);
+        else if (punctId.HasValue) query = query.Where(d => d.PunctId == punctId.Value);
+        else query = query.Where(d => d.HclId == hclId!.Value);
 
         var rezultat = await query
             .OrderBy(d => d.Ordine).ThenBy(d => d.CreatLa)
@@ -77,6 +84,9 @@ public class DocumenteController : ControllerBase
         [FromForm] TipDocument tipDocument,
         [FromForm] int? sedintaId,
         [FromForm] int? punctId,
+        [FromForm] int? hclId,
+        [FromForm] TipDocumentHcl? tipDocumentHcl,
+        [FromForm] int? numarOrdinAnexa,
         [FromForm] string? descriere,
         [FromForm] int ordine,
         CancellationToken ct)
@@ -84,8 +94,9 @@ public class DocumenteController : ControllerBase
         if (fisier is null || fisier.Length == 0)
             return BadRequest("Fișier lipsă.");
 
-        if (sedintaId.HasValue == punctId.HasValue)
-            return BadRequest("Documentul trebuie atașat la exact unul dintre sedintaId sau punctId.");
+        var contexte = new[] { sedintaId.HasValue, punctId.HasValue, hclId.HasValue }.Count(x => x);
+        if (contexte != 1)
+            return BadRequest("Documentul trebuie atașat la exact unul dintre sedintaId, punctId sau hclId.");
 
         if (string.IsNullOrWhiteSpace(denumire))
             return BadRequest("Denumirea este obligatorie.");
@@ -93,15 +104,50 @@ public class DocumenteController : ControllerBase
         var eroare = ValidareDocument.Valideaza(fisier.FileName, fisier.Length);
         if (eroare is not null) return BadRequest(eroare);
 
+        // Existență context
         if (sedintaId.HasValue)
         {
-            var existaSedinta = await _context.Sedinte.AnyAsync(s => s.Id == sedintaId.Value, ct);
-            if (!existaSedinta) return NotFound("Ședința nu există.");
+            if (!await _context.Sedinte.AnyAsync(s => s.Id == sedintaId.Value, ct))
+                return NotFound("Ședința nu există.");
+        }
+        else if (punctId.HasValue)
+        {
+            if (!await _context.PuncteOrdineZi.AnyAsync(p => p.Id == punctId.Value, ct))
+                return NotFound("Punctul nu există.");
         }
         else
         {
-            var existaPunct = await _context.PuncteOrdineZi.AnyAsync(p => p.Id == punctId!.Value, ct);
-            if (!existaPunct) return NotFound("Punctul nu există.");
+            if (!await _context.Hcluri.AnyAsync(h => h.Id == hclId!.Value, ct))
+                return NotFound("HCL-ul nu există.");
+        }
+
+        // Coexistență TipDocument vs TipDocumentHcl
+        var tipDocFinal = tipDocument;
+        TipDocumentHcl? tipDocHclFinal = null;
+        int? numarAnexaFinal = null;
+
+        if (hclId.HasValue)
+        {
+            tipDocFinal = TipDocument.Altele;     // forțat — sursa de adevăr e TipDocumentHcl
+            tipDocHclFinal = tipDocumentHcl;
+
+            if (tipDocumentHcl == TipDocumentHcl.Anexa)
+            {
+                if (numarOrdinAnexa is null)
+                    return BadRequest("Pentru o anexă, NumarOrdinAnexa este obligatoriu.");
+                numarAnexaFinal = numarOrdinAnexa;
+
+                var dublura = await _context.Documente.AnyAsync(d =>
+                    d.HclId == hclId.Value
+                    && d.TipDocumentHcl == TipDocumentHcl.Anexa
+                    && d.NumarOrdinAnexa == numarOrdinAnexa.Value, ct);
+                if (dublura)
+                    return Conflict($"Există deja o anexă cu numărul de ordine {numarOrdinAnexa} pe acest HCL.");
+            }
+        }
+        else if (tipDocumentHcl.HasValue)
+        {
+            return BadRequest("TipDocumentHcl se poate seta doar pentru documente atașate unui HCL.");
         }
 
         FisierStocat stocat;
@@ -115,7 +161,7 @@ public class DocumenteController : ControllerBase
         {
             Denumire = denumire.Trim(),
             Descriere = descriere?.Trim(),
-            TipDocument = tipDocument,
+            TipDocument = tipDocFinal,
             NumeFisierOriginal = Path.GetFileName(fisier.FileName),
             TipMime = ValidareDocument.TipMimePentru(fisier.FileName),
             Marime = stocat.Marime,
@@ -124,11 +170,21 @@ public class DocumenteController : ControllerBase
             EstePublic = false,
             Ordine = ordine,
             SedintaId = sedintaId,
-            PunctId = punctId
+            PunctId = punctId,
+            HclId = hclId,
+            TipDocumentHcl = tipDocHclFinal,
+            NumarOrdinAnexa = numarAnexaFinal
         };
 
         _context.Documente.Add(doc);
-        await _context.SaveChangesAsync(ct);
+        try
+        {
+            await _context.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (EsteViolareUnique(ex))
+        {
+            return Conflict($"Există deja o anexă cu numărul de ordine {numarOrdinAnexa} pe acest HCL.");
+        }
 
         return Ok(MapeazaSpreDto(doc));
     }
@@ -145,10 +201,49 @@ public class DocumenteController : ControllerBase
 
         doc.Denumire = dto.Denumire.Trim();
         doc.Descriere = dto.Descriere?.Trim();
-        doc.TipDocument = dto.TipDocument;
         doc.Ordine = dto.Ordine;
 
-        await _context.SaveChangesAsync();
+        if (doc.HclId.HasValue)
+        {
+            var hcl = await _context.Hcluri.FirstOrDefaultAsync(h => h.Id == doc.HclId.Value);
+            if (hcl is null) return NotFound("HCL-ul asociat documentului nu există.");
+
+            // NumarOrdinAnexa imutabil după semnare (referențiat textual în corpul HCL)
+            if (hcl.Status == StatusHclRedactional.Semnat && dto.NumarOrdinAnexa != doc.NumarOrdinAnexa)
+                return Conflict("HCL semnat — numărul de ordine al anexei nu mai poate fi schimbat (referențiat în corpul hotărârii).");
+
+            if (dto.TipDocumentHcl == TipDocumentHcl.Anexa && dto.NumarOrdinAnexa is null)
+                return BadRequest("Pentru o anexă, NumarOrdinAnexa este obligatoriu.");
+
+            if (dto.TipDocumentHcl == TipDocumentHcl.Anexa && dto.NumarOrdinAnexa.HasValue)
+            {
+                var dublura = await _context.Documente.AnyAsync(d =>
+                    d.HclId == doc.HclId.Value
+                    && d.TipDocumentHcl == TipDocumentHcl.Anexa
+                    && d.NumarOrdinAnexa == dto.NumarOrdinAnexa.Value
+                    && d.Id != doc.Id);
+                if (dublura)
+                    return Conflict($"Există deja o anexă cu numărul de ordine {dto.NumarOrdinAnexa} pe acest HCL.");
+            }
+
+            doc.TipDocument = TipDocument.Altele;   // rămâne forțat
+            doc.TipDocumentHcl = dto.TipDocumentHcl;
+            doc.NumarOrdinAnexa = dto.TipDocumentHcl == TipDocumentHcl.Anexa ? dto.NumarOrdinAnexa : null;
+        }
+        else
+        {
+            doc.TipDocument = dto.TipDocument;   // document non-HCL: comportament clasic
+        }
+
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (EsteViolareUnique(ex))
+        {
+            return Conflict($"Există deja o anexă cu numărul de ordine {dto.NumarOrdinAnexa} pe acest HCL.");
+        }
+
         return Ok(MapeazaSpreDto(doc));
     }
 
@@ -176,8 +271,14 @@ public class DocumenteController : ControllerBase
         return NoContent();
     }
 
+    private static bool EsteViolareUnique(DbUpdateException ex)
+        => ex.InnerException is SqlException sql
+           && (sql.Number == SqlServerErrorUniqueConstraint
+               || sql.Number == SqlServerErrorDuplicateKey);
+
     private static DocumentDto MapeazaSpreDto(Document d) => new(
         d.Id, d.Denumire, d.Descriere, d.TipDocument,
         d.NumeFisierOriginal, d.TipMime, d.Marime, d.HashSha256,
-        d.EstePublic, d.Ordine, d.SedintaId, d.PunctId, d.CreatLa);
+        d.EstePublic, d.Ordine, d.SedintaId, d.PunctId, d.CreatLa,
+        d.HclId, d.TipDocumentHcl, d.NumarOrdinAnexa);
 }

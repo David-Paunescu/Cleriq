@@ -2,6 +2,7 @@
 using Cleriq.Models;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Cleriq.Helpers;
 
 namespace Cleriq.Services;
 
@@ -51,7 +52,13 @@ public class ServiciuNumerotareHcl : IServiciuNumerotareHcl
                 TipRezultatAtribuire.StareInvalidaHcl,
                 $"HCL în stare {hcl.Status} — numerotarea se atribuie doar pe Draft.");
 
-        var an = hcl.DataAdoptare.Year;
+        // An de registru = anul juridic LOCAL al adoptării (nu UTC), consistent cu
+        // datele DateOnly de pe mandate. Contează la ședințe de îndată după miezul nopții.
+        var fusOrar = await _context.Institutii
+            .Where(i => i.Id == hcl.InstitutieId)
+            .Select(i => i.FusOrar)
+            .FirstAsync(ct);
+        var an = hcl.DataAdoptare.LaFusOrar(fusOrar).Year;
 
         // Numerele arse rămân arse — subdecizia S49 (paritar slug-uri instituții)
         var numarArs = await _context.Hcluri
