@@ -56,8 +56,21 @@ public class PublicDocumenteController : ControllerBase
         var doc = await _context.Documente.FirstOrDefaultAsync(d => d.Id == id);
         if (doc is null || !doc.EstePublic) return NotFound();
 
-        var sedintaId = doc.SedintaId ?? await SedintaPentruPunct(doc.PunctId!.Value);
-        if (sedintaId == 0 || !await SedintaPublica(sedintaId)) return NotFound();
+        bool vizibil;
+        if (doc.HclId != null)
+        {
+            vizibil = await _context.Hcluri.AnyAsync(h =>
+                h.Id == doc.HclId.Value
+                && h.EstePublicat
+                && h.Status >= StatusHclRedactional.Numerotat);
+        }
+        else
+        {
+            var sedintaId = doc.SedintaId ?? await SedintaPentruPunct(doc.PunctId!.Value);
+            vizibil = sedintaId != 0 && await SedintaPublica(sedintaId);
+        }
+
+        if (!vizibil) return NotFound();
 
         Stream stream;
         try

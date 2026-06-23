@@ -256,19 +256,33 @@ public class MentenantaController : ControllerBase
         // dar sunt referențiate din ProceseVerbale.CaleStocareSemnat, nu din Documente.
         // Fără includerea lor aici, scanerul le-ar clasifica FaraRandInDb și le-ar ȘTERGE.
         var pvSemnateDb = await _context.ProceseVerbale
+                    .IgnoreQueryFilters()
+                    .Where(p => p.CaleStocareSemnat != null)
+                    .Select(p => new
+                    {
+                        CaleStocare = p.CaleStocareSemnat!,
+                        p.EsteSters,
+                        p.StersLa,
+                        p.InstitutieId
+                    })
+                    .ToListAsync(ct);
+
+        var hclSemnateDb = await _context.Hcluri
             .IgnoreQueryFilters()
-            .Where(p => p.CaleStocareSemnat != null)
-            .Select(p => new
+            .Where(h => h.CaleStocareSemnat != null)
+            .Select(h => new
             {
-                CaleStocare = p.CaleStocareSemnat!,
-                p.EsteSters,
-                p.StersLa,
-                p.InstitutieId
+                CaleStocare = h.CaleStocareSemnat!,
+                h.EsteSters,
+                h.StersLa,
+                h.InstitutieId
             })
             .ToListAsync(ct);
 
-        // Dicționar pentru lookup O(1): cheie → metadate DB
-        var dictDb = documenteDb.Concat(pvSemnateDb).ToDictionary(d => d.CaleStocare);
+        var dictDb = documenteDb
+            .Concat(pvSemnateDb)
+            .Concat(hclSemnateDb)
+            .ToDictionary(d => d.CaleStocare);
 
         // 2. Enumerăm fișierele fizice și clasificăm
         var orfani = new List<FisierOrfanDto>();

@@ -3,20 +3,31 @@ using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 
-// Alias necesar: „Document" există și în Cleriq.Models, și în QuestPDF.Fluent.
 using PdfDocument = QuestPDF.Fluent.Document;
 
 namespace Cleriq.Services;
 
-public class GeneratorPdfProcesVerbal : IGeneratorPdfProcesVerbal
+public class GeneratorPdfHcl : IGeneratorPdfHcl
 {
-    public byte[] Genereaza(ProcesVerbal pv, Institutie institutie)
+    public byte[] Genereaza(Hcl hcl, Institutie institutie)
     {
-        var markdown = string.IsNullOrWhiteSpace(pv.Continut)
-            ? "_(Procesul verbal nu are conținut.)_"
-            : pv.Continut;
+        var markdown = string.IsNullOrWhiteSpace(hcl.Continut)
+            ? "_(Hotărârea nu are conținut generat.)_"
+            : hcl.Continut;
 
-        var esteDraft = pv.Status == StatusProcesVerbal.Draft;
+        // Watermark 3 stări. INVALIDAT prioritar (un act invalidat poate fi și Semnat,
+        // dar invaliditatea primează vizual). „INVALIDAT" e mai lung → font mai mic ca să încapă.
+        string? watermark = null;
+        var watermarkFontSize = 110f;
+        if (hcl.DataInvalidare != null)
+        {
+            watermark = "INVALIDAT";
+            watermarkFontSize = 75f;
+        }
+        else if (hcl.Status != StatusHclRedactional.Semnat)
+        {
+            watermark = "DRAFT";
+        }
 
         var pdf = PdfDocument.Create(container =>
         {
@@ -26,13 +37,13 @@ public class GeneratorPdfProcesVerbal : IGeneratorPdfProcesVerbal
                 page.Margin(2.2f, Unit.Centimetre);
                 page.DefaultTextStyle(s => s.FontSize(10.5f).LineHeight(1.35f));
 
-                if (esteDraft)
+                if (watermark != null)
                 {
                     page.Background()
                         .AlignCenter()
                         .AlignMiddle()
-                        .Text("DRAFT")
-                        .FontSize(110).Bold()
+                        .Text(watermark)
+                        .FontSize(watermarkFontSize).Bold()
                         .FontColor(Colors.Red.Lighten3);
                 }
 

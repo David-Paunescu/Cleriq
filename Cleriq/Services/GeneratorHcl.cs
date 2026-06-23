@@ -46,10 +46,9 @@ public class GeneratorHcl : IGeneratorHcl
         sb.AppendLine("**CONSILIUL LOCAL**");
         sb.AppendLine();
 
-        // Identitate juridică HCL
         var numarText = hcl.Numar.HasValue && hcl.AnNumerotare.HasValue
-            ? $"{hcl.Numar.Value}/{hcl.AnNumerotare.Value}"
-            : "_[urmează să fie atribuit]_";
+                    ? $"{hcl.Numar.Value}/{hcl.AnNumerotare.Value}"
+                    : PlaceholderHcl.NumarNeatribuit;
 
         var dataAdoptareLocala = hcl.DataAdoptare.LaFusOrar(institutie.FusOrar);
         var dataAdoptareText = dataAdoptareLocala.ToString("dd MMMM yyyy", CulturaRo);

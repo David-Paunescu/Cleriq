@@ -18,17 +18,23 @@ public class HclController : ControllerBase
     private readonly IServiciuFunctiiIstorice _functiiIstorice;
     private readonly IServiciuNumerotareHcl _numerotare;
     private readonly IGeneratorHcl _generator;
+    private readonly IGeneratorPdfHcl _generatorPdf;
+    private readonly IStocareDocumente _stocare;
 
     public HclController(
         AppDbContext context,
         IServiciuFunctiiIstorice functiiIstorice,
         IServiciuNumerotareHcl numerotare,
-        IGeneratorHcl generator)
+        IGeneratorHcl generator,
+        IGeneratorPdfHcl generatorPdf,
+        IStocareDocumente stocare)
     {
         _context = context;
         _functiiIstorice = functiiIstorice;
         _numerotare = numerotare;
         _generator = generator;
+        _generatorPdf = generatorPdf;
+        _stocare = stocare;
     }
 
     [HttpGet]
@@ -70,6 +76,124 @@ public class HclController : ControllerBase
 
         if (hcl is null) return NotFound();
         return Ok(MapeazaSpreDetaliiDto(hcl));
+    }
+
+    [HttpGet("{id}/Pdf")]
+    public async Task<IActionResult> ObtinePdf(int id)
+    {
+        var hcl = await _context.Hcluri.FirstOrDefaultAsync(h => h.Id == id);
+        if (hcl is null) return NotFound();
+
+        var institutie = await _context.Institutii.FirstOrDefaultAsync();
+        if (institutie is null) return NotFound();
+
+        var pdf = _generatorPdf.Genereaza(hcl, institutie);
+        var nume = hcl.Numar != null
+            ? $"hcl-{hcl.Numar}-{hcl.AnNumerotare}.pdf"
+            : $"hcl-draft-{hcl.Id}.pdf";
+
+        return File(pdf, "application/pdf", nume);
+    }
+
+    [HttpPost("{id}/Semnat")]
+    [Authorize(Roles = "Admin,Secretar")]
+    [RequestSizeLimit(ValidareDocument.MarimeMaxima)]
+    public async Task<IActionResult> IncarcaSemnat(
+    int id, [FromForm] IFormFile fisier, CancellationToken ct)
+    {
+        var hcl = await _context.Hcluri.FirstOrDefaultAsync(h => h.Id == id, ct);
+        if (hcl is null) return NotFound();
+
+        if (hcl.Status != StatusHclRedactional.Semnat)
+            return Conflict("Doar un HCL semnat poate primi varianta PDF semnată.");
+
+        if (hcl.CaleStocareSemnat != null && hcl.DataPublicareMol != null)
+            return Conflict("HCL publicat în MOL — varianta semnată nu mai poate fi înlocuită.");
+
+        if (fisier is null || fisier.Length == 0)
+            return BadRequest("Fișier lipsă.");
+        if (fisier.Length > ValidareDocument.MarimeMaxima)
+            return BadRequest($"Fișierul depășește limita de {ValidareDocument.MarimeMaxima / (1024 * 1024)} MB.");
+
+        var extensie = Path.GetExtension(fisier.FileName);
+        if (!string.Equals(extensie, ".pdf", StringComparison.OrdinalIgnoreCase))
+            return BadRequest("Doar fișiere PDF sunt acceptate pentru HCL semnat.");
+
+        var caleVeche = hcl.CaleStocareSemnat;
+
+        FisierStocat stocat;
+        await using (var stream = fisier.OpenReadStream())
+        {
+            stocat = await _stocare.SalveazaAsync(
+                _context.InstitutieIdCurenta, fisier.FileName, stream, ct);
+        }
+
+        hcl.CaleStocareSemnat = stocat.Cheie;
+        hcl.NumeFisierSemnat = Path.GetFileName(fisier.FileName);
+        hcl.MarimeSemnat = stocat.Marime;
+        hcl.HashSha256Semnat = stocat.HashSha256;
+        hcl.DataIncarcareSemnat = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(ct);
+
+        if (!string.IsNullOrEmpty(caleVeche) && caleVeche != stocat.Cheie)
+        {
+            try { await _stocare.StergeAsync(caleVeche, ct); }
+            catch { }
+        }
+
+        var hclComplet = await _context.Hcluri
+            .Include(h => h.Semnatari).ThenInclude(s => s.Persoana)
+            .Include(h => h.Semnatari).ThenInclude(s => s.Consilier)
+            .Include(h => h.Documente)
+            .Include(h => h.RelatiiSursa).ThenInclude(r => r.HclTinta)
+            .Include(h => h.RelatiiTinta).ThenInclude(r => r.HclSursa)
+            .Include(h => h.Comunicari)
+            .FirstAsync(h => h.Id == id, ct);
+
+        return Ok(MapeazaSpreDetaliiDto(hclComplet));
+    }
+
+    [HttpGet("{id}/Semnat")]
+    public async Task<IActionResult> DescarcaSemnat(int id, CancellationToken ct)
+    {
+        var hcl = await _context.Hcluri.FirstOrDefaultAsync(h => h.Id == id, ct);
+        if (hcl is null || string.IsNullOrEmpty(hcl.CaleStocareSemnat))
+            return NotFound("Nu există variantă semnată încărcată.");
+
+        Stream stream;
+        try
+        {
+            stream = await _stocare.DeschideAsync(hcl.CaleStocareSemnat, ct);
+        }
+        catch (FileNotFoundException)
+        {
+            return NotFound("Fișierul fizic lipsește.");
+        }
+
+        return File(stream, "application/pdf",
+            hcl.NumeFisierSemnat ?? "hcl-semnat.pdf");
+    }
+
+    [HttpDelete("{id}/Semnat")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> StergeSemnat(int id, CancellationToken ct)
+    {
+        var hcl = await _context.Hcluri.FirstOrDefaultAsync(h => h.Id == id, ct);
+        if (hcl is null || string.IsNullOrEmpty(hcl.CaleStocareSemnat))
+            return NotFound("Nu există variantă semnată încărcată.");
+
+        if (hcl.DataPublicareMol != null)
+            return Conflict("HCL publicat în MOL — varianta semnată nu mai poate fi ștearsă.");
+
+        hcl.CaleStocareSemnat = null;
+        hcl.NumeFisierSemnat = null;
+        hcl.MarimeSemnat = null;
+        hcl.HashSha256Semnat = null;
+        hcl.DataIncarcareSemnat = null;
+
+        await _context.SaveChangesAsync(ct);
+        return NoContent();
     }
 
     [HttpPost("Genereaza")]

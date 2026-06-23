@@ -104,6 +104,7 @@ builder.Services.AddSingleton<ICalculatorZileLucratoare, CalculatorZileLucratoar
 builder.Services.AddScoped<IServiciuNumerotareHcl, ServiciuNumerotareHcl>();
 builder.Services.AddScoped<IServiciuComunicareHclPrefect, ServiciuComunicareHclPrefect>();
 builder.Services.AddScoped<IGeneratorHcl, GeneratorHcl>();
+builder.Services.AddScoped<IGeneratorPdfHcl, GeneratorPdfHcl>();
 builder.Services.AddScoped<IServiciuValidareMandate, ServiciuValidareMandate>();
 builder.Services.AddScoped<IServiciuFunctiiIstorice, ServiciuFunctiiIstorice>();
 builder.Services.AddScoped<NotificareLogger>();

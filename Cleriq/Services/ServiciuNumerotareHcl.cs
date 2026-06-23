@@ -94,6 +94,9 @@ public class ServiciuNumerotareHcl : IServiciuNumerotareHcl
         hcl.AnNumerotare = an;
         hcl.Status = StatusHclRedactional.Numerotat;
 
+        if (!string.IsNullOrEmpty(hcl.Continut))
+            hcl.Continut = hcl.Continut.Replace(
+                PlaceholderHcl.NumarNeatribuit, $"{numar}/{an}");
         try
         {
             await _context.SaveChangesAsync(ct);
