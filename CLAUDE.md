@@ -47,6 +47,7 @@ Twilio (SMS). Frontend: Angular 22 zoneless, Angular Material (M3), SCSS.
 - Comentarii minime în cod; explicațiile rămân în chat, nu în fișiere.
 - TU (Claude) rulezi testele și verifici rezultatul — nu-mi da mie comenzi
   sau query-uri de copiat. Arată-mi ce a ieșit.
+- Nu faci rezumatul sesiunii, pana nu iti descriu cum trebuie facut
 
 ## Planuri de sesiune
 Planurile detaliate sunt în `docs/planuri/`. La începutul unei sesiuni îți
