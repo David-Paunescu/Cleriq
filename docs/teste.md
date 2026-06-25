@@ -1,6 +1,6 @@
 # Cleriq — Teste
 
-**84 teste verzi** în proiectul `Cleriq.Tests`. Suită xUnit + WebApplicationFactory.
+**262 teste verzi** în proiectul `Cleriq.Tests`. Suită xUnit + WebApplicationFactory.
 
 ## Stack teste
 
@@ -148,6 +148,22 @@ Assert.Equal(pdf1, pdf2);  // egalitate byte-cu-byte
 
 Regenerarea QuestPDF diferă prin metadatele PDF (timestamp creare în XMP) — egalitate byte exactă e dovada certă a cache-ului. Tehnică elegantă fără mock-uri sau spy-uri.
 
+## Teste Modul HCL (S52)
+
+**Helper fundamental** `admin.GenereazaHclAdoptatAsync()` (în `ExtensiiTeste`): lanțul complet până la un HCL Draft — secretar UAT (persoană + mandat) → consilier-președinte → ședință → prezență → punct ProiectHCL → vot Pentru → închidere (Adoptat) → bump `Convocata` → `Genereaza`. Întoarce `HclAdoptat(HclId, SedintaId, PunctId, ConsilierId, PersoanaSecretarId)`. Progresie: `AtribuieNumarHclAsync`, `SemneazaHclAsync`, `IncarcaHclSemnatAsync`, `IncarcaAnexaHclAsync`.
+
+**Idempotent pe Secretar UAT**: overlap-ul mandatelor e per-`TipFunctie` (nu per-persoană), deci al 2-lea HCL în același tenant ar pica la crearea mandatului. Helperul verifică `GET /FunctiiIstorice/SecretarUat` și refolosește secretarul existent — necesar pentru testele cu 2+ HCL-uri (număr luat/ars, relații, invalidare cu relații).
+
+**Votul merge pe ședință `Planificata`** (paritar PV); `Genereaza` cere `>= Convocata`, deci bump cu `DbTest.SeteazaStatusSedintaAsync` DUPĂ închiderea votului.
+
+**`DbTest.SeteazaDataAdoptareHclAsync`** forțează data adoptării în trecut (ședința e mereu la `UtcNow+7`) — pentru testele de termen depășit din `TesteAlerteT3`.
+
+**Numere arse pur prin API**: `AtribuieNumar` → `DELETE` HCL → reîncercare pe același număr → 409 cu sugestie.
+
+**Cache PDF HCL**: egalitate byte-cu-byte DOAR la Semnat (conținut înghețat); la Numerotat se regenerează. `DbTest.CitesteCaleStocareSemnatHclAsync` + ștergerea fișierului fizic testează fallback-ul semnat→generat.
+
+**Calculatorul de zile** (`TesteCalculatorZileLucratoare`) e pur-unit — fără `[Collection]`/fixture, paritar `TesteContractWhisperWrapper`.
+
 ## Capcane mediu
 
 **Hot Reload VS NU aplică**:
@@ -165,23 +181,43 @@ CI Linux = sesiune dedicată pre-deployment (ajustare teste sau `[SkippableFact]
 
 ```
 Cleriq.Tests/
-├── CleriqFixture.cs          # singletonul de Collection, configurare WAF
-├── DbTest.cs                  # helper-i aranjare DB inaccesibilă prin API
-├── HandlerHttpFals.cs         # mock HTTP handler pentru contract tests
-├── TesteAuth.cs               # autentificare, register, provisioning
-├── TesteRefreshTokens.cs      # 7 teste rotație/familii/detecție furt
+├── Infrastructura/
+│   ├── CleriqFixture.cs              # singletonul de Collection
+│   ├── CleriqWebApplicationFactory.cs # WAF + env vars de test
+│   ├── ConfigTest.cs                 # connection strings, chei, limite
+│   ├── DbTest.cs                     # aranjare DB inaccesibilă prin API
+│   ├── ExtensiiTeste.cs              # helperi de scenariu (HTTP)
+│   └── HandlerHttpFals.cs            # mock HTTP pentru contract tests
+├── TesteProvisioning.cs       # provisioning + register + auth
+├── TesteRefreshTokens.cs      # rotație/familii/detecție furt
 ├── TesteIzolareTenant.cs      # cross-tenant 404
-├── TesteCvorum.cs             # majoritate Simpla/Absoluta/Calificata OUG 57
-├── TesteVotSecret.cs          # anonimizare la citire + gărzi
-├── TesteVotulMeu.cs           # privacy claim ConsilierId (s37)
+├── TesteVotSiCvorum.cs        # majoritate Simpla/Absoluta/Calificata OUG 57
+├── TesteVotulMeu.cs           # privacy claim ConsilierId
 ├── TesteConvocare.cs          # outbox + retry + IncercareTrimitere
-├── TesteProcesVerbal.cs       # gărzi PV + PV semnat
+├── TestePersoane.cs           # persoane (subiecte pentru funcții)
+├── TesteComisii.cs            # comisii + membri
+├── TesteMandateFunctie.cs     # mandate Primar/Viceprimar/Secretar UAT
+├── TesteValidareMandate.cs    # overlap + viceprimar fantomă
+├── TesteFunctiiIstorice.cs    # cine deținea funcția la data X
+├── TesteProcesVerbal.cs       # gărzi PV + PV semnat + aprobare
 ├── TesteTranscriere.cs        # upload + retry + gărzi
-├── TestePublishTranscriere.cs # 5 teste publish flow snapshot (s40)
+├── TestePublishTranscriere.cs # publish flow snapshot
 ├── TestePortalPublic.cs       # vizibilitate + slug + cache PDF
 ├── TesteMentenanta.cs         # orfani Documente + Audio
 ├── TesteRateLimiting.cs       # global + flaky cunoscut
-└── TesteContractWhisper.cs    # unit pur HandlerHttpFals
+├── TesteContractWhisperWrapper.cs # unit pur HandlerHttpFals
+├── TesteInfrastructura.cs     # sanity fixture
+│   # === Modul HCL (Faza 3 — S52) ===
+├── TesteCalculatorZileLucratoare.cs # pur-unit: zile lucrătoare + sărbători
+├── TesteHcl.cs                # ciclul de viață (generare→numerotare→semnare→DELETE)
+├── TesteNumerotareHcl.cs      # lacune, numere arse, placeholder→număr
+├── TesteSemnatariHcl.cs       # XOR, art.140, filtered unique
+├── TesteRelatiiHcl.cs         # relații interne/externe + ștergere din sursă
+├── TesteInvalidareHcl.cs      # invalidare + relații + anulare
+├── TesteComunicareHclPrefect.cs # registru prefect + gărzi
+├── TesteAlerteT3.cs           # dashboard urgent (T-N zile lucrătoare)
+├── TesteAnexeHcl.cs           # anexe + download public branch HclId
+└── TestePublicHcl.cs          # portal: vizibilitate + PDF semnat/cache
 ```
 
 ## Migrații pe CleriqTest

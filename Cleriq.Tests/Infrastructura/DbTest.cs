@@ -95,6 +95,25 @@ public static class DbTest
             .FirstOrDefaultAsync();
     }
 
+    public static async Task<string?> CitesteCaleStocareSemnatHclAsync(int hclId)
+    {
+        await using var ctx = CreeazaContext();
+        return await ctx.Hcluri
+            .IgnoreQueryFilters()
+            .Where(h => h.Id == hclId)
+            .Select(h => h.CaleStocareSemnat)
+            .FirstOrDefaultAsync();
+    }
+
+    // Data adoptării vine din ședință (UtcNow+7); pentru testele de termene T-N o forțăm în trecut.
+    public static async Task SeteazaDataAdoptareHclAsync(int hclId, DateTime dataAdoptare)
+    {
+        await using var ctx = CreeazaContext();
+        var hcl = await ctx.Hcluri.IgnoreQueryFilters().FirstAsync(h => h.Id == hclId);
+        hcl.DataAdoptare = dataAdoptare;
+        await ctx.SaveChangesAsync();
+    }
+
     public static async Task<string> CitesteCaleStocareDocumentAsync(int documentId)
     {
         await using var ctx = CreeazaContext();

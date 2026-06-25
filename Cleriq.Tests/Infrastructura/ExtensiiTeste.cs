@@ -7,6 +7,9 @@ namespace Cleriq.Tests.Infrastructura;
 
 public record InstitutieDeTest(int Id, string Slug, string Denumire, string EmailAdmin, string ParolaAdmin);
 
+public record HclAdoptat(
+    int HclId, int SedintaId, int PunctId, int ConsilierId, int PersoanaSecretarId);
+
 public static class ExtensiiTeste
 {
     public static async Task<string> LoginAsync(
@@ -347,6 +350,123 @@ public static class ExtensiiTeste
             grupPolitic
         });
         await AsigurareSucces(raspuns, "Actualizare mandat consilier");
+    }
+
+    // === HCL (Modul A) ===
+
+    // Lanțul complet până la un HCL Draft generat dintr-un punct adoptat: persoană +
+    // mandat Secretar UAT valid la data adoptării, consilier-președinte, ședință,
+    // prezență, punct ProiectHCL, vot Pentru, închidere (→ Adoptat), bump la Convocata.
+    public static async Task<HclAdoptat> GenereazaHclAdoptatAsync(
+        this HttpClient admin,
+        TipHcl tipHcl = TipHcl.Normativ,
+        TipMajoritate tipMajoritate = TipMajoritate.Simpla)
+    {
+        // Secretar UAT — un singur mandat per tenant (overlap e per-TipFunctie). La al 2-lea
+        // HCL din același tenant refolosim secretarul existent, altfel mandatul ar da 409.
+        var dataSedinta = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7));
+        var secretarResp = await admin.GetAsync(
+            $"/api/FunctiiIstorice/SecretarUat?data={dataSedinta:yyyy-MM-dd}");
+        await AsigurareSucces(secretarResp, "Verificare Secretar UAT");
+        var secretarJson = await secretarResp.Content.ReadFromJsonAsync<JsonElement>();
+
+        int persoanaSecretarId;
+        if (secretarJson.ValueKind == JsonValueKind.Null)
+        {
+            persoanaSecretarId = await admin.CreeazaPersoanaAsync("Secretar UAT Test");
+            await admin.CreeazaMandatFunctieAsync(
+                TipFunctie.SecretarUat, persoanaSecretarId, null,
+                DateOnly.FromDateTime(DateTime.UtcNow.AddYears(-1)));
+        }
+        else
+        {
+            persoanaSecretarId = secretarJson.GetProperty("id").GetInt32();
+        }
+
+        var consilierId = await admin.CreeazaConsilierAsync("Consilier Președinte");
+        var sedintaId = await admin.CreeazaSedintaAsync();
+
+        var raspunsPresedinte = await admin.PostAsJsonAsync(
+            $"/api/Sedinte/{sedintaId}/PresedinteSedinta", new { consilierId });
+        await AsigurareSucces(raspunsPresedinte, "Setare președinte ședință");
+
+        await admin.SeteazaPrezentaAsync(sedintaId, consilierId, StatusPrezenta.Prezent);
+        var punctId = await admin.CreeazaPunctAsync(sedintaId, tipMajoritate);
+        await admin.VoteazaAsync(sedintaId, punctId, consilierId, OptiuneVot.Pentru);
+        await admin.InchideVotAsync(sedintaId, punctId);
+
+        // Genereaza cere Status >= Convocata; votul a mers pe Planificata (paritar PV).
+        await DbTest.SeteazaStatusSedintaAsync(sedintaId, StatusSedinta.Convocata);
+
+        var raspuns = await admin.PostAsJsonAsync(
+            "/api/Hcl/Genereaza", new { punctOrdineZiId = punctId, tipHcl });
+        await AsigurareSucces(raspuns, "Generare HCL");
+        var corp = await raspuns.Content.ReadFromJsonAsync<JsonElement>();
+
+        return new HclAdoptat(
+            corp.GetProperty("id").GetInt32(),
+            sedintaId, punctId, consilierId, persoanaSecretarId);
+    }
+
+    public static async Task<int> AtribuieNumarHclAsync(
+        this HttpClient admin, int hclId, int numar = 1, bool confirmaCuLacune = false)
+    {
+        var raspuns = await admin.PostAsJsonAsync(
+            $"/api/Hcl/{hclId}/AtribuieNumar", new { numar, confirmaCuLacune });
+        await AsigurareSucces(raspuns, "Atribuire număr HCL");
+        var corp = await raspuns.Content.ReadFromJsonAsync<JsonElement>();
+        return corp.GetProperty("numar").GetInt32();
+    }
+
+    public static async Task SemneazaHclAsync(this HttpClient admin, int hclId)
+    {
+        var raspuns = await admin.PostAsync($"/api/Hcl/{hclId}/Semneaza", null);
+        await AsigurareSucces(raspuns, "Semnare HCL");
+    }
+
+    public static async Task<HttpResponseMessage> IncarcaHclSemnatAsync(
+        this HttpClient admin, int hclId, byte[] continut, string numeFisier)
+    {
+        using var form = new MultipartFormDataContent();
+        var parte = new ByteArrayContent(continut);
+        parte.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+        form.Add(parte, "fisier", numeFisier);
+        return await admin.PostAsync($"/api/Hcl/{hclId}/Semnat", form);
+    }
+
+    // Anexă HCL: TipDocument trimis e Raport intenționat — backend-ul îl forțează la Altele.
+    public static async Task<HttpResponseMessage> IncarcaAnexaHclAsync(
+        this HttpClient admin, int hclId, byte[] continut, string numeFisier,
+        string denumire, TipDocumentHcl tipDocumentHcl, int? numarOrdinAnexa)
+    {
+        using var form = new MultipartFormDataContent();
+        var parte = new ByteArrayContent(continut);
+        parte.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+        form.Add(parte, "fisier", numeFisier);
+        form.Add(new StringContent(denumire), "denumire");
+        form.Add(new StringContent(((int)TipDocument.Raport).ToString()), "tipDocument");
+        form.Add(new StringContent("0"), "ordine");
+        form.Add(new StringContent(hclId.ToString()), "hclId");
+        form.Add(new StringContent(((int)tipDocumentHcl).ToString()), "tipDocumentHcl");
+        if (numarOrdinAnexa.HasValue)
+            form.Add(new StringContent(numarOrdinAnexa.Value.ToString()), "numarOrdinAnexa");
+        return await admin.PostAsync("/api/Documente", form);
+    }
+
+    public static async Task<HttpClient> ClientSecretarAsync(
+        this CleriqWebApplicationFactory factory, HttpClient clientAdmin)
+    {
+        var email = $"secretar.{Guid.NewGuid():N}@cleriq-test.ro";
+        const string parola = "SecretarTest1!";
+        var raspuns = await clientAdmin.PostAsJsonAsync("/api/Auth/register", new
+        {
+            email,
+            parola,
+            numeComplet = "Secretar Test",
+            rol = "Secretar"
+        });
+        await AsigurareSucces(raspuns, "Creare cont secretar");
+        return await factory.ClientAutentificatAsync(email, parola);
     }
 
     private static async Task AsigurareSucces(HttpResponseMessage raspuns, string operatiune)

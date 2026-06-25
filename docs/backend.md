@@ -107,9 +107,11 @@ Migrațiile se rulează din Package Manager Console (`Add-Migration X` / `Update
 Permite cascadă N-level atomică într-un singur `SaveChanges`. Modelul curent NU are cicluri — nu există `HashSet` de protecție (de adăugat dacă apar).
 
 **Cascade declarate** în `AplicaCascadaSoftDelete(parinte, ...)` cu switch pe tipul entității:
-- `Consilier → ComisieMembru, Mandat`
+- `Consilier → ComisieMembru, Mandat, SemnatarHcl`
+- `Persoana → MandatFunctie, SemnatarHcl`
 - `Sedinta → Prezenta, ProcesVerbal, PunctOrdineZi, Convocare, Document, Transcriere`
 - `PunctOrdineZi → Vot, Document`
+- `Hcl → SemnatarHcl, ComunicareHclPrefect, Document`
 
 **`IncercareTrimitere` NU cascadează** la soft-delete din `Convocare` sau `Sedinta` — audit forensic complet, toate tentativele din toate "rundele" rămân vizibile.
 
@@ -124,6 +126,8 @@ Permite cascadă N-level atomică într-un singur `SaveChanges`. Modelul curent 
 - `Convocare(SedintaId, ConsilierId)`
 - `Transcriere(SedintaId)` (one-to-one cu Sedinta)
 - `Utilizator(ConsilierId)` cu filtru `[ConsilierId] IS NOT NULL`
+- **Mandate funcție** (3, backstop DB peste `VerificaOverlap`): Primar + Secretar UAT (per `InstitutieId`), Viceprimar (per `InstitutieId, ConsilierId`)
+- **HCL** (7): `Hcl(InstitutieId, AnNumerotare, Numar)` (numerotare — numere arse), `Hcl(PunctOrdineZiId)` (max 1 HCL activ/punct), `ComunicareHclPrefect(InstitutieId, AnRegistru, NumarOrdineInRegistru)`, `Document(HclId, NumarOrdinAnexa)` cu filtru `[TipDocumentHcl] = 1`, `RelatieHcl(HclSursaId, HclTintaId, TipRelatie)` cu filtru `[HclTintaId] IS NOT NULL`, `SemnatarHcl(HclId)` × 2 (Președinte rol=1 / Secretar rol=2)
 
 ## Pattern-uri obligatorii
 
@@ -295,7 +299,7 @@ Shutdown grațios: re-throw, task rămâne `InProces`, curățat la restart (`In
 **Două niveluri de semnătură electronică implementate**:
 
 **Nivel 0 — PDF generat on-the-fly** din `pv.Continut` (Markdown cu editări secretar):
-- Generator `IGeneratorPdfProcesVerbal` cu QuestPDF + Markdig (parser PV Markdown, zero dependențe tranzitive)
+- Generator `IGeneratorPdfProcesVerbal` cu QuestPDF + Markdig. Motorul Markdown→PDF e `RandareMarkdownPdf` (static, extras în S51, partajat cu HCL); generatorul PV păstrează doar page chrome (margini, watermark DRAFT, antet, footer)
 - **QuestPDF Community License**: `QuestPDF.Settings.License = Community` în Program.cs ÎNAINTE de prima generare (gratuit < 1M USD venit anual)
 - Draft → watermark "DRAFT" în PDF. Finalizat fără watermark.
 - Fără stocare a PDF-ului generat — regenerat la fiecare cerere. Cache Redis pe portal public.
@@ -336,6 +340,67 @@ Pattern reutilizabil pentru Modulele A/C: orice act aprobat în alt act blocheaz
 - PV finalizat = **ireversibil** (OUG 57/2019 + Legea 52/2003). Fără "anulare finalizare" în MVP.
 - Typo material în PV finalizat = workaround SQL manual de Admin (frecvență estimată 1-2/an per primărie). Soluție viitoare = flow "Erată" oficial (al 2-lea PV legat de primul prin `EsteErataPentruPvId`, pattern Legea 24/2000) — separat în roadmap.
 
+## Funcții oficiale (Persoane + Mandate)
+
+Cine deține o funcție oficială (Primar / Viceprimar / Secretar UAT) la o dată dată — bază pentru semnăturile derivate pe acte administrative (HCL, viitor Dispoziții). Migrație `AddTrasabilitateFunctii`.
+
+**`Persoana`** (tenant + soft-delete + audit): `NumeComplet`, `Email?`, `Telefon?`. **Separată de `Consilier`** — Primarul și Secretarul UAT pot fi din afara consiliului. Index NON-unic `(InstitutieId, NumeComplet)` (pot exista doi omonimi). `PersoaneController` (api/Persoane): CRUD (scriere [Admin]); DELETE blocat dacă persoana are mandate (activ SAU soft-deleted — audit, gardă `IgnoreQueryFilters`). Telefon normalizat E.164 la stocare.
+
+**`MandatFunctie`** (tenant + soft-delete + audit): `TipFunctie` (Primar/Viceprimar/SecretarUat), `PersoanaId?` XOR `ConsilierId?`, `DataInceput`, `DataSfarsit?` (null = mandat deschis), `NrActNumire?`. **Regula de mapare** (OUG 57/2019): Primar/Secretar UAT = `PersoanaId` (funcționari, nu consilieri); Viceprimar = `ConsilierId` (mereu consilier ales). Impusă pe 3 niveluri: `ValideazaMapare` (controller) + check constraints `CK_MandatFunctie_ExactUnSubject` & `CK_MandatFunctie_FkCorectaPerTip` + FK Restrict spre Persoana/Consilier/Institutie. `CK_MandatFunctie_PerioadaValida` (DataSfarsit >= DataInceput).
+
+**`IServiciuValidareMandate`** (la POST/PUT):
+- `VerificaOverlap` — **per-TipFunctie** pentru Primar/Secretar (un singur primar/secretar la un moment dat, indiferent de persoană → 409), **per-(TipFunctie, Consilier)** pentru Viceprimar (mai mulți viceprimari în paralel OK, dar nu același consilier de două ori). Backstop DB: 3 filtered unique.
+- `PoateFiViceprimar` — cere ca acel consilier să aibă un mandat de **consilier** care acoperă perioada propusă → altfel 400.
+
+**`MandateFunctieController`** (api/MandateFunctie, scriere [Admin]): GET listă (filtru `tipFunctie`)/detalii; POST/PUT (validare overlap + viceprimar); `POST /{id}/Inchide` (setează `DataSfarsit`; **NU re-validează `PoateFiViceprimar`** — e instrumentul de rezolvare a „viceprimarului fantomă"); DELETE.
+
+**`IServiciuFunctiiIstorice`** — query „cine deținea funcția la data X": `CinEPrimarulLa`, `CinESecretarulUatLa` (→ `Persoana`), `CineEViceprimariiLa`, `CineEConsilieriiLa`, `CineEMembriiComisieiLa`, `CinePresedinteleComisieiLa`. Parametrul `data` = **data evenimentului juridic** (ședință / emitere act), NU data apelului — la regenerare PDF lookup-ul rămâne pe data originală. Consumat de Modul HCL (Secretar UAT pe act).
+- **Capcană `IgnoreQueryFilters`**: pe `Persoana`/`Consilier` ridică filtrul (audit — vrem și soft-deleted), dar pe `MandatFunctie`/`Mandat`/`ComisieMembru` RESPECTĂ filtrul global (corecții anulate = soft-deleted NU apar în istoric). Tenant re-impus manual pe ramurile cu `IgnoreQueryFilters` (anti-scurgere cross-tenant).
+- **„Viceprimar fantomă"**: viceprimar cu mandat de consilier expirat fără închidere explicită → EXCLUS din `CineEViceprimariiLa` (corectat prin `Inchide`).
+
+**`FunctiiIstoriceController`** (api/FunctiiIstorice) [Admin,Secretar]: GET `Primar`/`SecretarUat`/`Viceprimari`/`Consilieri`/`Comisii/{id}/Membri`/`Comisii/{id}/Presedinte` cu `?data=`. La negăsit → `JsonResult(null)` (200 cu body `null`, NU 404) — contract de citire pentru UI.
+
+## Modul HCL (Faza 3 — Modul A)
+
+Hotărâri de Consiliu Local generate din puncte adoptate: ciclu redacțional + comunicare legală către prefect + publicare portal/MOL. **4 entități noi** (tenant + soft-delete + audit), migrație `AddModulHCL` (include și cele 5 câmpuri signed-PDF — fără migrație separată):
+- `Hcl` — actul. Vot snapshot imutabil (`VotPentru/Impotriva/Abtinere` + `TipMajoritate`) copiat la generare.
+- `SemnatarHcl` — semnatari derivați (Președinte ședință / Secretar UAT / Semnatar alternativ art. 140). XOR `PersoanaId`/`ConsilierId` (check `CK_SemnatarHcl_*` + FK-corectă-per-rol). Filtered unique pe Președinte/Secretar.
+- `ComunicareHclPrefect` — registru comunicări către prefect (numerotare proprie pe an).
+- `RelatieHcl` — relații între acte; țintă internă `HclTintaId` XOR externă `ReferintaActExternText` (`CK_RelatieHcl_ExactUnaTinta`).
+
+**Două axe ortogonale** (paritar PV status vs aprobare):
+- `StatusHclRedactional`: `Draft → Numerotat → Semnat` (redactare internă).
+- Validitate juridică: `DataInvalidare` + `MotivInvalidare` + `RefInvalidare` (anulat prefect/instanță, abrogat, retractat). Un act semnat poate fi invalidat ulterior.
+
+**`HclController`** (`api/Hcl`, 18 endpoint-uri). `POST /Genereaza` din punct adoptat cu **5 precondiții ordonate**: (1) punct ProiectHCL `Rezultat == Adoptat` + `TipMajoritate` setat; (2) ședință `>= Convocata && != Anulata`; (3) `PresedinteSedintaConsilierId` setat; (4) Secretar UAT valid la **data adoptării locală** (`IServiciuFunctiiIstorice.CinESecretarulUatLa`, data = `Sedinta.DataOra.LaFusOrar`); (5) un singur HCL per punct (409). Creează Draft + 2 semnatari + conținut Markdown. Restul: `Continut`/`RegenereazaContinut` (gardă `!= Semnat`), `AtribuieNumar`, `Semneaza`, `Invalidare`±DELETE, `Publicare`, `PublicareMol`±DELETE, `MotivLipsaPresedinte`, `Pdf`, `Semnat` (POST/GET/DELETE), `DELETE`.
+
+**`Semneaza`** (`Numerotat → Semnat`): validează exact 1 Secretar UAT ȘI (1 Președinte SAU ≥2 alternativi art. 140 alin. 2 + motiv setat).
+
+**Numerotare** (`IServiciuNumerotareHcl`): an de registru = anul **local** al adoptării. Numerele soft-deleted rămân **arse** (subdecizie paritară slug-uri instituții — `IgnoreQueryFilters` + tenant re-impus manual). `AtribuieAsync` întoarce rezultat tipat: Succes / NumarInvalid (≤0) / StareInvalidaHcl (≠ Draft) / LacuneNeconfirmate (numărul sare peste sugestie → 409 cu lacunele, confirmabil cu `confirmaCuLacune=true`) / NumarLuat (activ SAU ars → 409 cu sugestie; compare-and-swap pe filtered unique). La reușită, placeholder-ul `PlaceholderHcl.NumarNeatribuit` din conținut e înlocuit țintit cu `{numar}/{an}` în același SaveChanges (păstrează editările secretarului, spre deosebire de regenerare).
+
+**Matricea DELETE = 4 gărzi ordonate cu early-return** (NU switch — stările sunt ortogonale):
+1. Comunicări active → 409 (registru prefect inviolabil).
+2. `DataInvalidare != null` → OK (override: act mort legal, eliminat la cererea instanței — bate chiar și garda Semnat).
+3. Status `Semnat` → 409.
+4. `EstePublicat` → 409 (depublică întâi).
+Altfel (Draft/Numerotat fără comunicări) → OK; numărul rămâne ars. Pattern reutilizabil la dispoziții/erată.
+
+**Generator PDF + renderer partajat**: `RandareMarkdownPdf` (static, `RandeazaIn(col, markdown)`) extras din `GeneratorPdfProcesVerbal` (S51) — motor Markdig→QuestPDF comun PV+HCL (rule-of-three plătit devreme; single point of failure, fără test PDF byte-level momentan). `IGeneratorPdfHcl` randează `hcl.Continut` (NU regenerează) cu **watermark 3 stări**: INVALIDAT dacă `DataInvalidare != null`, altfel DRAFT dacă `Status != Semnat`, altfel curat.
+
+**Variantă semnată (Nivel 1, paritar PV) — garda „varianta B"**: prima atașare permisă mereu cât `Status == Semnat` (chiar post-MOL — upgrade benign); replace blocat dacă există cale ȘI `DataPublicareMol != null`; DELETE blocat dacă `DataPublicareMol != null`. Divergență intenționată față de PV (ancore diferite: PV `DataAprobare`, HCL `DataPublicareMol`). **Critic**: `Hcluri.CaleStocareSemnat` inclus în scanul de orfani din Mentenanță (stocare partajată cu Documente + PV).
+
+**Semnatari** (`SemnatariHclController`): XOR persoană/consilier, FK-corectă-per-rol (Secretar=persoană, Președinte/Art140=consilier), filtered unique pe rolurile unice, conflict cross-rol pe același consilier. Art. 140 alin. 2: motiv lipsă președinte setat + consilier prezent (Prezent/OnlinePrezent). Ștergerea ultimului alternativ auto-curăță motivul.
+
+**Comunicare prefect** (`ComunicariHclPrefectController` + `RegistruComunicariPrefectController`): gardă `Status >= Numerotat` (art. 197 — termenul curge de la adoptare, nu semnare). `NumarOrdineInRegistru` per (instituție, an), arse — retry loop pe violare unique. Update: imutabile HclId/NumarOrdine/AnRegistru/DataTrimiteri/CanalTransmitere; DELETE = Admin only.
+
+**Termen + alerte T-N** (`CalculatorZileLucratoare` singleton + `IServiciuComunicareHclPrefect`): termen comunicare = **10 zile lucrătoare** de la adoptare (art. 197 alin. 1). Calculatorul acoperă weekend + sărbători fixe (Codul Muncii art. 139) + Paște ortodox (Meeus + 13 zile, **expiră ~2100**), cache per an. `GET /api/Hcl/UrgentDeComunicat?prag=N` — HCL Numerotat+, neinvalidate, fără comunicare live, cu zile rămase ≤ prag (negativ = termen depășit). Filtrare in-memory — OK ~50 HCL/an. Rută literală bate `{id}`.
+
+**Relații** (`RelatiiHclController`): XOR țintă internă/externă, text extern max 300, auto-referință → 400, duplicat (sursă,țintă,tip) → 409. Se administrează din capătul **sursă** (DELETE doar `HclSursaId == hclId`); `GET` partiționează sursă/țintă în memorie.
+
+**Anexe** (extindere `DocumenteController`): document atașat la HCL via `hclId` → `TipDocument` forțat `Altele`, `TipDocumentHcl` devine sursa de adevăr. Anexă (`TipDocumentHcl.Anexa`) cere `NumarOrdinAnexa` (unic per HCL, imutabil când Semnat). Context exact-unul-din-trei: `SedintaId` XOR `PunctId` XOR `HclId` (rescriere `CK_Document_ExactUnContext`).
+
+**Portal public** (`PublicHclController`, `/public/{slug}/hcl`): vizibilitate `EstePublicat && Status >= Numerotat`. HCL invalidat rămâne vizibil cu badge (vizibilitatea persistă — decizie juridică). `GET /` listă, `GET /{id}` detalii (expune semnatari nume+rol, vot, anexe publice, relații; NU comunicări sau internals de stocare), `GET /{id}/pdf` — variantă semnată prioritară (nume canonic `hcl-{numar}-{an}-semnat.pdf`) + fallback grațios la PDF generat. **Cache Redis DOAR la Semnat** (conținut înghețat): cheie `cleriq:hcl:pdf:{id}` sau `:inv` la invalidat; la Numerotat (conținut încă mutabil) generare proaspătă fără cache. Anexele HCL se descarcă prin `PublicDocumenteController` (branch `HclId` — anexa are Sedinta+Punct null).
+
 ## Portal public
 
 **Rute `/public/{slug}/...`** — fără `[Authorize]`. `SlugTenantMiddleware` rezolvă slug → tenant și setează `HttpContext.Items["InstitutieId"]` ÎNAINTE de execuția acțiunii. Filtrul global aplică automat `Id == InstitutieIdCurenta`.
@@ -351,6 +416,7 @@ Pattern reutilizabil pentru Modulele A/C: orice act aprobat în alt act blocheaz
 - `GET /public/{slug}/sedinte/{id}/documente`, `GET /public/{slug}/puncte/{id}/documente`
 - `GET /public/{slug}/documente/{id}` — descărcare cu dublă validare
 - `GET /public/{slug}/sedinte/{id}/procesverbal` (+ `/markdown`, `/pdf`)
+- `GET /public/{slug}/hcl`, `/hcl/{id}`, `/hcl/{id}/pdf` — listă/detalii/PDF HCL (vezi Modul HCL)
 
 **PV public**: doar `Status = Finalizat`. PDF: varianta semnată are prioritate (nume canonic `proces-verbal-{data}-semnat.pdf`, NU numele fișierului încărcat). Lipsă pe disk → warning în log + degradare grațioasă la PDF generat (cetățeanul primește mereu un PDF).
 
@@ -377,6 +443,7 @@ Pattern reutilizabil pentru Modulele A/C: orice act aprobat în alt act blocheaz
 - **Cu TTL** (sigur la evicție):
   - `cleriq:tenant:slug:{slug}` — SlugTenantMiddleware cache
   - `cleriq:pv:pdf:{sedintaId}` — PDF PV public (1h)
+  - `cleriq:hcl:pdf:{hclId}` (+ `:inv`) — PDF HCL public, DOAR la Semnat (1h)
   - `cleriq:lock:{...}` — locks distribuite workeri
 - **Fără TTL** (critic):
   - `cleriq:dataprotection-keys` — listă chei Data Protection (parolele SMTP criptate)
@@ -410,7 +477,7 @@ Query: `?zile=N` (default 90, **min 30** — gardă defensivă).
 
 **`IStocare*.EnumereazaToateAsync`** = abstracție obligatorie pe orice stocare. Migrare cloud drop-in.
 
-**Pattern critic**: orice tabelă care referențiază fișiere din `IStocareDocumente`/`IStocareAudio` TREBUIE inclusă în dicționarele de scan din `MentenantaController` — altfel cleanup-ul le șterge fizic ca orfane. Curent: `Documente.CaleStocare`, `ProceseVerbale.CaleStocareSemnat` (vin din aceeași stocare partajată!), `Transcrieri.CaleStocareAudio`.
+**Pattern critic**: orice tabelă care referențiază fișiere din `IStocareDocumente`/`IStocareAudio` TREBUIE inclusă în dicționarele de scan din `MentenantaController` — altfel cleanup-ul le șterge fizic ca orfane. Curent: `Documente.CaleStocare`, `ProceseVerbale.CaleStocareSemnat`, `Hcluri.CaleStocareSemnat` (toate trei din aceeași stocare partajată!), `Transcrieri.CaleStocareAudio`.
 
 **Logging structured cu `ILogger`** pe fiecare ștergere — audit pentru SuperAdmin.
 
@@ -432,7 +499,7 @@ Telefoanele consilierilor seedați = `null` (Twilio real în user-secrets ar tri
 
 ## Teste
 
-Suită xUnit + WebApplicationFactory, **84 teste verzi**. Izolare prin multi-tenancy (instituție proprie per test cu slug Guid), NU prin curățare DB între teste. DB de test = SQL Server real `CleriqTest` (NU InMemory — traduce filtered indexes, RowVersion, check constraints, filtre globale). `public partial class Program { }` la finalul Program.cs (necesar pentru `WebApplicationFactory` cu top-level statements).
+Suită xUnit + WebApplicationFactory, **262 teste verzi**. Izolare prin multi-tenancy (instituție proprie per test cu slug Guid), NU prin curățare DB între teste. DB de test = SQL Server real `CleriqTest` (NU InMemory — traduce filtered indexes, RowVersion, check constraints, filtre globale). `public partial class Program { }` la finalul Program.cs (necesar pentru `WebApplicationFactory` cu top-level statements).
 
 Convențiile fixture, patterns de aranjare prin DbTest, izolarea, rate limiting test, helper-i sunt în **`teste.md` — atașat când adăugăm/debug teste**.
 
@@ -441,7 +508,7 @@ Convențiile fixture, patterns de aranjare prin DbTest, izolarea, rate limiting 
 ## Migrații cumulative
 
 Lista migrațiilor aplicate (în ordine):
-`AddFkInstitutieRestrict`, `AddTipVotPunctOrdineZi`, `AddConsilierIdUtilizator`, `AddContinutConvocare`, `AddDocument`, `AddIncercareTrimitere`, `AddSmtpConfigInstitutie`, `AddTranscriere`, `AddHotwordsTranscriere`, `DropHotwordsFolosite`, `AddPvSemnat`, `RenameNumarIncercariToNumarEsecuri`, `AddRefreshToken`, `AddPublishTranscriere`.
+`AddFkInstitutieRestrict`, `AddTipVotPunctOrdineZi`, `AddConsilierIdUtilizator`, `AddContinutConvocare`, `AddDocument`, `AddIncercareTrimitere`, `AddSmtpConfigInstitutie`, `AddTranscriere`, `AddHotwordsTranscriere`, `DropHotwordsFolosite`, `AddPvSemnat`, `RenameNumarIncercariToNumarEsecuri`, `AddRefreshToken`, `AddPublishTranscriere`, `AddAprobarePv`, `AddTrasabilitateFunctii`, `AddModulHCL` (cele 5 câmpuri signed-PDF HCL incluse aici, fără migrație separată).
 
 ## Legături la fișiere on-demand
 
