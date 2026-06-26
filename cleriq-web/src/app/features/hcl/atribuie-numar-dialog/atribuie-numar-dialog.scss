@@ -1,0 +1,59 @@
+.continut {
+  min-width: 360px;
+  max-width: 95vw;
+}
+
+.centru-mic {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0;
+}
+
+.indiciu {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.rand-numar {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.camp-numar {
+  width: 140px;
+}
+
+.an-sufix {
+  font: var(--mat-sys-title-medium);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.avertisment {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fff8e1;
+  color: #8d6e00;
+
+  mat-icon {
+    flex-shrink: 0;
+  }
+
+  p {
+    margin: 0 0 8px;
+  }
+}
+
+.avertisment-eroare {
+  background: #fdecea;
+  color: #b71c1c;
+}
+
+.eroare {
+  color: var(--mat-sys-error);
+  margin: 8px 0 0;
+}

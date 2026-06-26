@@ -112,3 +112,63 @@ export enum RolComisie {
   Secretar = 2,
   Membru = 3
 }
+
+// === HCL (Modul A) ===
+
+export enum StatusHclRedactional {
+  Draft = 1,
+  Numerotat = 2,
+  Semnat = 3
+}
+
+export enum TipHcl {
+  Normativ = 1,
+  Individual = 2
+}
+
+export enum RolSemnatar {
+  PresedinteSedinta = 1,
+  SecretarUat = 2,
+  SemnatarAlternativArt140 = 3
+}
+
+export enum TipRelatieHcl {
+  Modifica = 1,
+  Abroga = 2,
+  Suspenda = 3,
+  PuneInAplicare = 4,
+  Completeaza = 5,
+  Republica = 6
+}
+
+export enum MotivInvalidare {
+  AnulatPrefect = 1,
+  AnulatInstanta = 2,
+  AbrogatHclUlterior = 3,
+  Retractat = 4
+}
+
+export enum CanalTransmiterePrefect {
+  Posta = 1,
+  EmailOficial = 2,
+  Curier = 3,
+  Prezentare = 4,
+  ePoartal = 5,
+  Altul = 6
+}
+
+export enum RaspunsPrefect {
+  Acceptat = 1,
+  RespinsLegalitate = 2,
+  CereClarificari = 3,
+  FaraRaspuns = 4
+}
+
+export enum TipDocumentHcl {
+  Anexa = 1,
+  RaportSpecialitate = 2,
+  ExpunereDeMotive = 3,
+  AvizComisie = 4,
+  Justificativ = 5,
+  Altul = 6
+}

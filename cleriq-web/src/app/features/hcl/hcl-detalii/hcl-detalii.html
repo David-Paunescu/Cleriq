@@ -1,0 +1,129 @@
+@if (seIncarca() && hcl() === null) {
+  <div class="centru"><mat-spinner diameter="40" /></div>
+} @else if (eroare(); as mesaj) {
+  <div class="centru">
+    <p class="eroare">{{ mesaj }}</p>
+    <button mat-stroked-button (click)="incarca()">Reîncearcă</button>
+  </div>
+} @else if (hcl(); as h) {
+  <div class="antet">
+    <button mat-icon-button (click)="inapoiLaLista()" matTooltip="Înapoi la listă">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+
+    <div class="antet-text">
+      <h1>{{ h.titlu }}</h1>
+      <div class="antet-meta">
+        <span class="badge-numar">HCL {{ numarAfisat(h) }}</span>
+        <span [class]="claseStatus(h.status)">{{ etichetaStatusHcl(h.status) }}</span>
+        @if (h.dataInvalidare) {
+          <span class="badge badge-invalidat">Invalidat</span>
+        }
+      </div>
+    </div>
+
+    <span class="spacer"></span>
+
+    <div class="antet-actiuni">
+      @if (actiuni().poateAtribuiNumar) {
+        <button mat-stroked-button (click)="deschideAtribuieNumar()">
+          <mat-icon>tag</mat-icon>
+          Atribuie număr
+        </button>
+      }
+      @if (actiuni().poateSemna) {
+        <button mat-flat-button (click)="semneaza()" [disabled]="seSemneaza()">
+          @if (seSemneaza()) {
+            <mat-spinner diameter="16" />
+          } @else {
+            <mat-icon>draw</mat-icon>
+          }
+          Semnează
+        </button>
+      }
+      @if (actiuni().poateDescarcaPdf) {
+        <button mat-stroked-button (click)="descarcaPdf()" [disabled]="seDescarcaPdf()">
+          @if (seDescarcaPdf()) {
+            <mat-spinner diameter="16" />
+          } @else {
+            <mat-icon>download</mat-icon>
+          }
+          PDF
+        </button>
+      }
+    </div>
+  </div>
+
+  <mat-tab-group [selectedIndex]="indexTabActiv()"
+                 (selectedIndexChange)="indexTabActiv.set($event)">
+    <mat-tab label="Detalii">
+      <dl class="grila">
+        <dt>Titlu</dt>
+        <dd>{{ h.titlu }}</dd>
+
+        <dt>Tip</dt>
+        <dd>{{ etichetaTipHcl(h.tipHcl) }}</dd>
+
+        <dt>Număr</dt>
+        <dd>{{ numarAfisat(h) }}</dd>
+
+        <dt>Data adoptării</dt>
+        <dd>{{ formateazaDataOra(h.dataAdoptare) }}</dd>
+
+        <dt>Status</dt>
+        <dd><span [class]="claseStatus(h.status)">{{ etichetaStatusHcl(h.status) }}</span></dd>
+
+        <dt>Majoritate</dt>
+        <dd>{{ etichetaTipMajoritate(h.tipMajoritate) }}</dd>
+
+        <dt>Vot la adoptare</dt>
+        <dd>{{ h.votPentru }} pentru · {{ h.votImpotriva }} împotrivă · {{ h.votAbtinere }} abținere</dd>
+      </dl>
+    </mat-tab>
+
+    <mat-tab label="Conținut">
+      <div class="tab-continut">
+        @if (actiuni().poateEditaContinut) {
+          <div class="antet-editor">
+            <span class="slot-indicator">
+              @if (afiseazaIndicator(); as ind) {
+                <span class="indicator-stare" [class]="ind.clasa">
+                  @if (ind.spinner) {
+                    <mat-spinner diameter="12" />
+                  } @else if (ind.icon; as iconName) {
+                    <mat-icon class="icon-indicator">{{ iconName }}</mat-icon>
+                  }
+                  <span>{{ ind.text }}</span>
+                </span>
+              }
+            </span>
+
+            <button mat-icon-button [matMenuTriggerFor]="meniuEditor"
+                    [disabled]="actiuneInCurs()" matTooltip="Mai multe">
+              <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #meniuEditor="matMenu">
+              <button mat-menu-item (click)="regenereaza()" [disabled]="actiuneInCurs()">
+                <mat-icon>refresh</mat-icon>
+                <span>Regenerează din date</span>
+              </button>
+            </mat-menu>
+          </div>
+
+          <textarea
+            #textareaEditor
+            rows="22"
+            class="textarea-editor"
+            (input)="laInputEditor($event)"
+            [disabled]="actiuneInCurs()">
+          </textarea>
+          <div class="hint-ctrls">Auto-save la 2 secunde · Ctrl+S pentru salvare imediată</div>
+        } @else if (h.continut) {
+          <pre class="continut-prose">{{ h.continut }}</pre>
+        } @else {
+          <p class="gol">Hotărârea nu are conținut.</p>
+        }
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+}

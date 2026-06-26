@@ -65,15 +65,7 @@ public class HclController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> Detalii(int id)
     {
-        var hcl = await _context.Hcluri
-            .Include(h => h.Semnatari).ThenInclude(s => s.Persoana)
-            .Include(h => h.Semnatari).ThenInclude(s => s.Consilier)
-            .Include(h => h.Documente)
-            .Include(h => h.RelatiiSursa).ThenInclude(r => r.HclTinta)
-            .Include(h => h.RelatiiTinta).ThenInclude(r => r.HclSursa)
-            .Include(h => h.Comunicari)
-            .FirstOrDefaultAsync(h => h.Id == id);
-
+        var hcl = await HcluriCuIncludeComplet().FirstOrDefaultAsync(h => h.Id == id);
         if (hcl is null) return NotFound();
         return Ok(MapeazaSpreDetaliiDto(hcl));
     }
@@ -142,15 +134,7 @@ public class HclController : ControllerBase
             catch { }
         }
 
-        var hclComplet = await _context.Hcluri
-            .Include(h => h.Semnatari).ThenInclude(s => s.Persoana)
-            .Include(h => h.Semnatari).ThenInclude(s => s.Consilier)
-            .Include(h => h.Documente)
-            .Include(h => h.RelatiiSursa).ThenInclude(r => r.HclTinta)
-            .Include(h => h.RelatiiTinta).ThenInclude(r => r.HclSursa)
-            .Include(h => h.Comunicari)
-            .FirstAsync(h => h.Id == id, ct);
-
+        var hclComplet = await ReincarcaCuIncludeAsync(id, ct);
         return Ok(MapeazaSpreDetaliiDto(hclComplet));
     }
 
@@ -300,7 +284,7 @@ public class HclController : ControllerBase
 
         hcl.Continut = dto.Continut;
         await _context.SaveChangesAsync();
-        return Ok(MapeazaSpreDto(hcl));
+        return Ok(MapeazaSpreDetaliiDto(await ReincarcaCuIncludeAsync(id)));
     }
 
     [HttpPost("{id}/RegenereazaContinut")]
@@ -321,7 +305,7 @@ public class HclController : ControllerBase
 
         hcl.Continut = _generator.GenereazaContinut(hcl);
         await _context.SaveChangesAsync();
-        return Ok(MapeazaSpreDto(hcl));
+        return Ok(MapeazaSpreDetaliiDto(await ReincarcaCuIncludeAsync(id)));
     }
 
     [HttpPost("{id}/AtribuieNumar")]
@@ -333,8 +317,7 @@ public class HclController : ControllerBase
         switch (rezultat.Tip)
         {
             case TipRezultatAtribuire.Succes:
-                var hcl = await _context.Hcluri.FirstAsync(h => h.Id == id);
-                return Ok(MapeazaSpreDto(hcl));
+                return Ok(MapeazaSpreDetaliiDto(await ReincarcaCuIncludeAsync(id)));
             case TipRezultatAtribuire.HclInexistent:
                 return NotFound(rezultat.MesajEroare);
             case TipRezultatAtribuire.NumarInvalid:
@@ -348,6 +331,25 @@ public class HclController : ControllerBase
             default:
                 return Conflict(rezultat.MesajEroare);
         }
+    }
+
+    // Pre-completează dialogul de numerotare cu următorul număr liber (sare peste numerele arse).
+    // An = anul juridic LOCAL al adoptării, identic cu ServiciuNumerotareHcl.AtribuieAsync.
+    [HttpGet("{id}/SugestieNumar")]
+    [Authorize(Roles = "Admin,Secretar")]
+    public async Task<IActionResult> SugestieNumar(int id, CancellationToken ct)
+    {
+        var hcl = await _context.Hcluri.FirstOrDefaultAsync(h => h.Id == id, ct);
+        if (hcl is null) return NotFound();
+
+        var fusOrar = await _context.Institutii
+            .Where(i => i.Id == hcl.InstitutieId)
+            .Select(i => i.FusOrar)
+            .FirstAsync(ct);
+        var an = hcl.DataAdoptare.LaFusOrar(fusOrar).Year;
+        var numar = await _numerotare.SugereazaNumarAsync(hcl.InstitutieId, an, ct);
+
+        return Ok(new SugestieNumarDto(numar, an));
     }
 
     [HttpPost("{id}/Semneaza")]
@@ -378,7 +380,7 @@ public class HclController : ControllerBase
 
         hcl.Status = StatusHclRedactional.Semnat;
         await _context.SaveChangesAsync();
-        return Ok(MapeazaSpreDto(hcl));
+        return Ok(MapeazaSpreDetaliiDto(await ReincarcaCuIncludeAsync(id)));
     }
 
     [HttpPost("{id}/Invalidare")]
@@ -531,6 +533,23 @@ public class HclController : ControllerBase
         await _context.SaveChangesAsync();
         return Ok(MapeazaSpreDto(hcl));
     }
+
+    // ============ Reload cu include ============
+
+    // Un singur loc pentru include-urile complete → maparea spre HclDetaliiDto nu vine cu
+    // colecții goale. Folosit la Detalii (GET) și la reload-ul post-mutație (toate acțiunile
+    // care întorc Detalii: editare/regenerare conținut, atribuire număr, semnare, încărcare semnat).
+    private IQueryable<Hcl> HcluriCuIncludeComplet() =>
+        _context.Hcluri
+            .Include(h => h.Semnatari).ThenInclude(s => s.Persoana)
+            .Include(h => h.Semnatari).ThenInclude(s => s.Consilier)
+            .Include(h => h.Documente)
+            .Include(h => h.RelatiiSursa).ThenInclude(r => r.HclTinta)
+            .Include(h => h.RelatiiTinta).ThenInclude(r => r.HclSursa)
+            .Include(h => h.Comunicari);
+
+    private Task<Hcl> ReincarcaCuIncludeAsync(int id, CancellationToken ct = default) =>
+        HcluriCuIncludeComplet().FirstAsync(h => h.Id == id, ct);
 
     // ============ Mappers ============
 

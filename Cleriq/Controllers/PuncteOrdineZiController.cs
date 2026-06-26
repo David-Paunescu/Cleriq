@@ -31,7 +31,9 @@ public class PuncteOrdineZiController : ControllerBase
             .OrderBy(p => p.Ordine)
             .Select(p => new PunctOrdineZiDto(
                 p.Id, p.SedintaId, p.Ordine, p.Titlu, p.Descriere, p.Tip,
-                p.NecesitaVot, p.TipVot, p.TipMajoritate, p.Rezultat, p.InstitutieId, p.CreatLa))
+                p.NecesitaVot, p.TipVot, p.TipMajoritate, p.Rezultat, p.InstitutieId, p.CreatLa,
+                _context.Hcluri.Where(h => h.PunctOrdineZiId == p.Id)
+                    .Select(h => (int?)h.Id).FirstOrDefault()))
             .ToListAsync();
 
         return Ok(puncte);
@@ -45,7 +47,10 @@ public class PuncteOrdineZiController : ControllerBase
         if (punct is null)
             return NotFound();
 
-        return Ok(MapeazaSpreDto(punct));
+        var hclId = await _context.Hcluri
+            .Where(h => h.PunctOrdineZiId == punctId)
+            .Select(h => (int?)h.Id).FirstOrDefaultAsync();
+        return Ok(MapeazaSpreDto(punct, hclId));
     }
 
     [HttpPost]
@@ -82,7 +87,8 @@ public class PuncteOrdineZiController : ControllerBase
         _context.PuncteOrdineZi.Add(punct);
         await _context.SaveChangesAsync();
 
-        return Ok(MapeazaSpreDto(punct));
+        // Punct nou → încă nu poate avea HCL generat.
+        return Ok(MapeazaSpreDto(punct, null));
     }
 
     [HttpPut("{punctId}")]
@@ -123,7 +129,10 @@ public class PuncteOrdineZiController : ControllerBase
         // Rezultat NU se modifică aici
 
         await _context.SaveChangesAsync();
-        return Ok(MapeazaSpreDto(punct));
+        var hclId = await _context.Hcluri
+            .Where(h => h.PunctOrdineZiId == punctId)
+            .Select(h => (int?)h.Id).FirstOrDefaultAsync();
+        return Ok(MapeazaSpreDto(punct, hclId));
     }
 
     [HttpDelete("{punctId}")]
@@ -215,7 +224,8 @@ public class PuncteOrdineZiController : ControllerBase
 
         punct.Rezultat = rezultat;
         await _context.SaveChangesAsync();
-        return Ok(MapeazaSpreDto(punct));
+        // Punct fără rezultat anterior (gardă mai sus) → nu poate avea HCL.
+        return Ok(MapeazaSpreDto(punct, null));
     }
 
     private static (bool Adoptat, int Prag) CalculeazaRezultat(
@@ -250,7 +260,7 @@ public class PuncteOrdineZiController : ControllerBase
     }
     //
 
-    private static PunctOrdineZiDto MapeazaSpreDto(PunctOrdineZi p) => new(
+    private static PunctOrdineZiDto MapeazaSpreDto(PunctOrdineZi p, int? hclId) => new(
         p.Id, p.SedintaId, p.Ordine, p.Titlu, p.Descriere, p.Tip,
-        p.NecesitaVot, p.TipVot, p.TipMajoritate, p.Rezultat, p.InstitutieId, p.CreatLa);
+        p.NecesitaVot, p.TipVot, p.TipMajoritate, p.Rezultat, p.InstitutieId, p.CreatLa, hclId);
 }

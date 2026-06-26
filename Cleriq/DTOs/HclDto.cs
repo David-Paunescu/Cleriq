@@ -81,3 +81,5 @@ public record DocumentHclDto(
     int Ordine);
 
 public record MotivLipsaPresedinteDto(string Motiv);
+
+public record SugestieNumarDto(int Numar, int An);

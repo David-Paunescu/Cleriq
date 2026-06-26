@@ -13,6 +13,7 @@ export interface PunctOrdineZi {
   rezultat: RezultatPunct | null;
   institutieId: number;
   creatLa: string;
+  hclId: number | null;
 }
 
 export interface CrearePunct {

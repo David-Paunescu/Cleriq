@@ -32,4 +32,5 @@ public record PunctOrdineZiDto(
     TipMajoritate? TipMajoritate,
     RezultatPunct? Rezultat,
     int InstitutieId,
-    DateTime CreatLa);
+    DateTime CreatLa,
+    int? HclId);

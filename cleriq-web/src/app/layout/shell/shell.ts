@@ -27,7 +27,8 @@ const GRUPURI: GrupMeniu[] = [
   {
     elemente: [
       { eticheta: 'Acasă', icon: 'home', ruta: '/' },
-      { eticheta: 'Ședințe', icon: 'event', ruta: '/sedinte' }
+      { eticheta: 'Ședințe', icon: 'event', ruta: '/sedinte' },
+      { eticheta: 'Hotărâri', icon: 'gavel', ruta: '/hcl' }
     ]
   },
   {

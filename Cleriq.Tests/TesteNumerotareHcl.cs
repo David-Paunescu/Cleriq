@@ -127,6 +127,32 @@ public class TesteNumerotareHcl
         }
     }
 
+    [Fact]
+    public async Task SugestieNumar_UrmatorulNumarLiber_SiAnulAdoptarii()
+    {
+        var admin = await AdminNouAsync();
+        using (admin)
+        {
+            var hcl1 = await admin.GenereazaHclAdoptatAsync();
+
+            var s1 = await admin.GetFromJsonAsync<JsonElement>(
+                $"/api/Hcl/{hcl1.HclId}/SugestieNumar");
+            Assert.Equal(1, s1.GetProperty("numar").GetInt32());
+            var anSugerat = s1.GetProperty("an").GetInt32();
+
+            // anul sugerat coincide cu anul real de numerotare (din DataAdoptare)
+            await admin.AtribuieNumarHclAsync(hcl1.HclId, 1);
+            var detalii = await admin.GetFromJsonAsync<JsonElement>($"/api/Hcl/{hcl1.HclId}");
+            Assert.Equal(anSugerat, detalii.GetProperty("anNumerotare").GetInt32());
+
+            // după ce nr.1 e luat, al doilea HCL primește sugestia 2
+            var hcl2 = await admin.GenereazaHclAdoptatAsync();
+            var s2 = await admin.GetFromJsonAsync<JsonElement>(
+                $"/api/Hcl/{hcl2.HclId}/SugestieNumar");
+            Assert.Equal(2, s2.GetProperty("numar").GetInt32());
+        }
+    }
+
     private async Task<HttpClient> AdminNouAsync()
     {
         var inst = await _factory.ProvisioneazaInstitutieAsync();

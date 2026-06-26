@@ -1,7 +1,8 @@
-import { ModDesfasurare, StatusSedinta, TipSedinta, OptiuneVot, RezultatPunct, StatusPrezenta, 
+import { ModDesfasurare, StatusSedinta, TipSedinta, OptiuneVot, RezultatPunct, StatusPrezenta,
          TipMajoritate, TipPunct, TipVot, TipDocument, StatusTrimitere, StatusConvocare,
          CanalNotificare, StatusIncercare, StatusTranscriere, StatusProcesVerbal, TipFunctie,
-         RolComisie  } from './enums';
+         RolComisie, StatusHclRedactional, TipHcl, RolSemnatar, TipRelatieHcl, MotivInvalidare,
+         CanalTransmiterePrefect, RaspunsPrefect, TipDocumentHcl  } from './enums';
 
 export function etichetaTipSedinta(t: TipSedinta): string {
   switch (t) {
@@ -153,5 +154,84 @@ export function etichetaRolComisie(r: RolComisie): string {
     case RolComisie.Presedinte: return 'Președinte';
     case RolComisie.Secretar: return 'Secretar';
     case RolComisie.Membru: return 'Membru';
+  }
+}
+
+// === HCL (Modul A) ===
+
+export function etichetaStatusHcl(s: StatusHclRedactional): string {
+  switch (s) {
+    case StatusHclRedactional.Draft: return 'Draft';
+    case StatusHclRedactional.Numerotat: return 'Numerotat';
+    case StatusHclRedactional.Semnat: return 'Semnat';
+  }
+}
+
+export function etichetaTipHcl(t: TipHcl): string {
+  switch (t) {
+    case TipHcl.Normativ: return 'Normativ';
+    case TipHcl.Individual: return 'Individual';
+  }
+}
+
+export function etichetaRolSemnatar(r: RolSemnatar): string {
+  switch (r) {
+    case RolSemnatar.PresedinteSedinta: return 'Președinte de ședință';
+    case RolSemnatar.SecretarUat: return 'Secretar UAT';
+    case RolSemnatar.SemnatarAlternativArt140: return 'Semnatar alternativ (art. 140)';
+  }
+}
+
+export function etichetaTipRelatieHcl(t: TipRelatieHcl): string {
+  switch (t) {
+    case TipRelatieHcl.Modifica: return 'Modifică';
+    case TipRelatieHcl.Abroga: return 'Abrogă';
+    case TipRelatieHcl.Suspenda: return 'Suspendă';
+    case TipRelatieHcl.PuneInAplicare: return 'Pune în aplicare';
+    case TipRelatieHcl.Completeaza: return 'Completează';
+    case TipRelatieHcl.Republica: return 'Republică';
+  }
+}
+
+export function etichetaMotivInvalidare(m: MotivInvalidare | null | undefined): string {
+  if (m == null) return '—';
+  switch (m) {
+    case MotivInvalidare.AnulatPrefect: return 'Anulat de prefect';
+    case MotivInvalidare.AnulatInstanta: return 'Anulat de instanță';
+    case MotivInvalidare.AbrogatHclUlterior: return 'Abrogat prin HCL ulterior';
+    case MotivInvalidare.Retractat: return 'Retractat';
+  }
+}
+
+export function etichetaCanalTransmiterePrefect(c: CanalTransmiterePrefect): string {
+  switch (c) {
+    case CanalTransmiterePrefect.Posta: return 'Poștă';
+    case CanalTransmiterePrefect.EmailOficial: return 'Email oficial';
+    case CanalTransmiterePrefect.Curier: return 'Curier';
+    case CanalTransmiterePrefect.Prezentare: return 'Prezentare';
+    case CanalTransmiterePrefect.ePoartal: return 'e-Portal';
+    case CanalTransmiterePrefect.Altul: return 'Altul';
+  }
+}
+
+export function etichetaRaspunsPrefect(r: RaspunsPrefect | null | undefined): string {
+  if (r == null) return 'Fără răspuns';
+  switch (r) {
+    case RaspunsPrefect.Acceptat: return 'Acceptat';
+    case RaspunsPrefect.RespinsLegalitate: return 'Respins pe legalitate';
+    case RaspunsPrefect.CereClarificari: return 'Cere clarificări';
+    case RaspunsPrefect.FaraRaspuns: return 'Fără răspuns';
+  }
+}
+
+export function etichetaTipDocumentHcl(t: TipDocumentHcl | null | undefined): string {
+  if (t == null) return '—';
+  switch (t) {
+    case TipDocumentHcl.Anexa: return 'Anexă';
+    case TipDocumentHcl.RaportSpecialitate: return 'Raport de specialitate';
+    case TipDocumentHcl.ExpunereDeMotive: return 'Expunere de motive';
+    case TipDocumentHcl.AvizComisie: return 'Aviz comisie';
+    case TipDocumentHcl.Justificativ: return 'Document justificativ';
+    case TipDocumentHcl.Altul: return 'Altul';
   }
 }

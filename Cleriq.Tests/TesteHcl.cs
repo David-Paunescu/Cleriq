@@ -107,6 +107,31 @@ public class TesteHcl
         }
     }
 
+    // === Legătura punct → HCL (hclId pe DTO-ul de punct) ===
+
+    [Fact]
+    public async Task PuncteLista_ExpuneHclId_DoarPePunctulCuHcl()
+    {
+        var admin = await AdminNouAsync();
+        using (admin)
+        {
+            var hcl = await admin.GenereazaHclAdoptatAsync();
+            var punctFaraHclId = await admin.CreeazaPunctAsync(
+                hcl.SedintaId, TipMajoritate.Simpla, ordine: 2);
+
+            var puncte = await admin.GetFromJsonAsync<JsonElement>(
+                $"/api/Sedinte/{hcl.SedintaId}/Puncte");
+
+            var punctCuHcl = puncte.EnumerateArray()
+                .Single(p => p.GetProperty("id").GetInt32() == hcl.PunctId);
+            Assert.Equal(hcl.HclId, punctCuHcl.GetProperty("hclId").GetInt32());
+
+            var punctFaraHcl = puncte.EnumerateArray()
+                .Single(p => p.GetProperty("id").GetInt32() == punctFaraHclId);
+            Assert.Equal(JsonValueKind.Null, punctFaraHcl.GetProperty("hclId").ValueKind);
+        }
+    }
+
     // === Conținut + semnare ===
 
     [Fact]
@@ -153,6 +178,47 @@ public class TesteHcl
             Assert.Equal(HttpStatusCode.OK, peNumerotat.StatusCode);
             var dto = await peNumerotat.Content.ReadFromJsonAsync<JsonElement>();
             Assert.Equal((int)StatusHclRedactional.Semnat, dto.GetProperty("status").GetInt32());
+        }
+    }
+
+    [Fact]
+    public async Task Mutatii_IntorcDetaliiComplete_CuContinutSiSemnatari()
+    {
+        var admin = await AdminNouAsync();
+        using (admin)
+        {
+            var hcl = await admin.GenereazaHclAdoptatAsync();
+
+            // EditeazaContinut → întoarce Detalii (continut + semnatari în răspuns)
+            var editare = await admin.PutAsJsonAsync($"/api/Hcl/{hcl.HclId}/Continut",
+                new { continut = "## HOTĂRĂȘTE:\n\nArt. 1. Text de test." });
+            Assert.Equal(HttpStatusCode.OK, editare.StatusCode);
+            var dtoEdit = await editare.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Contains("Text de test", dtoEdit.GetProperty("continut").GetString()!);
+            Assert.Equal(2, dtoEdit.GetProperty("semnatari").EnumerateArray().Count());
+
+            // RegenereazaContinut → noul conținut vine direct în răspuns
+            var regen = await admin.PostAsync($"/api/Hcl/{hcl.HclId}/RegenereazaContinut", null);
+            Assert.Equal(HttpStatusCode.OK, regen.StatusCode);
+            var dtoRegen = await regen.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Contains("HOTĂRÂREA Nr.", dtoRegen.GetProperty("continut").GetString()!);
+
+            // AtribuieNumar → răspunsul conține conținutul cu placeholderul înlocuit
+            var atribuie = await admin.PostAsJsonAsync($"/api/Hcl/{hcl.HclId}/AtribuieNumar",
+                new { numar = 7, confirmaCuLacune = true });
+            Assert.Equal(HttpStatusCode.OK, atribuie.StatusCode);
+            var dtoNumar = await atribuie.Content.ReadFromJsonAsync<JsonElement>();
+            var an = dtoNumar.GetProperty("anNumerotare").GetInt32();
+            var continutNumerotat = dtoNumar.GetProperty("continut").GetString()!;
+            Assert.Contains($"7/{an}", continutNumerotat);
+            Assert.DoesNotContain("_[urmează să fie atribuit]_", continutNumerotat);
+
+            // Semneaza → întoarce Detalii cu status Semnat
+            var semnare = await admin.PostAsync($"/api/Hcl/{hcl.HclId}/Semneaza", null);
+            Assert.Equal(HttpStatusCode.OK, semnare.StatusCode);
+            var dtoSemn = await semnare.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Equal((int)StatusHclRedactional.Semnat, dtoSemn.GetProperty("status").GetInt32());
+            Assert.Equal(2, dtoSemn.GetProperty("semnatari").EnumerateArray().Count());
         }
     }
 

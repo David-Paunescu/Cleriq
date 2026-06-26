@@ -11,6 +11,7 @@ Biblioteca completă de pattern-uri: `docs/frontend.md`.
 
 ## Reguli must-know
 - Domeniu în română, termeni Angular în engleză. Mesaje de eroare user: română.
+- Nu faci rezumatul sesiunii, pana nu iti descriu cum trebuie facut
 - Componente fără sufix de fișier (`login.ts`); infra `core/` cu sufixe
   clasice (`.service.ts`, `.guard.ts`, `.interceptor.ts`).
 - Orice pagină nouă = lazy `loadComponent`. În routing, segmentele fixe

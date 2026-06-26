@@ -70,6 +70,17 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/sedinte/sedinta-detalii/sedinta-detalii')
             .then(m => m.SedintaDetalii)
+      },
+      {
+        path: 'hcl',
+        loadComponent: () =>
+          import('./features/hcl/hcl-lista/hcl-lista').then(m => m.HclLista)
+      },
+      {
+        path: 'hcl/:id',
+        canDeactivate: [ghidModificariNesalvate],
+        loadComponent: () =>
+          import('./features/hcl/hcl-detalii/hcl-detalii').then(m => m.HclDetaliiPagina)
       }
     ]
   },

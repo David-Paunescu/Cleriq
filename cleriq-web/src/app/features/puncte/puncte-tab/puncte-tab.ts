@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
@@ -10,14 +11,15 @@ import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthService } from '../../../core/auth/auth.service';
 import { extrageMesajEroare } from '../../../core/http/erori';
-import { RezultatPunct } from '../../../shared/enums';
+import { RezultatPunct, TipHcl } from '../../../shared/enums';
 import {
   etichetaRezultatPunct, etichetaTipMajoritate, etichetaTipPunct, etichetaTipVot
 } from '../../../shared/etichete';
 import { ConfirmareDialog, DateConfirmare } from '../../../shared/confirmare/confirmare-dialog';
+import { HclService } from '../../hcl/hcl.service';
 import { DatePunctDialog, PuncteDialog } from '../puncte-dialog/puncte-dialog';
 import { PunctOrdineZi, RezultatVot } from '../puncte.models';
-import { actiuniPermise } from '../puncte.permisiuni';
+import { actiuniPermise, poateGeneraHcl } from '../puncte.permisiuni';
 import { PuncteService } from '../puncte.service';
 
 const COLOANE_BAZA = ['ordine', 'titlu', 'status'];
@@ -33,15 +35,21 @@ const COLOANE_BAZA = ['ordine', 'titlu', 'status'];
 })
 export class PuncteTab implements OnInit {
   private readonly api = inject(PuncteService);
+  private readonly hclApi = inject(HclService);
   private readonly auth = inject(AuthService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly router = inject(Router);
 
   readonly sedintaId = input.required<number>();
 
   readonly seIncarca = signal(false);
   readonly eroare = signal<string | null>(null);
   readonly puncte = signal<PunctOrdineZi[]>([]);
+  readonly genereazaInCurs = signal(false);
+
+  readonly poateGeneraHcl = poateGeneraHcl;
+  readonly TipHcl = TipHcl;
 
   readonly poateModifica = computed(() => this.auth.areOricareRol('Admin', 'Secretar'));
   readonly coloane = computed(() =>
@@ -82,6 +90,26 @@ export class PuncteTab implements OnInit {
       case RezultatPunct.Amanat: return 'badge badge-amanat';
       case RezultatPunct.Retras: return 'badge badge-retras';
     }
+  }
+
+  // Precondițiile backend (președinte de ședință + secretar UAT) NU sunt verificabile pe client
+  // → reactiv: la eșec, snackbar cu mesajul backend (400). La succes → navigare la hub.
+  async genereazaHcl(punct: PunctOrdineZi, tipHcl: TipHcl): Promise<void> {
+    if (this.genereazaInCurs()) return;
+
+    this.genereazaInCurs.set(true);
+    try {
+      const hcl = await this.hclApi.genereaza({ punctOrdineZiId: punct.id, tipHcl });
+      this.router.navigate(['/hcl', hcl.id]);
+    } catch (err) {
+      this.snackBar.open(extrageMesajEroare(err), 'Închide', { duration: 6000 });
+    } finally {
+      this.genereazaInCurs.set(false);
+    }
+  }
+
+  veziHcl(punct: PunctOrdineZi): void {
+    if (punct.hclId != null) this.router.navigate(['/hcl', punct.hclId]);
   }
 
   async adauga(): Promise<void> {

@@ -55,6 +55,27 @@
         <th mat-header-cell *matHeaderCellDef class="col-actiuni"></th>
         <td mat-cell *matCellDef="let p" class="col-actiuni">
           @if (actiuni(p); as a) {
+            @if (poateGeneraHcl(p)) {
+              <button mat-icon-button matTooltip="Generează HCL"
+                      [matMenuTriggerFor]="meniuGen" [disabled]="genereazaInCurs()">
+                <mat-icon>gavel</mat-icon>
+              </button>
+              <mat-menu #meniuGen="matMenu">
+                <button mat-menu-item (click)="genereazaHcl(p, TipHcl.Normativ)">
+                  <mat-icon>balance</mat-icon>
+                  <span>HCL normativ</span>
+                </button>
+                <button mat-menu-item (click)="genereazaHcl(p, TipHcl.Individual)">
+                  <mat-icon>description</mat-icon>
+                  <span>HCL individual</span>
+                </button>
+              </mat-menu>
+            }
+            @if (p.hclId !== null) {
+              <button mat-icon-button matTooltip="Vezi HCL" (click)="veziHcl(p)">
+                <mat-icon>open_in_new</mat-icon>
+              </button>
+            }
             @if (a.poateEdita) {
               <button mat-icon-button matTooltip="Editează" (click)="editeaza(p)">
                 <mat-icon>edit</mat-icon>
