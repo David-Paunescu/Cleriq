@@ -60,3 +60,15 @@ function offsetFusOrar(data: Date, fus: string): number {
     +m['hour'], +m['minute'], +m['second']);
   return (asUtc - data.getTime()) / 60_000;
 }
+
+// DateOnly (API: „yyyy-MM-dd") → afișare „dd.MM.yyyy", FĂRĂ shift de fus.
+// Un DateOnly nu are oră/fus; helperele cu Europe/Bucharest ar adăuga o oră parazită
+// (și ar muta ziua pe fusuri în urma UTC). Ancorăm la miezul nopții UTC și formatăm în
+// UTC → corect-prin-construcție, indiferent de fusul instituției.
+export function formateazaDataDoar(dataOnly: string | null | undefined): string {
+  if (!dataOnly) return '—';
+  return new Intl.DateTimeFormat('ro-RO', {
+    timeZone: 'UTC',
+    day: '2-digit', month: '2-digit', year: 'numeric'
+  }).format(new Date(`${dataOnly}T00:00:00Z`));
+}

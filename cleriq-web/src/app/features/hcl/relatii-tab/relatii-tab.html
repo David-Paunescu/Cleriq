@@ -1,0 +1,75 @@
+<div class="tab-relatii">
+  <div class="antet">
+    <h2>Relații cu alte acte</h2>
+    @if (actiuni().poateAdauga) {
+      <button mat-flat-button (click)="adauga()">
+        <mat-icon>add_link</mat-icon>
+        Adaugă relație
+      </button>
+    }
+  </div>
+
+  @if (seIncarca() && relatiiSursa().length === 0 && relatiiTinta().length === 0) {
+    <div class="centru"><mat-spinner diameter="40" /></div>
+  } @else if (eroare(); as mesaj) {
+    <div class="centru">
+      <p class="eroare">{{ mesaj }}</p>
+      <button mat-stroked-button (click)="incarca()">Reîncearcă</button>
+    </div>
+  } @else {
+    <section class="sectiune">
+      <h3>Declarate de această hotărâre</h3>
+      @if (relatiiSursa().length === 0) {
+        <p class="gol">Această hotărâre nu declară relații cu alte acte.</p>
+      } @else {
+        <ul class="lista-relatii">
+          @for (r of relatiiSursa(); track r.id) {
+            <li class="rand-relatie">
+              <span class="badge-tip">{{ etichetaTip(r.tipRelatie) }}</span>
+              @if (esteIntern(r)) {
+                <button type="button" class="link-act" (click)="deschideHclTinta(r)">
+                  {{ descriereTinta(r) }}
+                </button>
+              } @else {
+                <span class="act-extern">
+                  <mat-icon class="icon-extern">link</mat-icon>
+                  {{ descriereTinta(r) }}
+                </span>
+              }
+              <span class="spacer"></span>
+              @if (actiuni().poateSterge) {
+                <button mat-icon-button (click)="sterge(r)"
+                        [disabled]="seStergeId() !== null" matTooltip="Șterge relația">
+                  @if (seStergeId() === r.id) {
+                    <mat-spinner diameter="18" />
+                  } @else {
+                    <mat-icon>delete</mat-icon>
+                  }
+                </button>
+              }
+            </li>
+          }
+        </ul>
+      }
+    </section>
+
+    <section class="sectiune">
+      <h3>Hotărâri care vizează această hotărâre</h3>
+      @if (relatiiTinta().length === 0) {
+        <p class="gol">Nicio altă hotărâre nu declară o relație cu aceasta.</p>
+      } @else {
+        <ul class="lista-relatii">
+          @for (r of relatiiTinta(); track r.id) {
+            <li class="rand-relatie">
+              <button type="button" class="link-act" (click)="deschideHclSursa(r)">
+                {{ descriereSursa(r) }}
+              </button>
+              <span class="badge-tip badge-tip-tinta">{{ etichetaTip(r.tipRelatie) }}</span>
+              <span class="readonly-hint">această hotărâre</span>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  }
+</div>

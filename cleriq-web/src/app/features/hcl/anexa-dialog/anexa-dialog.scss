@@ -1,0 +1,25 @@
+.continut {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 380px;
+  max-width: 480px;
+  padding-top: 8px;
+}
+
+.camp-fisier {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.fisier-nume {
+  font-size: 13px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.eroare {
+  color: var(--mat-sys-error);
+  margin: 0;
+}

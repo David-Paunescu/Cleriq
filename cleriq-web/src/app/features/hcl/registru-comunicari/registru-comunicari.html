@@ -1,0 +1,81 @@
+<div class="antet">
+  <button mat-icon-button (click)="inapoi()" matTooltip="Înapoi">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  <h1>Registru comunicări către prefect</h1>
+</div>
+
+<div class="filtre">
+  <mat-form-field appearance="outline" class="filtru-an">
+    <mat-label>An</mat-label>
+    <mat-select [value]="an()" (valueChange)="laAnSchimbat($event)">
+      @for (a of ani; track a) {
+        <mat-option [value]="a">{{ a }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+</div>
+
+@if (seIncarca() && randuri().length === 0) {
+  <div class="centru"><mat-spinner diameter="40" /></div>
+} @else if (eroare(); as mesaj) {
+  <div class="centru">
+    <p class="eroare">{{ mesaj }}</p>
+    <button mat-stroked-button (click)="incarca()">Reîncearcă</button>
+  </div>
+} @else if (randuri().length === 0) {
+  <p class="gol">Nicio comunicare înregistrată în registru pentru anul {{ an() }}.</p>
+} @else {
+  <div class="tabel-container">
+    <table mat-table [dataSource]="randuri()" class="tabel">
+      <ng-container matColumnDef="nrOrdine">
+        <th mat-header-cell *matHeaderCellDef class="col-ordine">Nr.</th>
+        <td mat-cell *matCellDef="let r" class="col-ordine">{{ r.numarOrdineInRegistru }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="dataTrimiteri">
+        <th mat-header-cell *matHeaderCellDef>Data trimiterii</th>
+        <td mat-cell *matCellDef="let r">{{ formateazaDataDoar(r.dataTrimiteri) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="hcl">
+        <th mat-header-cell *matHeaderCellDef>Hotărâre</th>
+        <td mat-cell *matCellDef="let r">
+          <button type="button" class="link-hcl" (click)="deschideHcl(r)">
+            <span class="hcl-numar">HCL {{ r.numarHclFormatat ?? '—' }}</span>
+            <span class="hcl-titlu">{{ r.titluHcl }}</span>
+          </button>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="canal">
+        <th mat-header-cell *matHeaderCellDef>Canal</th>
+        <td mat-cell *matCellDef="let r">{{ etichetaCanal(r.canalTransmitere) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="raspuns">
+        <th mat-header-cell *matHeaderCellDef>Răspuns prefect</th>
+        <td mat-cell *matCellDef="let r">
+          <span [class]="claseBadgeRaspuns(r.raspunsPrefect)">
+            {{ r.raspunsPrefect === null ? '—' : etichetaRaspuns(r.raspunsPrefect) }}
+          </span>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="coloane"></tr>
+      <tr mat-row *matRowDef="let row; columns: coloane"></tr>
+    </table>
+  </div>
+
+  <div class="paginare">
+    <button mat-stroked-button (click)="paginaAnterioara()" [disabled]="pagina() === 1 || seIncarca()">
+      <mat-icon>chevron_left</mat-icon>
+      Anterioara
+    </button>
+    <span class="pagina-curenta">Pagina {{ pagina() }}</span>
+    <button mat-stroked-button (click)="paginaUrmatoare()" [disabled]="!areUrmator() || seIncarca()">
+      Următoarea
+      <mat-icon>chevron_right</mat-icon>
+    </button>
+  </div>
+}

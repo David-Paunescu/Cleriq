@@ -1,0 +1,33 @@
+.continut {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 380px;
+  max-width: 480px;
+  padding-top: 8px;
+}
+
+.context {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--mat-sys-surface-container-high);
+  font-size: 13px;
+}
+
+.context-rand {
+  display: flex;
+  gap: 8px;
+
+  .eticheta {
+    color: var(--mat-sys-on-surface-variant);
+    min-width: 84px;
+  }
+}
+
+.eroare {
+  color: var(--mat-sys-error);
+  margin: 0;
+}

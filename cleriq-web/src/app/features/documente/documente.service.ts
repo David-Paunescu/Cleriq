@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { TipDocument } from '../../shared/enums';
+import { TipDocument, TipDocumentHcl } from '../../shared/enums';
 import {
   ActualizareDocument, Document, SetareVizibilitate
 } from './documente.models';
@@ -10,6 +10,7 @@ import {
 export interface ContextDocument {
   sedintaId?: number;
   punctId?: number;
+  hclId?: number;
 }
 
 export interface DateUpload {
@@ -19,6 +20,8 @@ export interface DateUpload {
   descriere: string | null;
   ordine: number;
   context: ContextDocument;
+  tipDocumentHcl?: TipDocumentHcl | null;
+  numarOrdinAnexa?: number | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -30,6 +33,7 @@ export class DocumenteService {
     let params = new HttpParams();
     if (context.sedintaId != null) params = params.set('sedintaId', context.sedintaId);
     if (context.punctId != null) params = params.set('punctId', context.punctId);
+    if (context.hclId != null) params = params.set('hclId', context.hclId);
     return firstValueFrom(this.http.get<Document[]>(this.urlBaza, { params }));
   }
 
@@ -44,6 +48,12 @@ export class DocumenteService {
       form.append('sedintaId', date.context.sedintaId.toString());
     if (date.context.punctId != null)
       form.append('punctId', date.context.punctId.toString());
+    if (date.context.hclId != null)
+      form.append('hclId', date.context.hclId.toString());
+    if (date.tipDocumentHcl != null)
+      form.append('tipDocumentHcl', date.tipDocumentHcl.toString());
+    if (date.numarOrdinAnexa != null)
+      form.append('numarOrdinAnexa', date.numarOrdinAnexa.toString());
 
     return firstValueFrom(this.http.post<Document>(this.urlBaza, form));
   }

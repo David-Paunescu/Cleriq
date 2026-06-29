@@ -181,5 +181,17 @@
     <mat-tab label="Semnatari">
       <app-semnatari-tab [hcl]="h" [actiuni]="actiuni()" (actualizat)="hcl.set($event)" />
     </mat-tab>
+
+    <mat-tab label="Comunicări">
+      <app-comunicari-tab [hclId]="h.id" [status]="h.status" />
+    </mat-tab>
+
+    <mat-tab label="Relații">
+      <app-relatii-tab [hclId]="h.id" />
+    </mat-tab>
+
+    <mat-tab label="Anexe">
+      <app-anexe-tab [hclId]="h.id" [status]="h.status" />
+    </mat-tab>
   </mat-tab-group>
 }

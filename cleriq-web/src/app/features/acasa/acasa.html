@@ -9,3 +9,7 @@
     <p>Selectează o secțiune din meniu pentru a începe.</p>
   </mat-card-content>
 </mat-card>
+
+@if (esteAdminSauSecretar()) {
+  <app-hcl-urgent-widget />
+}

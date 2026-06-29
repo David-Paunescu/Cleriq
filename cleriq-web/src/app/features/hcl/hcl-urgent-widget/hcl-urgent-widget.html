@@ -1,0 +1,42 @@
+<mat-card class="card-urgent">
+  <mat-card-header>
+    <mat-card-title class="card-titlu">
+      <mat-icon class="titlu-icon">campaign</mat-icon>
+      HCL urgent de comunicat
+    </mat-card-title>
+    <mat-card-subtitle>
+      Termen legal: 10 zile lucrătoare de la adoptare (art. 197 OUG 57/2019)
+    </mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+    @if (seIncarca() && urgente().length === 0) {
+      <div class="centru"><mat-spinner diameter="32" /></div>
+    } @else if (eroare(); as mesaj) {
+      <div class="centru">
+        <p class="eroare">{{ mesaj }}</p>
+        <button mat-stroked-button (click)="incarca()">Reîncearcă</button>
+      </div>
+    } @else if (urgente().length === 0) {
+      <p class="gol">
+        <mat-icon class="icon-ok">check_circle</mat-icon>
+        Nicio hotărâre nu necesită comunicare urgentă.
+      </p>
+    } @else {
+      <ul class="lista-urgent">
+        @for (h of urgente(); track h.hclId) {
+          <li [class]="clasaRand(h.zileRamase)">
+            <button type="button" class="urgent-link" (click)="deschide(h)">
+              <span class="urgent-numar">HCL {{ h.numar }}/{{ h.anNumerotare }}</span>
+              <span class="urgent-titlu">{{ h.titlu }}</span>
+            </button>
+            <div class="urgent-meta">
+              <span class="urgent-zile">{{ textZile(h.zileRamase) }}</span>
+              <span class="urgent-limita">Termen: {{ formateazaDataDoar(h.dataLimitaComunicare) }}</span>
+            </div>
+          </li>
+        }
+      </ul>
+    }
+  </mat-card-content>
+</mat-card>

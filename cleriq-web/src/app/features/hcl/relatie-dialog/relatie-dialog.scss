@@ -1,0 +1,18 @@
+.continut {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 380px;
+  max-width: 480px;
+  padding-top: 8px;
+}
+
+.mod-grup {
+  display: flex;
+  gap: 16px;
+}
+
+.eroare {
+  color: var(--mat-sys-error);
+  margin: 0;
+}

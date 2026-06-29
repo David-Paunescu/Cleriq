@@ -29,6 +29,9 @@ import {
   DatePublicareMolDialog, PublicareMolDialog
 } from '../publicare-mol-dialog/publicare-mol-dialog';
 import { SemnatariTab } from '../semnatari-tab/semnatari-tab';
+import { ComunicariTab } from '../comunicari-tab/comunicari-tab';
+import { RelatiiTab } from '../relatii-tab/relatii-tab';
+import { AnexeTab } from '../anexe-tab/anexe-tab';
 import { HclDetalii } from '../hcl.models';
 import { actiuniPermise } from '../hcl.permisiuni';
 import { HclService } from '../hcl.service';
@@ -39,7 +42,8 @@ const DEBOUNCE_AUTOSAVE_MS = 2000;
   selector: 'app-hcl-detalii',
   imports: [
     MatCardModule, MatTabsModule, MatIconModule, MatButtonModule,
-    MatMenuModule, MatTooltipModule, MatProgressSpinnerModule, SemnatariTab
+    MatMenuModule, MatTooltipModule, MatProgressSpinnerModule, SemnatariTab, ComunicariTab,
+    RelatiiTab, AnexeTab
   ],
   templateUrl: './hcl-detalii.html',
   styleUrl: './hcl-detalii.scss'

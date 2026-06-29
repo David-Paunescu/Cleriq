@@ -4,14 +4,17 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { StatusHclRedactional, TipHcl } from '../../shared/enums';
 import {
-  AdaugareSemnatar, AtribuireNumarHcl, CreareHcl, EditareContinutHcl, Hcl, HclDetalii,
-  InvalidareHcl, SugestieNumar
+  ActualizareComunicare, AdaugareSemnatar, AtribuireNumarHcl, ComunicareHclPrefect, CreareComunicare,
+  CreareHcl, CreareRelatie, EditareContinutHcl, Hcl, HclDetalii, InvalidareHcl, RelatieHcl, RelatiiHcl,
+  SugestieNumar
 } from './hcl.models';
 
 export interface FiltreHcl {
   an?: number;
   status?: StatusHclRedactional;
   tipHcl?: TipHcl;
+  skip?: number;
+  take?: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -24,6 +27,8 @@ export class HclService {
     if (filtre.an != null) params = params.set('an', filtre.an);
     if (filtre.status != null) params = params.set('status', filtre.status);
     if (filtre.tipHcl != null) params = params.set('tipHcl', filtre.tipHcl);
+    if (filtre.skip != null) params = params.set('skip', filtre.skip);
+    if (filtre.take != null) params = params.set('take', filtre.take);
     return firstValueFrom(this.http.get<Hcl[]>(this.urlBaza, { params }));
   }
 
@@ -118,6 +123,42 @@ export class HclService {
     const blob = await firstValueFrom(
       this.http.get(`${this.urlBaza}/${id}/Pdf`, { responseType: 'blob' }));
     this.declanseazaDescarcare(blob, numeAfisat);
+  }
+
+  // === FE3 — comunicări prefect (sub-resursă self-contained: întoarce DTO-ul propriu) ===
+  comunicari(hclId: number): Promise<ComunicareHclPrefect[]> {
+    return firstValueFrom(
+      this.http.get<ComunicareHclPrefect[]>(`${this.urlBaza}/${hclId}/Comunicari`));
+  }
+
+  adaugaComunicare(hclId: number, dto: CreareComunicare): Promise<ComunicareHclPrefect> {
+    return firstValueFrom(
+      this.http.post<ComunicareHclPrefect>(`${this.urlBaza}/${hclId}/Comunicari`, dto));
+  }
+
+  actualizeazaComunicare(
+    hclId: number, comunicareId: number, dto: ActualizareComunicare
+  ): Promise<ComunicareHclPrefect> {
+    return firstValueFrom(this.http.put<ComunicareHclPrefect>(
+      `${this.urlBaza}/${hclId}/Comunicari/${comunicareId}`, dto));
+  }
+
+  stergeComunicare(hclId: number, comunicareId: number): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(
+      `${this.urlBaza}/${hclId}/Comunicari/${comunicareId}`));
+  }
+
+  // === FE3 — relații cu alte acte (self-contained) ===
+  relatii(hclId: number): Promise<RelatiiHcl> {
+    return firstValueFrom(this.http.get<RelatiiHcl>(`${this.urlBaza}/${hclId}/Relatii`));
+  }
+
+  adaugaRelatie(hclId: number, dto: CreareRelatie): Promise<RelatieHcl> {
+    return firstValueFrom(this.http.post<RelatieHcl>(`${this.urlBaza}/${hclId}/Relatii`, dto));
+  }
+
+  stergeRelatie(hclId: number, relatieId: number): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`${this.urlBaza}/${hclId}/Relatii/${relatieId}`));
   }
 
   private declanseazaDescarcare(blob: Blob, numeFisier: string): void {

@@ -25,6 +25,65 @@ export interface ActiuniHcl {
   poateDescarcaSemnat: boolean;   // are fișier
 }
 
+// === FE3 — Comunicări prefect (tab self-contained) ===
+// Oglindă strictă a gărzilor din ComunicariHclPrefectController.
+export interface ActiuniComunicari {
+  poateAdauga: boolean;   // [Admin,Secretar] + Status >= Numerotat (gard POST)
+  poateEdita: boolean;    // [Admin,Secretar] (PUT răspuns)
+  poateSterge: boolean;   // [Admin] (DELETE)
+}
+
+export function actiuniComunicari(
+  status: StatusHclRedactional | null,
+  esteAdminSauSecretar: boolean,
+  esteAdmin: boolean
+): ActiuniComunicari {
+  const celPutinNumerotat = status === StatusHclRedactional.Numerotat
+    || status === StatusHclRedactional.Semnat;
+  return {
+    poateAdauga: esteAdminSauSecretar && celPutinNumerotat,
+    poateEdita: esteAdminSauSecretar,
+    poateSterge: esteAdmin
+  };
+}
+
+// === FE3 — Relații cu alte acte (tab self-contained) ===
+// POST și DELETE sunt [Admin,Secretar]; ștergerea doar din sursă e o constrângere
+// structurală (doar rândurile relatiiSursa primesc buton), oglindită de backend.
+export interface ActiuniRelatii {
+  poateAdauga: boolean;
+  poateSterge: boolean;
+}
+
+export function actiuniRelatii(esteAdminSauSecretar: boolean): ActiuniRelatii {
+  return {
+    poateAdauga: esteAdminSauSecretar,
+    poateSterge: esteAdminSauSecretar
+  };
+}
+
+// === FE3 — Anexe (tab self-contained, prin DocumenteService) ===
+// POST/PUT/DELETE pe documente sunt [Admin,Secretar]. Pe HCL semnat, NumarOrdinAnexa
+// e imutabil (gard PUT) → blocăm tip + nr. la editare (mirror).
+export interface ActiuniAnexe {
+  poateAdauga: boolean;
+  poateEdita: boolean;
+  poateSterge: boolean;
+  numarOrdinBlocat: boolean;
+}
+
+export function actiuniAnexe(
+  status: StatusHclRedactional | null,
+  esteAdminSauSecretar: boolean
+): ActiuniAnexe {
+  return {
+    poateAdauga: esteAdminSauSecretar,
+    poateEdita: esteAdminSauSecretar,
+    poateSterge: esteAdminSauSecretar,
+    numarOrdinBlocat: status === StatusHclRedactional.Semnat
+  };
+}
+
 // Oglinda gărzii de completitudine din HclController.Semneaza (art. 140 alin. 2):
 // exact un Secretar UAT + fie un președinte de ședință, fie ≥2 semnatari alternativi
 // cu motivul lipsei semnăturii completat.

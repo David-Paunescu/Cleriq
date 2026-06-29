@@ -1,0 +1,88 @@
+<div class="antet">
+  <h2>Anexe și documente</h2>
+  @if (actiuni().poateAdauga) {
+    <button mat-flat-button (click)="adauga()">
+      <mat-icon>upload_file</mat-icon>
+      Adaugă anexă
+    </button>
+  }
+</div>
+
+@if (seIncarca() && anexe().length === 0) {
+  <div class="centru"><mat-spinner diameter="40" /></div>
+} @else if (eroare(); as mesaj) {
+  <div class="centru">
+    <p class="eroare">{{ mesaj }}</p>
+    <button mat-stroked-button (click)="incarca()">Reîncearcă</button>
+  </div>
+} @else if (anexe().length === 0) {
+  <p class="gol">Nicio anexă sau document atașat acestei hotărâri.</p>
+} @else {
+  <div class="tabel-container">
+    <table mat-table [dataSource]="anexe()" class="tabel">
+      <ng-container matColumnDef="ordin">
+        <th mat-header-cell *matHeaderCellDef class="col-ordine">Anexa</th>
+        <td mat-cell *matCellDef="let d" class="col-ordine">{{ d.numarOrdinAnexa ?? '—' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="denumire">
+        <th mat-header-cell *matHeaderCellDef>Denumire</th>
+        <td mat-cell *matCellDef="let d">
+          <div class="celula-link">
+            <button type="button" class="link-descarcare" (click)="descarca(d)"
+                    [disabled]="esteRandBlocat(d.id)">
+              <mat-icon class="icon-fisier">insert_drive_file</mat-icon>
+              <div class="celula-denumire">
+                <span class="denumire">{{ d.denumire }}</span>
+                <span class="sub">{{ d.numeFisierOriginal }}</span>
+              </div>
+            </button>
+            @if (d.descriere) {
+              <mat-icon class="icon-info" [matTooltip]="d.descriere" matTooltipPosition="right">
+                info_outline
+              </mat-icon>
+            }
+          </div>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="tip">
+        <th mat-header-cell *matHeaderCellDef class="col-tip">Tip</th>
+        <td mat-cell *matCellDef="let d" class="col-tip">{{ etichetaTip(d.tipDocumentHcl) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="marime">
+        <th mat-header-cell *matHeaderCellDef>Mărime</th>
+        <td mat-cell *matCellDef="let d">{{ formateazaMarime(d.marime) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="actiuni">
+        <th mat-header-cell *matHeaderCellDef class="col-actiuni"></th>
+        <td mat-cell *matCellDef="let d" class="col-actiuni">
+          <button mat-icon-button matTooltip="Descarcă" (click)="descarca(d)"
+                  [disabled]="esteRandBlocat(d.id)">
+            @if (esteRandBlocat(d.id)) {
+              <mat-spinner diameter="18" />
+            } @else {
+              <mat-icon>download</mat-icon>
+            }
+          </button>
+          @if (actiuni().poateEdita) {
+            <button mat-icon-button matTooltip="Editează metadate" (click)="editeaza(d)">
+              <mat-icon>edit</mat-icon>
+            </button>
+          }
+          @if (actiuni().poateSterge) {
+            <button mat-icon-button matTooltip="Șterge" (click)="sterge(d)"
+                    [disabled]="esteRandBlocat(d.id)">
+              <mat-icon>delete</mat-icon>
+            </button>
+          }
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="coloane()"></tr>
+      <tr mat-row *matRowDef="let row; columns: coloane()"></tr>
+    </table>
+  </div>
+}

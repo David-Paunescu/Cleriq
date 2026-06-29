@@ -11,8 +11,9 @@ Backend complet (S49–S52). UI internă (secretar/admin) pentru Modul A, în 3 
 - **FE2 — LIVRAT (S54)** ✅ — semnatari + stări legale + variantă semnată. Backend pas 0
   (mutații → `HclDetaliiDto` prin `Helpers/MapareHcl.cs`) + tot FE2; `dotnet test` 266 verzi,
   `npm run build`/`lint` verzi, smoke test live OK. Vezi `docs/rezumate/rezumat_54.md`.
-- **FE3 — sesiunea următoare (S55)** — exterior: comunicări prefect + registru, relații,
-  anexe, widget T-3. Backend pas 0 = ZERO atingeri (confirmat empiric în S54).
+- **FE3 — LIVRAT (S55)** ✅ — exterior: comunicări prefect + registru, relații, anexe,
+  widget T-3. Backend pas 0 = ZERO atingeri (confirmat empiric). `npm run build`/`lint`
+  verzi pe fiecare bucată + smoke test live OK. Vezi `docs/rezumate/rezumat_55.md`.
 
 ## Decizii confirmate (S53)
 1. **„Generează HCL" în `PuncteTab`** (pe punctul adoptat) — nu în antetul ședinței.
@@ -104,6 +105,8 @@ A doua parte din Modul A, peste hub-ul existent. Tot consolă internă.
 ---
 
 ## FE3 — exterior + widget T-3 (detaliat)
+
+> ✅ **LIVRAT (S55)** — vezi `docs/rezumate/rezumat_55.md`. Planul de mai jos e păstrat ca referință.
 
 A treia parte: relația cu prefectul + acte conexe + alertă pe pagina de start.
 

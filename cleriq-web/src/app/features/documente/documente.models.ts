@@ -1,4 +1,4 @@
-import { TipDocument } from '../../shared/enums';
+import { TipDocument, TipDocumentHcl } from '../../shared/enums';
 
 export interface Document {
   id: number;
@@ -14,6 +14,9 @@ export interface Document {
   sedintaId: number | null;
   punctId: number | null;
   creatLa: string;
+  hclId: number | null;
+  tipDocumentHcl: TipDocumentHcl | null;
+  numarOrdinAnexa: number | null;
 }
 
 export interface ActualizareDocument {
@@ -21,6 +24,9 @@ export interface ActualizareDocument {
   descriere: string | null;
   tipDocument: TipDocument;
   ordine: number;
+  // Opționale — doar documentele HCL le folosesc (anexa-dialog); pe ședință/punct sunt omise.
+  tipDocumentHcl?: TipDocumentHcl | null;
+  numarOrdinAnexa?: number | null;
 }
 
 export interface SetareVizibilitate {

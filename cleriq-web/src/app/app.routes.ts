@@ -77,6 +77,12 @@ export const routes: Routes = [
           import('./features/hcl/hcl-lista/hcl-lista').then(m => m.HclLista)
       },
       {
+        path: 'hcl/registru-comunicari',
+        loadComponent: () =>
+          import('./features/hcl/registru-comunicari/registru-comunicari')
+            .then(m => m.RegistruComunicari)
+      },
+      {
         path: 'hcl/:id',
         canDeactivate: [ghidModificariNesalvate],
         loadComponent: () =>
