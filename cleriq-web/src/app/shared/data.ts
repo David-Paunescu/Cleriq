@@ -58,7 +58,7 @@ function offsetFusOrar(data: Date, fus: string): number {
   const asUtc = Date.UTC(
     +m['year'], +m['month'] - 1, +m['day'],
     +m['hour'], +m['minute'], +m['second']);
-  return (asUtc - data.getTime()) / 60_000;
+  return Math.round((asUtc - data.getTime()) / 60_000);
 }
 
 // DateOnly (API: „yyyy-MM-dd") → afișare „dd.MM.yyyy", FĂRĂ shift de fus.
