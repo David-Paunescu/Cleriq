@@ -113,7 +113,7 @@ public class ServiciuNumerotareHcl : IServiciuNumerotareHcl
             var sugestieNoua = await SugereazaNumarAsync(hcl.InstitutieId, an, ct);
             return new RezultatAtribuireNumar(
                 TipRezultatAtribuire.NumarLuat,
-                $"Nr. {numar} tocmai a fost atribuit altui HCL. Sugerăm nr. {sugestieNoua}.",
+                $"Nr. {numar} este atribuit altui HCL. Sugerăm nr. {sugestieNoua}.",
                 SugestieAlternativa: sugestieNoua);
         }
     }
