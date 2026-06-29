@@ -61,11 +61,10 @@
         <ul class="lista-relatii">
           @for (r of relatiiTinta(); track r.id) {
             <li class="rand-relatie">
+              <span class="badge-tip badge-tip-tinta">{{ etichetaTipPasiv(r.tipRelatie) }}</span>
               <button type="button" class="link-act" (click)="deschideHclSursa(r)">
                 {{ descriereSursa(r) }}
               </button>
-              <span class="badge-tip badge-tip-tinta">{{ etichetaTip(r.tipRelatie) }}</span>
-              <span class="readonly-hint">această hotărâre</span>
             </li>
           }
         </ul>

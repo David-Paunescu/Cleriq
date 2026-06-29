@@ -193,6 +193,17 @@ export function etichetaTipRelatieHcl(t: TipRelatieHcl): string {
   }
 }
 
+export function etichetaTipRelatieHclPasiv(t: TipRelatieHcl): string {
+  switch (t) {
+    case TipRelatieHcl.Modifica: return 'Modificată de';
+    case TipRelatieHcl.Abroga: return 'Abrogată de';
+    case TipRelatieHcl.Suspenda: return 'Suspendată de';
+    case TipRelatieHcl.PuneInAplicare: return 'Pusă în aplicare de';
+    case TipRelatieHcl.Completeaza: return 'Completată de';
+    case TipRelatieHcl.Republica: return 'Republicată de';
+  }
+}
+
 export function etichetaMotivInvalidare(m: MotivInvalidare | null | undefined): string {
   if (m == null) return '—';
   switch (m) {

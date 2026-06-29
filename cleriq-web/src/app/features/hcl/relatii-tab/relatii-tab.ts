@@ -10,7 +10,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthService } from '../../../core/auth/auth.service';
 import { extrageMesajEroare } from '../../../core/http/erori';
 import { ConfirmareDialog, DateConfirmare } from '../../../shared/confirmare/confirmare-dialog';
-import { etichetaTipRelatieHcl } from '../../../shared/etichete';
+import { etichetaTipRelatieHcl, etichetaTipRelatieHclPasiv } from '../../../shared/etichete';
 import { DateRelatieDialog, RelatieDialog } from '../relatie-dialog/relatie-dialog';
 import { RelatieHcl } from '../hcl.models';
 import { actiuniRelatii } from '../hcl.permisiuni';
@@ -43,6 +43,7 @@ export class RelatiiTab implements OnInit {
     actiuniRelatii(this.auth.areOricareRol('Admin', 'Secretar')));
 
   readonly etichetaTip = etichetaTipRelatieHcl;
+  readonly etichetaTipPasiv = etichetaTipRelatieHclPasiv;
 
   ngOnInit(): void {
     this.incarca();

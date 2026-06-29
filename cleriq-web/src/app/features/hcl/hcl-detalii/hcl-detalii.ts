@@ -2,6 +2,7 @@ import {
   Component, ElementRef, OnDestroy, OnInit, computed, effect, inject, signal, viewChild
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { firstValueFrom } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -57,12 +58,12 @@ export class HclDetaliiPagina implements OnInit, OnDestroy {
   private readonly snackBar = inject(MatSnackBar);
   private readonly modificari = inject(ModificariNesalvateService);
 
-  readonly id = Number(this.route.snapshot.paramMap.get('id'));
+  id = Number(this.route.snapshot.paramMap.get('id'));
 
   readonly seIncarca = signal(false);
   readonly eroare = signal<string | null>(null);
   readonly hcl = signal<HclDetalii | null>(null);
-  readonly indexTabActiv = signal(0);
+  readonly indexTabActiv = signal(Number(this.route.snapshot.queryParamMap.get('tab')) || 0);
 
   readonly seSemneaza = signal(false);
   readonly seDescarcaPdf = signal(false);
@@ -164,17 +165,15 @@ export class HclDetaliiPagina implements OnInit, OnDestroy {
         clearTimeout(timerDirty);
       });
     });
+
+    // Reîncarcă la schimbarea :id (navigare HCL→HCL: relații, registru), fiindcă
+    // Angular reutilizează componenta pe aceeași rută /hcl/:id.
+    this.route.paramMap.pipe(takeUntilDestroyed()).subscribe(params => {
+      this.initPentruHcl(Number(params.get('id')));
+    });
   }
 
   ngOnInit(): void {
-    this.proprietar = {
-      id: `hcl-continut-${this.id}`,
-      areModificariNesalvate: () => this.esteDirty()
-    };
-    this.modificari.inregistreaza(this.proprietar);
-
-    this.incarca();
-
     this.vizibilitateHandler = () => {
       if (document.visibilityState === 'hidden'
           && this.esteDirty() && !this.seSalveaza() && !this.actiuneInCurs()) {
@@ -183,6 +182,25 @@ export class HclDetaliiPagina implements OnInit, OnDestroy {
     };
     document.addEventListener('visibilitychange', this.vizibilitateHandler);
     window.addEventListener('keydown', this.handlerKeydown);
+  }
+
+  private initPentruHcl(idNou: number): void {
+    this.id = idNou;
+    this.hcl.set(null);
+    this.eroare.set(null);
+    this.valoareEditor.set('');
+    this.ultimaValoareSalvata.set('');
+    this.valoareEditorInitializata.set(false);
+    this.eroareSalvare.set(null);
+    this.dataUltimeiSalvari.set(null);
+    this.indexTabActiv.set(Number(this.route.snapshot.queryParamMap.get('tab')) || 0);
+    if (this.proprietar) this.modificari.retragere(this.proprietar.id);
+    this.proprietar = {
+      id: `hcl-continut-${idNou}`,
+      areModificariNesalvate: () => this.esteDirty()
+    };
+    this.modificari.inregistreaza(this.proprietar);
+    this.incarca();
   }
 
   ngOnDestroy(): void {
@@ -450,6 +468,16 @@ export class HclDetaliiPagina implements OnInit, OnDestroy {
 
   inapoiLaLista(): void {
     this.router.navigate(['/hcl']);
+  }
+
+  laSchimbareTab(index: number): void {
+    this.indexTabActiv.set(index);
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab: index || null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
   }
 
   numarAfisat(h: HclDetalii): string {
