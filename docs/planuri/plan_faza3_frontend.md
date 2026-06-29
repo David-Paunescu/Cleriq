@@ -1,94 +1,153 @@
 # Plan Faza 3 — Frontend Modul A (HCL + Comunicare Prefect)
 
 ## Context
-Backend complet (S49–S52, 262 teste verzi). Urmează **UI internă** (secretar/admin) pentru
-Modul A. Pattern-urile sunt în `cleriq-web/CLAUDE.md` + `docs/frontend.md`; `frontend.md`
-prevede deja hook-uri pentru HCL (card „HCL emis", stări legale ortogonale).
+Backend complet (S49–S52). UI internă (secretar/admin) pentru Modul A, în 3 sub-sesiuni
+(context mic per sesiune). **Paginile publice HCL = Faza 9** (portal extins + decizia SSR) —
+`PublicHclController` există în backend, dar UI-ul public NU intră aici.
 
-**Scop — ce NU intră aici:** paginile publice HCL (cetățean) sunt **Faza 9** (portal extins +
-decizia SSR). `PublicHclController` există în backend, dar UI-ul public vine la Faza 9.
-Aici facem doar consola internă.
+## Stare
+- **FE1 — LIVRAT (S53)** ✅ — spina actului: schelet + listă + generare din punct + hub
+  (Detalii + Conținut cu auto-save) + numerotare + semnare + PDF. Backend pas 0 + tot FE1;
+  `dotnet test` 265 verzi, `npm run build`/`lint` verzi, smoke test live OK. Commit făcut.
+- **FE2 — sesiunea următoare** — semnatari + stări legale + variantă semnată.
+- **FE3** — exterior: comunicări prefect + registru, relații, anexe, widget T-3.
 
-## Suprafața de acoperit (API din S50–S52)
-Listă HCL (filtre an/status/tip) · detalii · Genereaza (din punct adoptat) · Conținut
-edit/regen · AtribuieNumar (lacune / număr luat / număr ars) · Semneaza · Semnatari (art.140 +
-MotivLipsaPresedinte) · Invalidare±anulare · Publicare · PublicareMol · PDF generat + variantă
-semnată (POST/GET/DELETE, varianta B) · Comunicări prefect + Registru · Relații · Anexe ·
-Dashboard `UrgentDeComunicat` (T-3).
+## Decizii confirmate (S53)
+1. **„Generează HCL" în `PuncteTab`** (pe punctul adoptat) — nu în antetul ședinței.
+2. **Etichetă meniu „Hotărâri"** (rută `/hcl`).
+3. **Widget T-3 pe `Acasă`** (se implementează la FE3).
+4. **`hclId: int?` pe `PunctOrdineZiDto`** — ascunde „Generează", arată „Vezi HCL" + navigare.
 
-## Decompunere recomandată — 3 sub-sesiuni
-Mărimea modulului ≈ cea din backend (4 sesiuni). Pentru context mic per sesiune, 3 părți:
+## Convenții stabilite în FE1 (reutilizate la FE2/FE3)
+- **Mutațiile consumate de hub (starea `HclDetalii` partajată) întorc `HclDetaliiDto`** prin
+  helperul `ReincarcaCuIncludeAsync` din `HclController` → hub-ul face uniform
+  `this.hcl.set(rezultat)`. (Sub-resursele cu tab propriu — Comunicări/Relații/Anexe — fac
+  excepție: au listă proprie, vezi FE3.)
+- **Precondiții neverificabile pe client → reactive** (snackbar din 400/409), NU disabled mut.
+- `hcl.permisiuni.ts` = oglindă strictă a gărzilor pe status.
+- Editor auto-save 1:1 cu `ProcesVerbalTab`; download/upload prin blob (cleanup `revokeObjectURL`);
+  confirmare `periculos` la ireversibile; erori în dialog inline / acțiuni directe snackbar.
+- **Disciplină „pas 0"**: orice atingere de backend întâi, fiecare cu testul ei →
+  `dotnet test` full verde înainte de a scrie frontend.
+- **Smoke test la final**, reutilizând tenant-ul Slobozia (seed) + HCL 7/2026 (deja Semnat).
+  Lanțul de date se face rapid prin API (script Node), apoi verificare UI prin preview pe :4200
+  (CORS dev permite doar `http://localhost:4200`).
 
-- **FE1 — spina actului**: schelet feature + listă + generare din punct + hub detalii
-  (Detalii + Conținut cu auto-save) + numerotare + semnare + PDF.
-- **FE2 — semnatari + stări legale + variantă semnată**: tab Semnatari (flux art.140),
-  acțiuni antet Publicare / PublicareMol / Invalidare, card „Variantă semnată" (upload/replace/
-  delete, garda B).
-- **FE3 — exterior**: tab Comunicări prefect + Registru cronologic, tab Relații, tab Anexe,
-  widget Dashboard T-3 pe `acasa`.
+## FE1 — livrat (rezumat scurt)
+- `shared/enums.ts` + `shared/etichete.ts`: toate cele 8 enum-uri HCL + etichete.
+- `features/hcl/`: `hcl.models.ts`, `hcl.service.ts`, `hcl.permisiuni.ts` (+ `semnatariCompleti`).
+- `hcl-lista` (rută `/hcl`) + meniu „Hotărâri"; `hcl-detalii` hub (Detalii + Conținut editor);
+  `atribuie-numar-dialog` (pre-fill `SugestieNumar` + cele 3 răspunsuri 409).
+- Hook în `PuncteTab` (`poateGeneraHcl` + Generează/Vezi HCL).
+- Backend pas 0: 4 mutații FE1 → `HclDetaliiDto`, `hclId` pe DTO punct, `GET /Hcl/{id}/SugestieNumar`.
 
-Ordinea respectă dependențele: FE1 livrează scheletul (service/models/permisiuni + hub) pe
-care FE2/FE3 doar adaugă tab-uri/acțiuni. Plata pattern-urilor (editor, badges) se face în FE1.
+---
 
-## FE1 — sesiunea viitoare (detaliat)
+## FE2 — semnatari + stări legale + variantă semnată (detaliat)
 
-**Schelet** `features/hcl/`: `hcl.models.ts` (oglindă `HclDto`/`HclDetaliiDto`/sub-DTO-uri),
-`hcl.service.ts` (`Promise<T>` via `firstValueFrom`), `hcl.permisiuni.ts` (oglindă strictă a
-gărzilor: cine poate genera/numerota/semna/edita/șterge + tranzițiile pe status). Enum-urile
-HCL (`StatusHclRedactional`, `TipHcl`, `RolSemnatar`, `TipRelatieHcl`, `MotivInvalidare`,
-`CanalTransmiterePrefect`, `RaspunsPrefect`, `TipDocumentHcl`) + etichete → `shared/enums.ts` +
-`shared/etichete.ts`.
+A doua parte din Modul A, peste hub-ul existent. Tot consolă internă.
 
-**Listă** `hcl/hcl-lista` (rută `hcl`): filtre an/status/tip, badge status (Draft/Numerotat/
-Semnat) + badge ortogonal „Invalidat", subtitlu metadate concatenate (pattern listă). Reload de
-la server după mutație. Adaugă „Hotărâri" în meniul `shell`.
+### Pas 0 — backend (întâi, fiecare cu testul ei)
+1. **Mutațiile FE2 din `HclController` → `HclDetaliiDto`** prin `ReincarcaCuIncludeAsync`
+   (există deja): `Invalidare`, `AnuleazaInvalidare`, `Publicare`, `PublicareMol`,
+   `AnuleazaPublicareMol`, `SeteazaMotivLipsaPresedinte`. Cele care întorc azi `NoContent`
+   (`AnuleazaPublicareMol`) — fie întorc Detalii, fie hub re-fetch (aliniere la „set(rezultat)").
+2. **`SemnatariHclController` (POST/DELETE semnatar) → `HclDetaliiDto`** — garda „Semnează"
+   depinde de lista de semnatari, deci hub-ul trebuie să-și actualizeze starea. De verificat
+   ce întorc acum (probabil `SemnatarHclDto` / listă) și aliniat.
+3. `dotnet test` full verde înainte de frontend.
 
-**Generare din punct**: buton „Generează HCL" în `PuncteTab`, vizibil pe punct `ProiectHCL` cu
-`Rezultat = Adoptat` și fără HCL existent. Precondițiile backend (președinte de ședință setat +
-Secretar UAT valid la dată) → oglindite în permisiuni + „snackbar avertizant la click" când
-lipsesc, NU disabled mut. La succes → navigare la `hcl/:id`.
+### Frontend
+- **models**: cereri FE2 — `AdaugareSemnatar`, `InvalidareHcl`, `PublicareHcl`, `PublicareMol`,
+  `MotivLipsaPresedinte`. (Răspunsurile — `SemnatarHcl`, `RelatieHcl` — există în `HclDetalii`.)
+- **service**: `adaugaSemnatar/stergeSemnatar`, `publica(estePublicat)`, `publicaMol(data)`,
+  `anuleazaMol`, `invalideaza(dto)`, `anuleazaInvalidare`, `seteazaMotivLipsa`, + variantă
+  semnată `incarcaSemnat/descarcaSemnat/stergeSemnat` (`api/Hcl/{id}/Semnat`).
+- **permisiuni**: extind `ActiuniHcl` (oglindă strictă): `poatePublica` (≥ Numerotat),
+  `poateDepublica`, `poatePublicaMol` (== Semnat), `poateAnulaMol` (Admin + are MOL),
+  `poateInvalida` (nu dacă deja invalidat), `poateAnulaInvalidare` (Admin + invalidat),
+  `poateGestionaSemnatari` (≠ Semnat); variantă semnată = garda B (upload pe Semnat;
+  replace/delete blocate după MOL; delete Admin).
+- **Hub** (crește aditiv):
+  - **Tab Semnatari**: listă (rol/nume/ordine, ordonat `OrdineAfisare`) + adăugare prin dialog
+    cu **XOR persoană/consilier** + ștergere; editabil doar pe ≠ Semnat. **Flux art.140**:
+    fără președinte → minim 2 semnatari alternativi (`SemnatarAlternativArt140`) + câmp
+    `MotivLipsaPresedinte` (PUT separat). Validările backend (consilier prezent la ședință,
+    motiv setat) tratate reactiv.
+  - **Card „Variantă semnată"** paritar `ProcesVerbalTab`: apare pe Semnat; upload/descărcare/
+    replace (confirm înainte de file picker)/delete (Admin); **garda B** (prima atașare
+    post-MOL OK, replace/delete → 409 după MOL).
+  - **Antet**: Publicare (toggle „Publică pe portal / Retrage de pe portal") vizibil; în meniul
+    ⋮ cele rare — Publicare MOL (dialog dată), Invalidare (dialog motiv enum + referință +
+    **confirmare relații active** din 409, ca la lacune-numerotare), Anulează invalidare /
+    Anulează MOL (Admin).
+  - **Badge-uri noi**: „Publicat", „Publicat MOL", „Invalidat" în antet (+ listă).
+- **Dialoguri noi**: `semnatar-dialog` (XOR + art.140), `invalidare-dialog`
+  (motiv + ref + confirmare relații active), `publicare-mol-dialog` (date picker nativ + fus).
 
-**Hub detalii** `hcl/hcl-detalii` (rută `hcl/:id` + `canDeactivate: [ghidModificariNesalvate]`):
-`mat-tab-group`. Acțiunile (Atribuie număr / Semnează / Descarcă PDF) stau în **antet**, nu în
-tab (pattern hub). Badge-uri status în antet.
-- **Tab Detalii**: `<dl>` cu titlu, tip, dată adoptare, vot snapshot, majoritate, status.
-- **Tab Conținut**: editor cu auto-save (`ModificariNesalvateService`, id `hcl-continut-${id}`)
-  — reutilizare 1:1 din `ProcesVerbalTab` (textarea + effect sync DOM↔signal, debounce 2s,
-  Ctrl+S, indicator stare). Gardă editare = `Status != Semnat`. Buton „Regenerează" (confirmare
-  `periculos`, suprascrie editările).
+### De citit la începutul FE2
+`proces-verbal-tab` (cardul variantă semnată + garda B), `features/functii-oficiale`
+(dialoguri XOR persoană/consilier), `SemnatariHclController` + `HclController`
+(Invalidare/Publicare/PublicareMol/MotivLipsa) pentru contract.
 
-**Acțiuni antet FE1**:
-- **Atribuie număr**: dialog cu input număr; tratează cele 3 răspunsuri 409 — lacune
-  (`{lacune}` → confirmare „lasă liber 1,2,3,4?”), număr luat / ars (`{sugestieAlternativa}` →
-  oferă sugestia). Erori inline în dialog.
-- **Semnează**: confirmare; oglindește garda completitudine semnatari (mesaj clar dacă lipsesc).
-- **Descarcă PDF**: download via blob (pattern `URL.createObjectURL` + revoke).
+---
 
-**Rute** (segmente fixe înaintea `:id`): `hcl` → listă; `hcl/:id` → hub (cu `canDeactivate`).
+## FE3 — exterior + widget T-3 (detaliat)
 
-## FE2 / FE3 — schiță (detaliere la sesiunea lor)
-- FE2: `semnatari-tab` (CRUD + dialog adăugare cu XOR persoană/consilier, flux art.140 cu
-  `MotivLipsaPresedinte`); acțiuni antet Publicare (toggle) / PublicareMol (dată) / Invalidare
-  (dialog cu confirmare relații active); card „Variantă semnată" paritar PV (garda B:
-  prima atașare post-MOL OK, replace/delete blocate). Badge „Publicat MOL" / „Invalidat".
-- FE3: `comunicari-tab` (CRUD + update răspuns prefect) + pagină Registru cronologic
-  (`api/RegistruComunicariPrefect`); `relatii-tab` (intern/extern, ștergere din sursă);
-  `anexe-tab` (reutilizează pattern Documente + `TipDocumentHcl`/`NumarOrdinAnexa`); widget
-  „HCL urgent de comunicat" (T-3) pe `acasa`, cu cod culoare pe zile rămase (negativ = depășit).
+A treia parte: relația cu prefectul + acte conexe + alertă pe pagina de start.
 
-## Decizii de confirmat (la începutul FE1)
-1. **Generarea HCL din `PuncteTab`** (recomandat — punctul adoptat e contextul natural) vs un
-   buton separat în antetul ședinței.
-2. **Eticheta de meniu**: „Hotărâri" (recomandat, limbaj cetățean) vs „HCL".
-3. **Widget T-3 pe `acasa`** (recomandat — e prima pagină) vs pagină dedicată.
+### Pas 0 — backend
+**Probabil ZERO atingeri.** Sub-resursele (Comunicări, Relații, Anexe) au controllere proprii
+care întorc DTO-urile lor, iar tab-urile își gestionează **lista proprie** (self-contained, ca
+`puncte-tab`/`documente-tab`) — NU depind de starea `HclDetalii` partajată. De confirmat la
+început; dacă vrem badge-uri pe antet care reflectă nr. comunicări, hub-ul oricum reîncarcă.
 
-## De citit la începutul sesiunii (paritate)
-`docs/frontend.md` (editor auto-save, hub tab-uri, publish flow, download blob, badges),
-`features/proces-verbal/proces-verbal-tab` (act cu editor + variantă semnată), `sedinta-detalii`
-(hub), `features/sedinte/sedinte-lista` + `sedinta-form` (listă + formular), `features/
-functii-oficiale` (paritate dialoguri/serviciu) și controllerele HCL din backend pentru contractul exact.
+### Contracte backend (verificate în S53)
+- **Comunicări** `api/Hcl/{hclId}/Comunicari`: GET listă (desc `NumarOrdineInRegistru`);
+  POST [Admin,Secretar] (`CreareComunicareDto`, gardă Status ≥ Numerotat, retry pe race) →
+  `ComunicareHclPrefectDto`; PUT `/{id}` (`ActualizareComunicareDto` — update răspuns prefect;
+  imutabile: nr ordine/an/dată/canal) → DTO; DELETE `/{id}` [Admin].
+- **Registru** `api/RegistruComunicariPrefect?an=&page=&size=` [Admin,Secretar] → listă
+  `RegistruComunicareDto` (cronologic, an default = anul curent).
+- **Relații** `api/Hcl/{hclId}/Relatii`: GET → `{ relatiiSursa, relatiiTinta }`;
+  POST [Admin,Secretar] (`CreareRelatieDto`, **XOR** `HclTintaId` intern / `ReferintaActExternText`)
+  → `RelatieHclDto`; DELETE `/{id}` **doar din sursă** (`HclSursaId == hclId`).
+- **Anexe** prin `DocumenteController`: POST `/api/Documente` cu `hclId` + `tipDocumentHcl` +
+  `numarOrdinAnexa` (forțează `TipDocument=Altele`; `NumarOrdinAnexa` imutabil pe Semnat;
+  duplicat anexă → 409). Documentele HCL sunt deja în `HclDetalii.documente`.
+- **T-3** `api/Hcl/UrgentDeComunicat?prag=3` [Admin,Secretar] → `List<HclUrgentDto>`
+  (`HclId, Numar, AnNumerotare, Titlu, DataAdoptare, DataLimitaComunicare, ZileRamase, Status`).
+
+### Frontend
+- **models**: cereri (`CreareComunicare`, `ActualizareComunicare`, `CreareRelatie`) +
+  `RegistruComunicare`, `HclUrgent`. (`ComunicareHclPrefect`/`RelatieHcl`/`DocumentHcl` există.)
+- **service**: extind `HclService` (comunicari/relatii pe `api/Hcl/{id}/...`, anexe prin
+  Documente) + servicii noi `RegistruComunicariService` și `HclDashboardService`.
+- **Hub** (tab-uri noi, self-contained):
+  - **Tab Comunicări prefect**: listă (nr ordine, dată, canal, răspuns) + adăugare (dialog:
+    dată, `CanalTransmiterePrefect`, nr înregistrare, observații) + editare răspuns
+    (`RaspunsPrefect` + dată + obiecții) + ștergere (Admin). Gardă ≥ Numerotat (reactiv).
+  - **Tab Relații**: două secțiuni — relații-sursă (cu ștergere) + relații-țintă (read-only) +
+    adăugare (dialog XOR: HCL intern via autocomplete din `GET /Hcl` / text act extern +
+    `TipRelatieHcl`). Ștergere doar din sursă (oglindă backend).
+  - **Tab Anexe**: reutilizează pattern `DocumenteTab` (upload cu progres + listă + download
+    blob) cu câmpuri HCL (`TipDocumentHcl`, `NumarOrdinAnexa`). Sursa: `HclDetalii.documente`
+    sau `GET /Documente?hclId`.
+- **Pagină Registru** `registru-comunicari`: tabel cronologic + filtru an + paginare.
+  **Decizie de luat**: loc în meniu (sub „Hotărâri" vs intrare separată) — recomand un buton
+  „Registru comunicări" în tab-ul Comunicări + opțional intrare de meniu.
+- **Widget T-3 pe `Acasă`**: card „HCL urgent de comunicat" din `UrgentDeComunicat(prag=3)`,
+  cod culoare pe `ZileRamase` (verde > 0, portocaliu ≈ 0, roșu < 0 = depășit), fiecare rând
+  link la HCL. `acasa` e acum aproape gol → loc natural.
+
+### De citit la începutul FE3
+`features/documente/documente-tab` (upload+listă+download), `features/convocari/convocari-tab`
+(tab self-contained + dialoguri), `ComunicariHclPrefectController` / `RelatiiHclController` /
+`RegistruComunicariPrefectController` / `HclDashboardController`.
+
+---
 
 ## Notă de mărime
-Faza 3 totală ajunge la ~7 sesiuni (4 backend + 3 frontend), peste estimarea inițială de 3–5 —
-e modulul cel mai mare și cel mai mare time-saver. Dacă vrei mai compact, FE2+FE3 pot fi comasate
-într-o sesiune mai lungă.
+Faza 3 totală ≈ 7 sesiuni (4 backend + 3 frontend). FE2 și FE3 pot fi comasate într-o sesiune
+mai lungă dacă se dorește, dar fluxul art.140 (FE2) + cele 3 tab-uri externe (FE3) sunt
+substanțiale — recomand separat pentru context mic.
