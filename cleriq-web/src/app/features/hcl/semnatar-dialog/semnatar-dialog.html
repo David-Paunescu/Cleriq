@@ -1,0 +1,60 @@
+<h2 mat-dialog-title>Adaugă semnatar</h2>
+
+<form [formGroup]="form" (ngSubmit)="adauga()">
+  <mat-dialog-content class="continut">
+    @if (seIncarcaInitial()) {
+      <div class="centru"><mat-spinner diameter="32" /></div>
+    } @else {
+      <fieldset class="rol-semnatar">
+        <legend>Rol</legend>
+        <mat-radio-group formControlName="rol" class="radio-group">
+          @for (rol of roluri; track rol) {
+            <mat-radio-button [value]="rol">{{ etichetaRolSemnatar(rol) }}</mat-radio-button>
+          }
+        </mat-radio-group>
+      </fieldset>
+
+      @if (necesitaPersoana()) {
+        <mat-form-field appearance="outline">
+          <mat-label>Persoană (Secretar UAT)</mat-label>
+          <mat-select formControlName="persoanaId">
+            @for (p of persoane(); track p.id) {
+              <mat-option [value]="p.id">{{ p.numeComplet }}</mat-option>
+            }
+          </mat-select>
+          @if (persoane().length === 0) {
+            <mat-hint>Adaugă mai întâi persoana din meniul „Persoane".</mat-hint>
+          }
+        </mat-form-field>
+      }
+
+      @if (necesitaConsilier()) {
+        <mat-form-field appearance="outline">
+          <mat-label>Consilier</mat-label>
+          <mat-select formControlName="consilierId">
+            @for (c of consilieri(); track c.id) {
+              <mat-option [value]="c.id">{{ c.numeComplet }}</mat-option>
+            }
+          </mat-select>
+          <mat-hint>Pentru alternativ (art. 140): consilier prezent la ședință.</mat-hint>
+        </mat-form-field>
+      }
+
+      <mat-form-field appearance="outline" class="camp-ordine">
+        <mat-label>Ordine afișare</mat-label>
+        <input matInput type="number" min="1" formControlName="ordineAfisare" />
+      </mat-form-field>
+
+      @if (eroare(); as mesaj) {
+        <p class="eroare">{{ mesaj }}</p>
+      }
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" mat-dialog-close>Renunță</button>
+    <button mat-flat-button type="submit" [disabled]="seSalveaza() || seIncarcaInitial()">
+      {{ seSalveaza() ? 'Se adaugă...' : 'Adaugă' }}
+    </button>
+  </mat-dialog-actions>
+</form>

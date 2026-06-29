@@ -1,0 +1,154 @@
+<input #inputFisierSemnat type="file" accept=".pdf" (change)="laFisierSemnatSelectat($event)" hidden />
+
+@let h = hcl();
+@let act = actiuni();
+
+<div class="tab-semnatari">
+  <!-- Semnatari -->
+  <section class="sectiune">
+    <div class="sectiune-antet">
+      <h3>Semnatari</h3>
+      @if (act.poateGestionaSemnatari) {
+        <button mat-stroked-button (click)="deschideAdaugare()">
+          <mat-icon>person_add</mat-icon>
+          Adaugă semnatar
+        </button>
+      }
+    </div>
+
+    @if (h.semnatari.length === 0) {
+      <p class="gol">Niciun semnatar.</p>
+    } @else {
+      <ul class="lista-semnatari">
+        @for (s of h.semnatari; track s.id) {
+          <li class="rand-semnatar">
+            <div class="semnatar-info">
+              <span class="semnatar-nume">{{ s.numeComplet }}</span>
+              <span class="semnatar-rol">{{ etichetaRolSemnatar(s.rolSemnatar) }}</span>
+            </div>
+            @if (act.poateGestionaSemnatari) {
+              <button mat-icon-button (click)="stergeSemnatar(s)"
+                      [disabled]="seStergeId() !== null" matTooltip="Elimină semnatarul">
+                @if (seStergeId() === s.id) {
+                  <mat-spinner diameter="18" />
+                } @else {
+                  <mat-icon>delete</mat-icon>
+                }
+              </button>
+            }
+          </li>
+        }
+      </ul>
+    }
+
+    @if (esteSemnatStatus()) {
+      <p class="nota">Hotărâre semnată — lista de semnatari este finală.</p>
+    } @else if (!arePresedinte()) {
+      <p class="nota nota-atentie">
+        <mat-icon>info</mat-icon>
+        <span>Fără președinte de ședință: art. 140 cere minim 2 semnatari alternativi (consilieri
+          prezenți la ședință) și completarea motivului de mai jos.</span>
+      </p>
+    }
+  </section>
+
+  <!-- Motiv lipsă președinte (art. 140) -->
+  @if (afiseazaMotiv()) {
+    <section class="sectiune">
+      <h3>Motivul lipsei semnăturii președintelui (art. 140)</h3>
+      @if (act.poateGestionaSemnatari) {
+        <textarea #textareaMotiv rows="3" class="textarea-motiv" maxlength="500"
+                  (input)="laInputMotiv($event)" [disabled]="seSalveazaMotiv()"
+                  placeholder="Ex: Președintele a părăsit ședința înainte de semnare."></textarea>
+        <div class="motiv-actiuni">
+          <button mat-stroked-button (click)="salveazaMotiv()"
+                  [disabled]="!motivDirty() || seSalveazaMotiv()">
+            @if (seSalveazaMotiv()) {
+              <mat-spinner diameter="16" />
+            } @else {
+              <mat-icon>save</mat-icon>
+            }
+            Salvează motivul
+          </button>
+        </div>
+      } @else {
+        <p class="motiv-readonly">{{ h.motivLipsaSemnaturaPresedinte || '—' }}</p>
+      }
+    </section>
+  }
+
+  <!-- Variantă semnată (PDF scanat) -->
+  @if (esteSemnatStatus()) {
+    <section class="sectiune">
+      <h3>Variantă semnată (PDF scanat)</h3>
+      @if (h.esteSemnat) {
+        <mat-card class="card-semnat">
+          <mat-card-content>
+            <div class="semnat-randul">
+              <mat-icon class="icon-semnat">verified</mat-icon>
+              <div class="semnat-text">
+                <div class="semnat-titlu">{{ h.numeFisierSemnat }}</div>
+                <div class="semnat-meta">
+                  @if (h.marimeSemnat; as marime) {
+                    {{ formateazaMarime(marime) }}
+                  }
+                  @if (h.dataIncarcareSemnat; as data) {
+                    · Încărcat: {{ formateazaDataOra(data) }}
+                  }
+                </div>
+              </div>
+            </div>
+            <div class="semnat-actiuni">
+              <button mat-flat-button (click)="descarcaSemnat()" [disabled]="seDescarcaSemnat()">
+                @if (seDescarcaSemnat()) {
+                  <mat-spinner diameter="16" />
+                } @else {
+                  <mat-icon>download</mat-icon>
+                }
+                Descarcă
+              </button>
+              @if (act.poateInlocuiSemnat) {
+                <button mat-stroked-button (click)="incepInlocuireSemnat()"
+                        [disabled]="seIncarcaSemnat()">
+                  @if (seIncarcaSemnat()) {
+                    <mat-spinner diameter="16" />
+                  } @else {
+                    <mat-icon>swap_horiz</mat-icon>
+                  }
+                  Înlocuiește
+                </button>
+              }
+              @if (act.poateStergeSemnat) {
+                <button mat-icon-button [matMenuTriggerFor]="meniuSemnat" matTooltip="Mai multe">
+                  <mat-icon>more_vert</mat-icon>
+                </button>
+                <mat-menu #meniuSemnat="matMenu">
+                  <button mat-menu-item (click)="stergeSemnat()">
+                    <mat-icon>delete</mat-icon>
+                    <span>Șterge varianta semnată</span>
+                  </button>
+                </mat-menu>
+              }
+            </div>
+          </mat-card-content>
+        </mat-card>
+      } @else if (act.poateIncarcaSemnat) {
+        <mat-card class="card-upload">
+          <mat-card-content>
+            <p>Încarcă PDF-ul semnat olograf (scanat) al hotărârii.</p>
+            <button mat-flat-button (click)="incepIncarcareSemnat()" [disabled]="seIncarcaSemnat()">
+              @if (seIncarcaSemnat()) {
+                <mat-spinner diameter="16" />
+              } @else {
+                <mat-icon>upload_file</mat-icon>
+              }
+              Încarcă PDF semnat
+            </button>
+          </mat-card-content>
+        </mat-card>
+      } @else {
+        <p class="gol">Nicio variantă semnată încărcată.</p>
+      }
+    </section>
+  }
+</div>

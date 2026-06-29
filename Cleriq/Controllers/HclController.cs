@@ -65,9 +65,9 @@ public class HclController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> Detalii(int id)
     {
-        var hcl = await HcluriCuIncludeComplet().FirstOrDefaultAsync(h => h.Id == id);
+        var hcl = await _context.Hcluri.CuIncludeComplet().FirstOrDefaultAsync(h => h.Id == id);
         if (hcl is null) return NotFound();
-        return Ok(MapeazaSpreDetaliiDto(hcl));
+        return Ok(MapareHcl.SpreDetaliiDto(hcl));
     }
 
     [HttpGet("{id}/Pdf")]
@@ -135,7 +135,7 @@ public class HclController : ControllerBase
         }
 
         var hclComplet = await ReincarcaCuIncludeAsync(id, ct);
-        return Ok(MapeazaSpreDetaliiDto(hclComplet));
+        return Ok(MapareHcl.SpreDetaliiDto(hclComplet));
     }
 
     [HttpGet("{id}/Semnat")]
@@ -284,7 +284,7 @@ public class HclController : ControllerBase
 
         hcl.Continut = dto.Continut;
         await _context.SaveChangesAsync();
-        return Ok(MapeazaSpreDetaliiDto(await ReincarcaCuIncludeAsync(id)));
+        return Ok(MapareHcl.SpreDetaliiDto(await ReincarcaCuIncludeAsync(id)));
     }
 
     [HttpPost("{id}/RegenereazaContinut")]
@@ -305,7 +305,7 @@ public class HclController : ControllerBase
 
         hcl.Continut = _generator.GenereazaContinut(hcl);
         await _context.SaveChangesAsync();
-        return Ok(MapeazaSpreDetaliiDto(await ReincarcaCuIncludeAsync(id)));
+        return Ok(MapareHcl.SpreDetaliiDto(await ReincarcaCuIncludeAsync(id)));
     }
 
     [HttpPost("{id}/AtribuieNumar")]
@@ -317,7 +317,7 @@ public class HclController : ControllerBase
         switch (rezultat.Tip)
         {
             case TipRezultatAtribuire.Succes:
-                return Ok(MapeazaSpreDetaliiDto(await ReincarcaCuIncludeAsync(id)));
+                return Ok(MapareHcl.SpreDetaliiDto(await ReincarcaCuIncludeAsync(id)));
             case TipRezultatAtribuire.HclInexistent:
                 return NotFound(rezultat.MesajEroare);
             case TipRezultatAtribuire.NumarInvalid:
@@ -380,7 +380,7 @@ public class HclController : ControllerBase
 
         hcl.Status = StatusHclRedactional.Semnat;
         await _context.SaveChangesAsync();
-        return Ok(MapeazaSpreDetaliiDto(await ReincarcaCuIncludeAsync(id)));
+        return Ok(MapareHcl.SpreDetaliiDto(await ReincarcaCuIncludeAsync(id)));
     }
 
     [HttpPost("{id}/Invalidare")]
@@ -404,8 +404,8 @@ public class HclController : ControllerBase
             return Conflict(new
             {
                 mesaj = "HCL-ul are relații active cu alte hotărâri. Confirmă cu ConfirmaCuRelatiiActive=true pentru a continua.",
-                relatiiSursaActive = relatiiSursa.Select(MapeazaRelatie).ToList(),
-                relatiiTintaActive = relatiiTinta.Select(MapeazaRelatie).ToList()
+                relatiiSursaActive = relatiiSursa.Select(MapareHcl.SpreRelatieDto).ToList(),
+                relatiiTintaActive = relatiiTinta.Select(MapareHcl.SpreRelatieDto).ToList()
             });
         }
 
@@ -415,7 +415,7 @@ public class HclController : ControllerBase
         hcl.RefInvalidare = string.IsNullOrWhiteSpace(dto.RefInvalidare) ? null : dto.RefInvalidare.Trim();
 
         await _context.SaveChangesAsync();
-        return Ok(MapeazaSpreDto(hcl));
+        return Ok(MapareHcl.SpreDetaliiDto(await ReincarcaCuIncludeAsync(id)));
     }
 
     [HttpDelete("{id}/Invalidare")]
@@ -433,7 +433,7 @@ public class HclController : ControllerBase
         hcl.InvalidatDe = null;
 
         await _context.SaveChangesAsync();
-        return Ok(MapeazaSpreDto(hcl));
+        return Ok(MapareHcl.SpreDetaliiDto(await ReincarcaCuIncludeAsync(id)));
     }
 
     [HttpPut("{id}/Publicare")]
@@ -448,7 +448,7 @@ public class HclController : ControllerBase
 
         hcl.EstePublicat = dto.EstePublicat;
         await _context.SaveChangesAsync();
-        return Ok(MapeazaSpreDto(hcl));
+        return Ok(MapareHcl.SpreDetaliiDto(await ReincarcaCuIncludeAsync(id)));
     }
 
     [HttpPut("{id}/PublicareMol")]
@@ -463,7 +463,7 @@ public class HclController : ControllerBase
         hcl.DataPublicareMol = dto.DataPublicareMol;
         hcl.PublicataDe = _context.UserIdCurent;
         await _context.SaveChangesAsync();
-        return Ok(MapeazaSpreDto(hcl));
+        return Ok(MapareHcl.SpreDetaliiDto(await ReincarcaCuIncludeAsync(id)));
     }
 
     [HttpDelete("{id}/PublicareMol")]
@@ -478,7 +478,7 @@ public class HclController : ControllerBase
         hcl.DataPublicareMol = null;
         hcl.PublicataDe = null;
         await _context.SaveChangesAsync();
-        return NoContent();
+        return Ok(MapareHcl.SpreDetaliiDto(await ReincarcaCuIncludeAsync(id)));
     }
 
     // Matricea DELETE = 4 gărzi ordonate cu early-return (NU switch pe 6 stări;
@@ -531,70 +531,24 @@ public class HclController : ControllerBase
 
         hcl.MotivLipsaSemnaturaPresedinte = dto.Motiv.Trim();
         await _context.SaveChangesAsync();
-        return Ok(MapeazaSpreDto(hcl));
+        return Ok(MapareHcl.SpreDetaliiDto(await ReincarcaCuIncludeAsync(id)));
     }
 
     // ============ Reload cu include ============
 
-    // Un singur loc pentru include-urile complete → maparea spre HclDetaliiDto nu vine cu
-    // colecții goale. Folosit la Detalii (GET) și la reload-ul post-mutație (toate acțiunile
-    // care întorc Detalii: editare/regenerare conținut, atribuire număr, semnare, încărcare semnat).
-    private IQueryable<Hcl> HcluriCuIncludeComplet() =>
-        _context.Hcluri
-            .Include(h => h.Semnatari).ThenInclude(s => s.Persoana)
-            .Include(h => h.Semnatari).ThenInclude(s => s.Consilier)
-            .Include(h => h.Documente)
-            .Include(h => h.RelatiiSursa).ThenInclude(r => r.HclTinta)
-            .Include(h => h.RelatiiTinta).ThenInclude(r => r.HclSursa)
-            .Include(h => h.Comunicari);
-
+    // Reload cu include-urile complete (sursa = MapareHcl.CuIncludeComplet) pentru toate
+    // acțiunile care întorc HclDetaliiDto: editare/regenerare conținut, atribuire număr,
+    // semnare, încărcare semnat + mutațiile de stări legale (publicare/MOL/invalidare/motiv).
     private Task<Hcl> ReincarcaCuIncludeAsync(int id, CancellationToken ct = default) =>
-        HcluriCuIncludeComplet().FirstAsync(h => h.Id == id, ct);
+        _context.Hcluri.CuIncludeComplet().FirstAsync(h => h.Id == id, ct);
 
     // ============ Mappers ============
 
+    // HclDto (slim) — folosit la Lista și Genereaza (care navighează la /hcl/:id, ce reîncarcă
+    // Detalii). Maparea spre HclDetaliiDto stă în MapareHcl (partajată cu SemnatariHclController).
     private static HclDto MapeazaSpreDto(Hcl h) => new(
         h.Id, h.Numar, h.AnNumerotare, h.TipHcl, h.Titlu,
         h.DataAdoptare, h.DataIntrareInVigoare, h.Status,
         h.EstePublicat, h.DataPublicareMol,
         h.DataInvalidare, h.MotivInvalidare, h.InstitutieId, h.CreatLa);
-
-    private static HclDetaliiDto MapeazaSpreDetaliiDto(Hcl h) => new(
-        h.Id, h.Numar, h.AnNumerotare, h.TipHcl, h.Titlu, h.Continut,
-        h.DataAdoptare, h.DataIntrareInVigoare, h.Status, h.PunctOrdineZiId,
-        h.VotPentru, h.VotImpotriva, h.VotAbtinere, h.TipMajoritate,
-        h.EstePublicat, h.DataPublicareMol,
-        !string.IsNullOrEmpty(h.CaleStocareSemnat), h.NumeFisierSemnat, h.MarimeSemnat, h.DataIncarcareSemnat,
-        h.MotivLipsaSemnaturaPresedinte,
-        h.DataInvalidare, h.MotivInvalidare, h.RefInvalidare,
-        h.InstitutieId, h.CreatLa,
-        h.Semnatari.OrderBy(s => s.OrdineAfisare).Select(MapeazaSemnatar).ToList(),
-        h.Documente.OrderBy(d => d.Ordine).Select(MapeazaDocument).ToList(),
-        h.RelatiiSursa.Select(MapeazaRelatie).ToList(),
-        h.RelatiiTinta.Select(MapeazaRelatie).ToList(),
-        h.Comunicari.OrderByDescending(c => c.NumarOrdineInRegistru).Select(MapeazaComunicare).ToList());
-
-    private static SemnatarHclDto MapeazaSemnatar(SemnatarHcl s) => new(
-        s.Id, s.RolSemnatar, s.PersoanaId, s.ConsilierId,
-        s.Persoana?.NumeComplet ?? s.Consilier?.NumeComplet ?? "—",
-        s.DataSemnare, s.OrdineAfisare);
-
-    private static DocumentHclDto MapeazaDocument(Document d) => new(
-        d.Id, d.Denumire, d.Descriere, d.TipDocumentHcl, d.NumarOrdinAnexa,
-        d.NumeFisierOriginal, d.Marime, d.Ordine);
-
-    private static RelatieHclDto MapeazaRelatie(RelatieHcl r) => new(
-        r.Id, r.TipRelatie,
-        r.HclSursaId, FormateazaNumar(r.HclSursa), r.HclSursa?.Titlu ?? "—",
-        r.HclTintaId, FormateazaNumar(r.HclTinta), r.HclTinta?.Titlu,
-        r.ReferintaActExternText);
-
-    private static ComunicareHclPrefectDto MapeazaComunicare(ComunicareHclPrefect c) => new(
-        c.Id, c.HclId, c.NumarOrdineInRegistru, c.AnRegistru,
-        c.DataTrimiteri, c.DataInregistrareInRegistru, c.CanalTransmitere,
-        c.NrInregistrarePrefect, c.DataConfirmarePrefect, c.ObiectiiMotivate,
-        c.RaspunsPrefect, c.DataRaspunsPrefect, c.ObservatiiInterne, c.CreatLa);
-
-    private static string? FormateazaNumar(Hcl? h)
-        => h?.Numar != null && h.AnNumerotare != null ? $"{h.Numar}/{h.AnNumerotare}" : null;
 }

@@ -7,16 +7,25 @@ Backend complet (S49–S52). UI internă (secretar/admin) pentru Modul A, în 3 
 
 ## Stare
 - **FE1 — LIVRAT (S53)** ✅ — spina actului: schelet + listă + generare din punct + hub
-  (Detalii + Conținut cu auto-save) + numerotare + semnare + PDF. Backend pas 0 + tot FE1;
-  `dotnet test` 265 verzi, `npm run build`/`lint` verzi, smoke test live OK. Commit făcut.
-- **FE2 — sesiunea următoare** — semnatari + stări legale + variantă semnată.
-- **FE3** — exterior: comunicări prefect + registru, relații, anexe, widget T-3.
+  (Detalii + Conținut cu auto-save) + numerotare + semnare + PDF.
+- **FE2 — LIVRAT (S54)** ✅ — semnatari + stări legale + variantă semnată. Backend pas 0
+  (mutații → `HclDetaliiDto` prin `Helpers/MapareHcl.cs`) + tot FE2; `dotnet test` 266 verzi,
+  `npm run build`/`lint` verzi, smoke test live OK. Vezi `docs/rezumate/rezumat_54.md`.
+- **FE3 — sesiunea următoare (S55)** — exterior: comunicări prefect + registru, relații,
+  anexe, widget T-3. Backend pas 0 = ZERO atingeri (confirmat empiric în S54).
 
 ## Decizii confirmate (S53)
 1. **„Generează HCL" în `PuncteTab`** (pe punctul adoptat) — nu în antetul ședinței.
 2. **Etichetă meniu „Hotărâri"** (rută `/hcl`).
 3. **Widget T-3 pe `Acasă`** (se implementează la FE3).
 4. **`hclId: int?` pe `PunctOrdineZiDto`** — ascunde „Generează", arată „Vezi HCL" + navigare.
+
+## Decizii confirmate (S54)
+1. **FE2 și FE3 în sesiuni separate** (context mic) — S54 a livrat doar FE2.
+2. **Registru comunicări (FE3) = buton în tab-ul Comunicări**, fără intrare separată de meniu.
+3. **Mutațiile FE2 → `HclDetaliiDto` prin helper partajat `Helpers/MapareHcl.cs`** — o singură
+   sursă de include + mapare pentru `HclController` și `SemnatariHclController`; `AsNoTracking`
+   pe reload-urile read-only (evită poluarea identity-map după ștergerea unui copil).
 
 ## Convenții stabilite în FE1 (reutilizate la FE2/FE3)
 - **Mutațiile consumate de hub (starea `HclDetalii` partajată) întorc `HclDetaliiDto`** prin
@@ -44,6 +53,8 @@ Backend complet (S49–S52). UI internă (secretar/admin) pentru Modul A, în 3 
 ---
 
 ## FE2 — semnatari + stări legale + variantă semnată (detaliat)
+
+> ✅ **LIVRAT (S54)** — vezi `docs/rezumate/rezumat_54.md`. Planul de mai jos e păstrat ca referință.
 
 A doua parte din Modul A, peste hub-ul existent. Tot consolă internă.
 
@@ -97,10 +108,13 @@ A doua parte din Modul A, peste hub-ul existent. Tot consolă internă.
 A treia parte: relația cu prefectul + acte conexe + alertă pe pagina de start.
 
 ### Pas 0 — backend
-**Probabil ZERO atingeri.** Sub-resursele (Comunicări, Relații, Anexe) au controllere proprii
-care întorc DTO-urile lor, iar tab-urile își gestionează **lista proprie** (self-contained, ca
-`puncte-tab`/`documente-tab`) — NU depind de starea `HclDetalii` partajată. De confirmat la
-început; dacă vrem badge-uri pe antet care reflectă nr. comunicări, hub-ul oricum reîncarcă.
+**ZERO atingeri — CONFIRMAT empiric (S54)** (citite toate controllerele). Sub-resursele
+(Comunicări, Relații, Anexe via `DocumenteController`, T-3 via `HclDashboardController`) au
+controllere proprii care întorc DTO-urile lor; tab-urile își gestionează **lista proprie**
+(self-contained, ca `puncte-tab`/`documente-tab`) — NU depind de starea `HclDetalii` partajată.
+Convenția FE2: doar mutațiile consumate de hub (semnatari + stări legale) întorc `HclDetaliiDto`;
+sub-resursele externe sunt self-contained. Excepție posibilă: badge „nr. comunicări" pe antet →
+hub-ul reîncarcă oricum.
 
 ### Contracte backend (verificate în S53)
 - **Comunicări** `api/Hcl/{hclId}/Comunicari`: GET listă (desc `NumarOrdineInRegistru`);
@@ -134,8 +148,8 @@ care întorc DTO-urile lor, iar tab-urile își gestionează **lista proprie** (
     blob) cu câmpuri HCL (`TipDocumentHcl`, `NumarOrdinAnexa`). Sursa: `HclDetalii.documente`
     sau `GET /Documente?hclId`.
 - **Pagină Registru** `registru-comunicari`: tabel cronologic + filtru an + paginare.
-  **Decizie de luat**: loc în meniu (sub „Hotărâri" vs intrare separată) — recomand un buton
-  „Registru comunicări" în tab-ul Comunicări + opțional intrare de meniu.
+  **Decizie CONFIRMATĂ (S54)**: buton „Registru comunicări" în tab-ul Comunicări → deschide
+  pagina (rută lazy). FĂRĂ intrare separată de meniu (suprafață minimă; promovabil ușor mai târziu).
 - **Widget T-3 pe `Acasă`**: card „HCL urgent de comunicat" din `UrgentDeComunicat(prag=3)`,
   cod culoare pe `ZileRamase` (verde > 0, portocaliu ≈ 0, roșu < 0 = depășit), fiecare rând
   link la HCL. `acasa` e acum aproape gol → loc natural.
@@ -144,6 +158,20 @@ care întorc DTO-urile lor, iar tab-urile își gestionează **lista proprie** (
 `features/documente/documente-tab` (upload+listă+download), `features/convocari/convocari-tab`
 (tab self-contained + dialoguri), `ComunicariHclPrefectController` / `RelatiiHclController` /
 `RegistruComunicariPrefectController` / `HclDashboardController`.
+
+### Convenții + mediu (din FE2/S54, reutilizate la FE3)
+- **Servicii**: extind `HclService` pentru comunicări/relații (rute `api/Hcl/{id}/Comunicari`,
+  `.../Relatii`); anexe prin `DocumenteService` existent (refolosește upload-cu-progres +
+  download-blob); servicii noi `RegistruComunicariService` + `HclDashboardService`
+  (per feature, `Promise<T>` cu `firstValueFrom`).
+- **Tab-uri self-contained** (input `hclId`, listă proprie, NU emit spre hub). Dialoguri paritare
+  cu FE2: erori inline în dialog, snackbar la acțiuni directe din listă, `periculos` la ștergeri,
+  date/timp prin `shared/data.ts` cu fus explicit.
+- **Gărzi reactive**: comunicarea cere HCL ≥ Numerotat (snackbar din 409); ștergere relație doar
+  din sursă (oglindă backend); anexă duplicată / `NumarOrdinAnexa` imutabil pe Semnat → 409 reactiv.
+- **Date dev + capcane mediu**: `docs/rezumate/rezumat_54.md` („Note de mediu / date dev"). Pe scurt:
+  backend profil `https` (cale ABSOLUTĂ la `dotnet run --project`), preview `:4200`; HCL id=4 (Draft)
+  + ședința id=4 reutilizabile; pentru tab Comunicări trebuie un HCL ≥ Numerotat (folosește 5/6/7-2026).
 
 ---
 

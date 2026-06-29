@@ -4,7 +4,8 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { StatusHclRedactional, TipHcl } from '../../shared/enums';
 import {
-  AtribuireNumarHcl, CreareHcl, EditareContinutHcl, Hcl, HclDetalii, SugestieNumar
+  AdaugareSemnatar, AtribuireNumarHcl, CreareHcl, EditareContinutHcl, Hcl, HclDetalii,
+  InvalidareHcl, SugestieNumar
 } from './hcl.models';
 
 export interface FiltreHcl {
@@ -56,6 +57,61 @@ export class HclService {
 
   semneaza(id: number): Promise<HclDetalii> {
     return firstValueFrom(this.http.post<HclDetalii>(`${this.urlBaza}/${id}/Semneaza`, {}));
+  }
+
+  // === FE2 — semnatari (POST/DELETE întorc HclDetalii: garda „Semnează" depinde de listă) ===
+  adaugaSemnatar(id: number, dto: AdaugareSemnatar): Promise<HclDetalii> {
+    return firstValueFrom(this.http.post<HclDetalii>(`${this.urlBaza}/${id}/Semnatari`, dto));
+  }
+
+  stergeSemnatar(id: number, semnatarId: number): Promise<HclDetalii> {
+    return firstValueFrom(
+      this.http.delete<HclDetalii>(`${this.urlBaza}/${id}/Semnatari/${semnatarId}`));
+  }
+
+  seteazaMotivLipsa(id: number, motiv: string): Promise<HclDetalii> {
+    return firstValueFrom(
+      this.http.put<HclDetalii>(`${this.urlBaza}/${id}/MotivLipsaPresedinte`, { motiv }));
+  }
+
+  // === FE2 — stări legale ===
+  publica(id: number, estePublicat: boolean): Promise<HclDetalii> {
+    return firstValueFrom(
+      this.http.put<HclDetalii>(`${this.urlBaza}/${id}/Publicare`, { estePublicat }));
+  }
+
+  publicaMol(id: number, dataPublicareMol: string): Promise<HclDetalii> {
+    return firstValueFrom(
+      this.http.put<HclDetalii>(`${this.urlBaza}/${id}/PublicareMol`, { dataPublicareMol }));
+  }
+
+  anuleazaMol(id: number): Promise<HclDetalii> {
+    return firstValueFrom(this.http.delete<HclDetalii>(`${this.urlBaza}/${id}/PublicareMol`));
+  }
+
+  invalideaza(id: number, dto: InvalidareHcl): Promise<HclDetalii> {
+    return firstValueFrom(this.http.post<HclDetalii>(`${this.urlBaza}/${id}/Invalidare`, dto));
+  }
+
+  anuleazaInvalidare(id: number): Promise<HclDetalii> {
+    return firstValueFrom(this.http.delete<HclDetalii>(`${this.urlBaza}/${id}/Invalidare`));
+  }
+
+  // === FE2 — variantă semnată (PDF scanat) ===
+  incarcaSemnat(id: number, fisier: File): Promise<HclDetalii> {
+    const form = new FormData();
+    form.append('fisier', fisier);
+    return firstValueFrom(this.http.post<HclDetalii>(`${this.urlBaza}/${id}/Semnat`, form));
+  }
+
+  async descarcaSemnat(id: number, numeAfisat: string): Promise<void> {
+    const blob = await firstValueFrom(
+      this.http.get(`${this.urlBaza}/${id}/Semnat`, { responseType: 'blob' }));
+    this.declanseazaDescarcare(blob, numeAfisat);
+  }
+
+  stergeSemnat(id: number): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`${this.urlBaza}/${id}/Semnat`));
   }
 
   async descarcaPdf(id: number, numeAfisat: string): Promise<void> {

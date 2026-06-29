@@ -29,6 +29,10 @@ public class TesteInvalidareHcl
                 confirmaCuRelatiiActive = false
             });
             Assert.Equal(HttpStatusCode.OK, raspuns.StatusCode);
+            // POST întoarce HclDetaliiDto: câmpurile de invalidare + colecțiile sunt în răspuns
+            var dtoPost = await raspuns.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.NotEqual(JsonValueKind.Null, dtoPost.GetProperty("dataInvalidare").ValueKind);
+            Assert.Equal(2, dtoPost.GetProperty("semnatari").EnumerateArray().Count());
 
             var detalii = await admin.GetFromJsonAsync<JsonElement>($"/api/Hcl/{hcl.HclId}");
             Assert.NotEqual(JsonValueKind.Null, detalii.GetProperty("dataInvalidare").ValueKind);
@@ -121,6 +125,10 @@ public class TesteInvalidareHcl
 
             var anulare = await admin.DeleteAsync($"/api/Hcl/{hcl.HclId}/Invalidare");
             Assert.Equal(HttpStatusCode.OK, anulare.StatusCode);
+            // DELETE întoarce Detalii cu câmpurile de invalidare resetate
+            var dtoAnulare = await anulare.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Equal(JsonValueKind.Null, dtoAnulare.GetProperty("dataInvalidare").ValueKind);
+            Assert.Equal(2, dtoAnulare.GetProperty("semnatari").EnumerateArray().Count());
 
             var detalii = await admin.GetFromJsonAsync<JsonElement>($"/api/Hcl/{hcl.HclId}");
             Assert.Equal(JsonValueKind.Null, detalii.GetProperty("dataInvalidare").ValueKind);

@@ -112,12 +112,10 @@ public class SemnatariHclController : ControllerBase
         _context.SemnatariHcl.Add(semnatar);
         await _context.SaveChangesAsync();
 
-        if (semnatar.PersoanaId.HasValue)
-            await _context.Entry(semnatar).Reference(s => s.Persoana).LoadAsync();
-        if (semnatar.ConsilierId.HasValue)
-            await _context.Entry(semnatar).Reference(s => s.Consilier).LoadAsync();
-
-        return Ok(MapeazaSpreDto(semnatar));
+        // Întoarce HclDetaliiDto: hub-ul își actualizează starea partajată (garda „Semnează"
+        // depinde de lista de semnatari). Reload-ul cu include populează nume/persoană/consilier.
+        return Ok(MapareHcl.SpreDetaliiDto(
+            await _context.Hcluri.CuIncludeComplet().FirstAsync(h => h.Id == hclId)));
     }
 
     [HttpDelete("{semnatarId}")]
@@ -150,7 +148,10 @@ public class SemnatariHclController : ControllerBase
         }
 
         await _context.SaveChangesAsync();
-        return NoContent();
+
+        // La fel ca POST: starea partajată a hub-ului reflectă lista actualizată de semnatari.
+        return Ok(MapareHcl.SpreDetaliiDto(
+            await _context.Hcluri.CuIncludeComplet().FirstAsync(h => h.Id == hclId)));
     }
 
     private static string? ValideazaRol(RolSemnatar rol, int? persoanaId, int? consilierId)

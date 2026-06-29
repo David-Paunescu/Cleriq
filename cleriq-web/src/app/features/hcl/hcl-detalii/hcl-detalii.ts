@@ -24,6 +24,11 @@ import { etichetaStatusHcl, etichetaTipHcl, etichetaTipMajoritate } from '../../
 import {
   AtribuieNumarDialog, DateAtribuireNumarDialog
 } from '../atribuie-numar-dialog/atribuie-numar-dialog';
+import { DateInvalidareDialog, InvalidareDialog } from '../invalidare-dialog/invalidare-dialog';
+import {
+  DatePublicareMolDialog, PublicareMolDialog
+} from '../publicare-mol-dialog/publicare-mol-dialog';
+import { SemnatariTab } from '../semnatari-tab/semnatari-tab';
 import { HclDetalii } from '../hcl.models';
 import { actiuniPermise } from '../hcl.permisiuni';
 import { HclService } from '../hcl.service';
@@ -34,7 +39,7 @@ const DEBOUNCE_AUTOSAVE_MS = 2000;
   selector: 'app-hcl-detalii',
   imports: [
     MatCardModule, MatTabsModule, MatIconModule, MatButtonModule,
-    MatMenuModule, MatTooltipModule, MatProgressSpinnerModule
+    MatMenuModule, MatTooltipModule, MatProgressSpinnerModule, SemnatariTab
   ],
   templateUrl: './hcl-detalii.html',
   styleUrl: './hcl-detalii.scss'
@@ -57,6 +62,7 @@ export class HclDetaliiPagina implements OnInit, OnDestroy {
 
   readonly seSemneaza = signal(false);
   readonly seDescarcaPdf = signal(false);
+  readonly actiuneStareLegala = signal(false);
 
   // === Editor (paritate ProcesVerbalTab) ===
   readonly valoareEditor = signal('');
@@ -73,8 +79,10 @@ export class HclDetaliiPagina implements OnInit, OnDestroy {
   private vizibilitateHandler: (() => void) | null = null;
   private proprietar!: ProprietarStareModificari;
 
+  readonly esteAdmin = computed(() => this.auth.areRol('Admin'));
   readonly esteAdminSauSecretar = computed(() => this.auth.areOricareRol('Admin', 'Secretar'));
-  readonly actiuni = computed(() => actiuniPermise(this.hcl(), this.esteAdminSauSecretar()));
+  readonly actiuni = computed(() =>
+    actiuniPermise(this.hcl(), this.esteAdminSauSecretar(), this.esteAdmin()));
 
   readonly esteDirty = computed(() => this.valoareEditor() !== this.ultimaValoareSalvata());
 
@@ -343,6 +351,97 @@ export class HclDetaliiPagina implements OnInit, OnDestroy {
     } finally {
       this.seDescarcaPdf.set(false);
     }
+  }
+
+  // === FE2 — stări legale (antet) ===
+
+  async comutaPublicare(): Promise<void> {
+    const act = this.actiuni();
+    if (this.actiuneStareLegala()) return;
+
+    if (act.poatePublica) {
+      await this.executaStareLegala(
+        () => this.api.publica(this.id, true), 'Hotărârea a fost publicată pe portal.');
+      return;
+    }
+    if (act.poateDepublica) {
+      const confirmat = await this.confirma({
+        titlu: 'Retragere de pe portal',
+        mesaj: 'Hotărârea nu va mai fi vizibilă pe portalul public. O poți republica oricând.',
+        etichetaConfirmare: 'Retrage',
+        periculos: true
+      });
+      if (!confirmat) return;
+      await this.executaStareLegala(
+        () => this.api.publica(this.id, false), 'Hotărârea a fost retrasă de pe portal.');
+    }
+  }
+
+  async deschidePublicareMol(): Promise<void> {
+    if (!this.actiuni().poatePublicaMol) return;
+    const date: DatePublicareMolDialog = { hclId: this.id };
+    const rezultat = await firstValueFrom(
+      this.dialog.open<PublicareMolDialog, DatePublicareMolDialog, HclDetalii | undefined>(
+        PublicareMolDialog, { data: date, width: '440px', maxWidth: '95vw' }).afterClosed());
+    if (!rezultat) return;
+    this.hcl.set(rezultat);
+    this.snackBar.open('Hotărârea a fost publicată în MOL.', 'Închide', { duration: 4000 });
+  }
+
+  async anuleazaMol(): Promise<void> {
+    if (!this.actiuni().poateAnulaMol || this.actiuneStareLegala()) return;
+    const confirmat = await this.confirma({
+      titlu: 'Anulare publicare MOL',
+      mesaj: 'Se anulează data publicării în Monitorul Oficial Local. Folosit doar pentru corecții administrative.',
+      etichetaConfirmare: 'Anulează publicarea MOL',
+      periculos: true
+    });
+    if (!confirmat) return;
+    await this.executaStareLegala(
+      () => this.api.anuleazaMol(this.id), 'Publicarea în MOL a fost anulată.');
+  }
+
+  async deschideInvalidare(): Promise<void> {
+    if (!this.actiuni().poateInvalida) return;
+    const date: DateInvalidareDialog = { hclId: this.id };
+    const rezultat = await firstValueFrom(
+      this.dialog.open<InvalidareDialog, DateInvalidareDialog, HclDetalii | undefined>(
+        InvalidareDialog, { data: date, width: '520px', maxWidth: '95vw' }).afterClosed());
+    if (!rezultat) return;
+    this.hcl.set(rezultat);
+    this.snackBar.open('Hotărârea a fost invalidată.', 'Închide', { duration: 4000 });
+  }
+
+  async anuleazaInvalidare(): Promise<void> {
+    if (!this.actiuni().poateAnulaInvalidare || this.actiuneStareLegala()) return;
+    const confirmat = await this.confirma({
+      titlu: 'Anulare invalidare',
+      mesaj: 'Hotărârea revine în vigoare (se șterg motivul și referința invalidării). Folosit doar pentru corecții administrative.',
+      etichetaConfirmare: 'Anulează invalidarea',
+      periculos: true
+    });
+    if (!confirmat) return;
+    await this.executaStareLegala(
+      () => this.api.anuleazaInvalidare(this.id), 'Invalidarea a fost anulată.');
+  }
+
+  private async executaStareLegala(
+    actiune: () => Promise<HclDetalii>, mesajSucces: string): Promise<void> {
+    this.actiuneStareLegala.set(true);
+    try {
+      this.hcl.set(await actiune());
+      this.snackBar.open(mesajSucces, 'Închide', { duration: 4000 });
+    } catch (err) {
+      this.snackBar.open(extrageMesajEroare(err), 'Închide', { duration: 5000 });
+    } finally {
+      this.actiuneStareLegala.set(false);
+    }
+  }
+
+  private async confirma(date: DateConfirmare): Promise<boolean> {
+    return !!(await firstValueFrom(
+      this.dialog.open(ConfirmareDialog, { data: date, width: '520px', maxWidth: '95vw' })
+        .afterClosed()));
   }
 
   inapoiLaLista(): void {

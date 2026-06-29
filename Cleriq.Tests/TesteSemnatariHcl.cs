@@ -132,8 +132,13 @@ public class TesteSemnatariHcl
                 ordineAfisare = 3
             });
             Assert.Equal(HttpStatusCode.OK, raspuns.StatusCode);
-            var dto = await raspuns.Content.ReadFromJsonAsync<JsonElement>();
-            Assert.Equal((int)RolSemnatar.SemnatarAlternativArt140, dto.GetProperty("rolSemnatar").GetInt32());
+            // POST întoarce HclDetaliiDto: lista de semnatari conține acum și alternativul art.140
+            var detalii = await raspuns.Content.ReadFromJsonAsync<JsonElement>();
+            var semnatari = detalii.GetProperty("semnatari").EnumerateArray().ToList();
+            Assert.Equal(3, semnatari.Count);
+            Assert.Contains(semnatari, s =>
+                s.GetProperty("rolSemnatar").GetInt32() == (int)RolSemnatar.SemnatarAlternativArt140
+                && s.GetProperty("consilierId").GetInt32() == consilier);
         }
     }
 
@@ -197,13 +202,20 @@ public class TesteSemnatariHcl
                 ordineAfisare = 3
             });
             Assert.Equal(HttpStatusCode.OK, adauga.StatusCode);
-            var semnatarId = (await adauga.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetInt32();
+            // POST întoarce Detalii → găsim id-ul alternativului din lista de semnatari
+            var detaliiAdaugare = await adauga.Content.ReadFromJsonAsync<JsonElement>();
+            var semnatarId = detaliiAdaugare.GetProperty("semnatari").EnumerateArray()
+                .Single(s => s.GetProperty("rolSemnatar").GetInt32() == (int)RolSemnatar.SemnatarAlternativArt140)
+                .GetProperty("id").GetInt32();
 
             var stergere = await admin.DeleteAsync($"/api/Hcl/{hcl.HclId}/Semnatari/{semnatarId}");
-            Assert.Equal(HttpStatusCode.NoContent, stergere.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, stergere.StatusCode);
 
-            var detalii = await admin.GetFromJsonAsync<JsonElement>($"/api/Hcl/{hcl.HclId}");
+            // DELETE întoarce Detalii: motivul s-a auto-curățat + alternativul a dispărut din listă
+            var detalii = await stergere.Content.ReadFromJsonAsync<JsonElement>();
             Assert.Equal(JsonValueKind.Null, detalii.GetProperty("motivLipsaSemnaturaPresedinte").ValueKind);
+            Assert.DoesNotContain(detalii.GetProperty("semnatari").EnumerateArray(),
+                s => s.GetProperty("rolSemnatar").GetInt32() == (int)RolSemnatar.SemnatarAlternativArt140);
         }
     }
 

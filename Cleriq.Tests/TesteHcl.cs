@@ -222,6 +222,48 @@ public class TesteHcl
         }
     }
 
+    [Fact]
+    public async Task Mutatii_StariLegale_IntorcDetaliiComplete()
+    {
+        var admin = await AdminNouAsync();
+        using (admin)
+        {
+            var hcl = await admin.GenereazaHclAdoptatAsync();
+            await admin.AtribuieNumarHclAsync(hcl.HclId);
+
+            // Publicare → Detalii (estePublicat + colecții, nu HclDto slim)
+            var publicare = await admin.PutAsJsonAsync($"/api/Hcl/{hcl.HclId}/Publicare",
+                new { estePublicat = true });
+            Assert.Equal(HttpStatusCode.OK, publicare.StatusCode);
+            var dtoPub = await publicare.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.True(dtoPub.GetProperty("estePublicat").GetBoolean());
+            Assert.Equal(2, dtoPub.GetProperty("semnatari").EnumerateArray().Count());
+
+            // MotivLipsaPresedinte → Detalii cu motivul setat
+            var motiv = await admin.PutAsJsonAsync($"/api/Hcl/{hcl.HclId}/MotivLipsaPresedinte",
+                new { motiv = "Președintele a părăsit ședința înainte de semnare." });
+            Assert.Equal(HttpStatusCode.OK, motiv.StatusCode);
+            var dtoMotiv = await motiv.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Equal("Președintele a părăsit ședința înainte de semnare.",
+                dtoMotiv.GetProperty("motivLipsaSemnaturaPresedinte").GetString());
+
+            // Semnare (semnatarii inițiali sunt compleți), apoi PublicareMol → Detalii
+            await admin.SemneazaHclAsync(hcl.HclId);
+            var mol = await admin.PutAsJsonAsync($"/api/Hcl/{hcl.HclId}/PublicareMol",
+                new { dataPublicareMol = DateTime.UtcNow });
+            Assert.Equal(HttpStatusCode.OK, mol.StatusCode);
+            var dtoMol = await mol.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.NotEqual(JsonValueKind.Null, dtoMol.GetProperty("dataPublicareMol").ValueKind);
+            Assert.Equal(2, dtoMol.GetProperty("semnatari").EnumerateArray().Count());
+
+            // AnuleazaPublicareMol → Detalii cu dataPublicareMol null (înainte: 204 NoContent)
+            var anulareMol = await admin.DeleteAsync($"/api/Hcl/{hcl.HclId}/PublicareMol");
+            Assert.Equal(HttpStatusCode.OK, anulareMol.StatusCode);
+            var dtoAnulareMol = await anulareMol.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Equal(JsonValueKind.Null, dtoAnulareMol.GetProperty("dataPublicareMol").ValueKind);
+        }
+    }
+
     // === PDF generat + variantă semnată ===
 
     [Fact]

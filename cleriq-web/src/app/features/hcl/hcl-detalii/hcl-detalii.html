@@ -19,6 +19,12 @@
         @if (h.dataInvalidare) {
           <span class="badge badge-invalidat">Invalidat</span>
         }
+        @if (h.estePublicat) {
+          <span class="badge badge-publicat">Publicat</span>
+        }
+        @if (h.dataPublicareMol) {
+          <span class="badge badge-mol">Publicat MOL</span>
+        }
       </div>
     </div>
 
@@ -50,6 +56,52 @@
           }
           PDF
         </button>
+      }
+
+      @if (actiuni().poatePublica) {
+        <button mat-stroked-button (click)="comutaPublicare()" [disabled]="actiuneStareLegala()">
+          <mat-icon>public</mat-icon>
+          Publică pe portal
+        </button>
+      } @else if (actiuni().poateDepublica) {
+        <button mat-stroked-button (click)="comutaPublicare()" [disabled]="actiuneStareLegala()">
+          <mat-icon>public_off</mat-icon>
+          Retrage de pe portal
+        </button>
+      }
+
+      @if (actiuni().poatePublicaMol || actiuni().poateAnulaMol
+           || actiuni().poateInvalida || actiuni().poateAnulaInvalidare) {
+        <button mat-icon-button [matMenuTriggerFor]="meniuAntet"
+                [disabled]="actiuneStareLegala()" matTooltip="Mai multe acțiuni">
+          <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #meniuAntet="matMenu">
+          @if (actiuni().poatePublicaMol) {
+            <button mat-menu-item (click)="deschidePublicareMol()">
+              <mat-icon>menu_book</mat-icon>
+              <span>Publică în MOL</span>
+            </button>
+          }
+          @if (actiuni().poateAnulaMol) {
+            <button mat-menu-item (click)="anuleazaMol()">
+              <mat-icon>undo</mat-icon>
+              <span>Anulează publicarea MOL</span>
+            </button>
+          }
+          @if (actiuni().poateInvalida) {
+            <button mat-menu-item (click)="deschideInvalidare()">
+              <mat-icon>gavel</mat-icon>
+              <span>Invalidează</span>
+            </button>
+          }
+          @if (actiuni().poateAnulaInvalidare) {
+            <button mat-menu-item (click)="anuleazaInvalidare()">
+              <mat-icon>restore</mat-icon>
+              <span>Anulează invalidarea</span>
+            </button>
+          }
+        </mat-menu>
       }
     </div>
   </div>
@@ -124,6 +176,10 @@
           <p class="gol">Hotărârea nu are conținut.</p>
         }
       </div>
+    </mat-tab>
+
+    <mat-tab label="Semnatari">
+      <app-semnatari-tab [hcl]="h" [actiuni]="actiuni()" (actualizat)="hcl.set($event)" />
     </mat-tab>
   </mat-tab-group>
 }

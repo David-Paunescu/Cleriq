@@ -128,3 +128,43 @@ export interface AtribuireNumarHcl {
   numar: number;
   confirmaCuLacune: boolean;
 }
+
+// === Cereri (FE2) ===
+
+export interface AdaugareSemnatar {
+  rol: RolSemnatar;
+  consilierId: number | null;
+  persoanaId: number | null;
+  ordineAfisare: number;
+}
+
+export interface InvalidareHcl {
+  motiv: MotivInvalidare;
+  refInvalidare: string | null;
+  confirmaCuRelatiiActive: boolean;
+}
+
+export interface PublicareHcl {
+  estePublicat: boolean;
+}
+
+export interface PublicareMol {
+  dataPublicareMol: string;  // ISO UTC (din date picker, fus instituție)
+}
+
+export interface MotivLipsaPresedinte {
+  motiv: string;
+}
+
+// Payload-ul 409 „relații active" întors de Invalidare fără confirmare (oglindă obiect anonim backend).
+export interface RelatiiActiveInvalidare {
+  mesaj: string;
+  relatiiSursaActive: RelatieHcl[];
+  relatiiTintaActive: RelatieHcl[];
+}
+
+export function formateazaMarime(octeti: number): string {
+  if (octeti < 1024) return `${octeti} B`;
+  if (octeti < 1024 * 1024) return `${(octeti / 1024).toFixed(1)} KB`;
+  return `${(octeti / (1024 * 1024)).toFixed(1)} MB`;
+}
