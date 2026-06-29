@@ -68,7 +68,7 @@ public class SemnatariHclController : ControllerBase
         if (dto.Rol == RolSemnatar.SemnatarAlternativArt140)
         {
             if (string.IsNullOrWhiteSpace(hcl.MotivLipsaSemnaturaPresedinte))
-                return BadRequest("Setează mai întâi motivul lipsei semnăturii președintelui (PUT /api/Hcl/{id}/MotivLipsaPresedinte).");
+                return BadRequest("Setează mai întâi motivul lipsei semnăturii președintelui.");
 
             var estePrezent = await _context.Prezente.AnyAsync(p =>
                 p.SedintaId == hcl.PunctOrdineZi.SedintaId

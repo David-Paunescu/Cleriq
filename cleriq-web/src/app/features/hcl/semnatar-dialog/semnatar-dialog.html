@@ -16,7 +16,7 @@
 
       @if (necesitaPersoana()) {
         <mat-form-field appearance="outline">
-          <mat-label>Persoană (Secretar UAT)</mat-label>
+          <mat-label>Secretar UAT</mat-label>
           <mat-select formControlName="persoanaId">
             @for (p of persoane(); track p.id) {
               <mat-option [value]="p.id">{{ p.numeComplet }}</mat-option>
@@ -36,7 +36,9 @@
               <mat-option [value]="c.id">{{ c.numeComplet }}</mat-option>
             }
           </mat-select>
-          <mat-hint>Pentru alternativ (art. 140): consilier prezent la ședință.</mat-hint>
+          @if (esteAlternativ()) {
+            <mat-hint>Trebuie să fie un consilier care a fost prezent la ședință (art. 140).</mat-hint>
+          }
         </mat-form-field>
       }
 

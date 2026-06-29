@@ -208,7 +208,7 @@ public class HclController : ControllerBase
 
         // Precondiție 3 — președinte de ședință setat
         if (sedinta.PresedinteSedintaConsilierId is null)
-            return BadRequest("Înainte de a genera HCL, marchează președintele de ședință prin POST /api/Sedinte/{id}/PresedinteSedinta.");
+            return BadRequest("Înainte de a genera HCL, marchează președintele de ședință.");
 
         // Precondiție 4 — secretar UAT valid la data adoptării (fix #1: data LOCALĂ)
         var dataAdoptareLocala = DateOnly.FromDateTime(sedinta.DataOra.LaFusOrar(institutie.FusOrar));

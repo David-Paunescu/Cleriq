@@ -65,6 +65,8 @@ export class SemnatarDialog {
   readonly necesitaConsilier = computed(() =>
     this.rolCurent() === RolSemnatar.PresedinteSedinta
     || this.rolCurent() === RolSemnatar.SemnatarAlternativArt140);
+  readonly esteAlternativ = computed(() =>
+    this.rolCurent() === RolSemnatar.SemnatarAlternativArt140);
 
   constructor() {
     this.incarcaInitial();

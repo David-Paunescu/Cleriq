@@ -60,6 +60,12 @@ export class SemnatariTab {
     || (this.hcl().motivLipsaSemnaturaPresedinte?.trim().length ?? 0) > 0);
   readonly motivDirty = computed(() =>
     this.motivEditor().trim() !== (this.hcl().motivLipsaSemnaturaPresedinte ?? '').trim());
+  readonly art140Indeplinit = computed(() => {
+    const alternativi = this.hcl().semnatari.filter(
+      s => s.rolSemnatar === RolSemnatar.SemnatarAlternativArt140).length;
+    const areMotiv = (this.hcl().motivLipsaSemnaturaPresedinte?.trim().length ?? 0) > 0;
+    return alternativi >= 2 && areMotiv;
+  });
 
   constructor() {
     // Resetează editorul când motivul de pe server se schimbă (load / save / auto-clear la delete).

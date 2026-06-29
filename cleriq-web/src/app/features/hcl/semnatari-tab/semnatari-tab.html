@@ -43,12 +43,14 @@
 
     @if (esteSemnatStatus()) {
       <p class="nota">Hotărâre semnată — lista de semnatari este finală.</p>
-    } @else if (!arePresedinte()) {
+    } @else if (!arePresedinte() && !art140Indeplinit()) {
       <p class="nota nota-atentie">
         <mat-icon>info</mat-icon>
         <span>Fără președinte de ședință: art. 140 cere minim 2 semnatari alternativi (consilieri
           prezenți la ședință) și completarea motivului de mai jos.</span>
       </p>
+    } @else if (!arePresedinte() && art140Indeplinit()) {
+      <p class="nota">Condiții art. 140 alin. (2) îndeplinite: 2 semnatari alternativi + motiv completat.</p>
     }
   </section>
 
