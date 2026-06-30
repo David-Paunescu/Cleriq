@@ -2,7 +2,7 @@
 
 namespace Cleriq.Models;
 
-public class ProcesVerbal : EntitateDeBaza, IEntitateCuTenant
+public class ProcesVerbal : EntitateDeBaza, IEntitateCuTenant, IActCuVariantaSemnata
 {
     public string? Continut { get; set; }
     public StatusProcesVerbal Status { get; set; } = StatusProcesVerbal.Draft;

@@ -134,6 +134,15 @@ public static class ExtensiiEnumuri
         _ => m.ToString()!
     };
 
+    // Etichetă act-aware pentru dispoziție: „Retractat" și „AbrogatHclUlterior" au formulare proprii
+    // (cuvântul „hotărâre"/„HCL" din globalul HCL e greșit pe o dispoziție); restul deleagă la global.
+    public static string EtichetaDispozitie(this MotivInvalidare? m) => m switch
+    {
+        MotivInvalidare.Retractat => "Revocat de primar (emitent)",
+        MotivInvalidare.AbrogatHclUlterior => "Abrogată prin dispoziție ulterioară",
+        _ => m.Eticheta()
+    };
+
     public static string Eticheta(this TipDocumentHcl? t) => t switch
     {
         TipDocumentHcl.Anexa => "Anexă",

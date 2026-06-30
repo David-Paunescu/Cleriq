@@ -247,45 +247,13 @@ public class ProcesVerbalController : ControllerBase
             return Conflict("Doar un proces verbal finalizat poate primi varianta semnată.");
         if (pv.DataAprobare is not null)
             return Conflict("PV-ul a fost aprobat oficial. Varianta semnată nu mai poate fi înlocuită.");
-        if (fisier is null || fisier.Length == 0)
-            return BadRequest("Fișier lipsă.");
-        if (fisier.Length > ValidareDocument.MarimeMaxima)
-            return BadRequest($"Fișierul depășește limita de {ValidareDocument.MarimeMaxima / (1024 * 1024)} MB.");
+        var eroare = VariantaSemnata.ValideazaPdf(fisier, "procesul verbal semnat");
+        if (eroare != null) return BadRequest(eroare);
 
-        var extensie = Path.GetExtension(fisier.FileName);
-        if (!string.Equals(extensie, ".pdf", StringComparison.OrdinalIgnoreCase))
-            return BadRequest("Doar fișiere PDF sunt acceptate pentru procesul verbal semnat.");
-
-        var caleVeche = pv.CaleStocareSemnat;
-
-        FisierStocat stocat;
-        await using (var stream = fisier.OpenReadStream())
-        {
-            stocat = await _stocare.SalveazaAsync(
-                _context.InstitutieIdCurenta, fisier.FileName, stream, ct);
-        }
-
-        pv.CaleStocareSemnat = stocat.Cheie;
-        pv.NumeFisierSemnat = Path.GetFileName(fisier.FileName);
-        pv.MarimeSemnat = stocat.Marime;
-        pv.HashSha256Semnat = stocat.HashSha256;
-        pv.DataIncarcareSemnat = DateTime.UtcNow;
-
+        var caleVeche = await VariantaSemnata.StocheazaAsync(
+            pv, fisier, _stocare, _context.InstitutieIdCurenta, ct);
         await _context.SaveChangesAsync(ct);
-
-        // Post-commit: replace șterge fișierul vechi (pattern TranscriereController).
-        // Eșecul lasă un orfan acceptabil — măturat de MentenantaController.
-        if (!string.IsNullOrEmpty(caleVeche) && caleVeche != stocat.Cheie)
-        {
-            try
-            {
-                await _stocare.StergeAsync(caleVeche, ct);
-            }
-            catch
-            {
-                // orfan acceptabil; cleanup viitor
-            }
-        }
+        await VariantaSemnata.StergeVecheAsync(_stocare, caleVeche, pv.CaleStocareSemnat!, ct);
 
         return Ok(MapeazaSpreDto(pv));
     }
@@ -331,12 +299,7 @@ public class ProcesVerbalController : ControllerBase
         if (pv.DataAprobare is not null)
             return Conflict("PV-ul a fost aprobat oficial. Varianta semnată nu mai poate fi ștearsă.");
 
-        pv.CaleStocareSemnat = null;
-        pv.NumeFisierSemnat = null;
-        pv.MarimeSemnat = null;
-        pv.HashSha256Semnat = null;
-        pv.DataIncarcareSemnat = null;
-
+        VariantaSemnata.Curata(pv);
         await _context.SaveChangesAsync(ct);
         return NoContent();
     }

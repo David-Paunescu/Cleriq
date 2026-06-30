@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Cleriq.Models;
 
-public class Hcl : EntitateDeBaza, IEntitateCuTenant, IActNumerotat
+public class Hcl : EntitateDeBaza, IEntitateCuTenant, IActNumerotat, IActCuVariantaSemnata
 {
     public int? Numar { get; set; }
     public int? AnNumerotare { get; set; }

@@ -5,7 +5,7 @@ namespace Cleriq.Models;
 
 // Dispoziția primarului — act administrativ unilateral (art. 196 alin. (1) lit. b) Cod adm.).
 // Același ciclu Draft→Numerotat→Semnat ca HCL, dar fără vot/punct de ordine de zi.
-public class Dispozitie : EntitateDeBaza, IEntitateCuTenant, IActNumerotat
+public class Dispozitie : EntitateDeBaza, IEntitateCuTenant, IActNumerotat, IActCuVariantaSemnata
 {
     public int? Numar { get; set; }
     public int? AnNumerotare { get; set; }

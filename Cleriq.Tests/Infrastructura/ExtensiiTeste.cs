@@ -498,6 +498,119 @@ public static class ExtensiiTeste
         return await factory.ClientAutentificatAsync(email, parola);
     }
 
+    // === Dispoziții (Modul C) ===
+
+    // Asigură un mandat de Primar valid la dată (creează persoană + mandat deschis dacă lipsește).
+    // Întoarce PersoanaId-ul primarului.
+    public static async Task<int> AsigurareMandatPrimarAsync(this HttpClient admin, DateOnly data)
+    {
+        var resp = await admin.GetAsync($"/api/FunctiiIstorice/Primar?data={data:yyyy-MM-dd}");
+        await AsigurareSucces(resp, "Verificare Primar");
+        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        if (json.ValueKind != JsonValueKind.Null)
+            return json.GetProperty("id").GetInt32();
+
+        var persoanaId = await admin.CreeazaPersoanaAsync("Primar Test");
+        await admin.CreeazaMandatFunctieAsync(
+            TipFunctie.Primar, persoanaId, null,
+            DateOnly.FromDateTime(DateTime.UtcNow.AddYears(-1)));
+        return persoanaId;
+    }
+
+    // Asigură un mandat de Secretar UAT valid la dată (creează persoană + mandat deschis dacă lipsește).
+    public static async Task<int> AsigurareMandatSecretarAsync(this HttpClient admin, DateOnly data)
+    {
+        var resp = await admin.GetAsync($"/api/FunctiiIstorice/SecretarUat?data={data:yyyy-MM-dd}");
+        await AsigurareSucces(resp, "Verificare Secretar UAT");
+        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        if (json.ValueKind != JsonValueKind.Null)
+            return json.GetProperty("id").GetInt32();
+
+        var persoanaId = await admin.CreeazaPersoanaAsync("Secretar UAT Test");
+        await admin.CreeazaMandatFunctieAsync(
+            TipFunctie.SecretarUat, persoanaId, null,
+            DateOnly.FromDateTime(DateTime.UtcNow.AddYears(-1)));
+        return persoanaId;
+    }
+
+    // Creează o dispoziție. Implicit asigură mandate de Primar + Secretar la dataEmitere (emitentul
+    // se derivă din primar). Pentru override de înlocuitor, trimite emitentConsilierId (atunci
+    // primarul NU se mai asigură). Pentru testele negative, dezactivează asigurMandat*.
+    public static async Task<HttpResponseMessage> CreeazaDispozitieRaspunsAsync(
+        this HttpClient admin,
+        TipDispozitie tip = TipDispozitie.Normativ,
+        string titlu = "Dispoziție test",
+        DateOnly? dataEmitere = null,
+        int? emitentConsilierId = null,
+        bool asigurMandatPrimar = true,
+        bool asigurMandatSecretar = true)
+    {
+        var data = dataEmitere ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        if (asigurMandatPrimar && emitentConsilierId is null)
+            await admin.AsigurareMandatPrimarAsync(data);
+        if (asigurMandatSecretar)
+            await admin.AsigurareMandatSecretarAsync(data);
+
+        return await admin.PostAsJsonAsync("/api/Dispozitii", new
+        {
+            tipDispozitie = tip,
+            titlu,
+            dataEmitere = data,
+            emitentConsilierId
+        });
+    }
+
+    public static async Task<int> CreeazaDispozitieAsync(
+        this HttpClient admin,
+        TipDispozitie tip = TipDispozitie.Normativ,
+        string titlu = "Dispoziție test",
+        DateOnly? dataEmitere = null,
+        int? emitentConsilierId = null)
+    {
+        var raspuns = await admin.CreeazaDispozitieRaspunsAsync(
+            tip, titlu, dataEmitere, emitentConsilierId);
+        await AsigurareSucces(raspuns, "Creare dispoziție");
+        var corp = await raspuns.Content.ReadFromJsonAsync<JsonElement>();
+        return corp.GetProperty("id").GetInt32();
+    }
+
+    public static async Task<int> AtribuieNumarDispozitieAsync(
+        this HttpClient admin, int dispozitieId, int numar = 1, bool confirmaCuLacune = false)
+    {
+        var raspuns = await admin.PostAsJsonAsync(
+            $"/api/Dispozitii/{dispozitieId}/AtribuieNumar", new { numar, confirmaCuLacune });
+        await AsigurareSucces(raspuns, "Atribuire număr dispoziție");
+        var corp = await raspuns.Content.ReadFromJsonAsync<JsonElement>();
+        return corp.GetProperty("numar").GetInt32();
+    }
+
+    public static async Task SemneazaDispozitieAsync(this HttpClient admin, int dispozitieId)
+    {
+        var raspuns = await admin.PostAsync($"/api/Dispozitii/{dispozitieId}/Semneaza", null);
+        await AsigurareSucces(raspuns, "Semnare dispoziție");
+    }
+
+    public static Task<HttpResponseMessage> RefuzContrasemnareDispozitieAsync(
+        this HttpClient admin, int dispozitieId, string obiectie = "Contravine art. X din lege.")
+        => admin.PostAsJsonAsync(
+            $"/api/Dispozitii/{dispozitieId}/RefuzContrasemnare", new { obiectieLegalitate = obiectie });
+
+    public static async Task<HttpResponseMessage> IncarcaDispozitieSemnatAsync(
+        this HttpClient admin, int dispozitieId, byte[] continut, string numeFisier)
+    {
+        using var form = new MultipartFormDataContent();
+        var parte = new ByteArrayContent(continut);
+        parte.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+        form.Add(parte, "fisier", numeFisier);
+        return await admin.PostAsync($"/api/Dispozitii/{dispozitieId}/Semnat", form);
+    }
+
+    public static Task<HttpResponseMessage> InvalideazaDispozitieAsync(
+        this HttpClient admin, int dispozitieId, MotivInvalidare motiv,
+        string? motivAltulText = null, string? refInvalidare = null)
+        => admin.PostAsJsonAsync($"/api/Dispozitii/{dispozitieId}/Invalidare",
+            new { motiv, motivAltulText, refInvalidare });
+
     private static async Task AsigurareSucces(HttpResponseMessage raspuns, string operatiune)
     {
         if (raspuns.IsSuccessStatusCode) return;

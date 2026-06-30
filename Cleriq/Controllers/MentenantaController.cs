@@ -252,9 +252,10 @@ public class MentenantaController : ControllerBase
             })
             .ToListAsync(ct);
 
-        // PV-urile semnate trăiesc în ACEEAȘI stocare fizică (IStocareDocumente),
-        // dar sunt referențiate din ProceseVerbale.CaleStocareSemnat, nu din Documente.
-        // Fără includerea lor aici, scanerul le-ar clasifica FaraRandInDb și le-ar ȘTERGE.
+        // PV/HCL/Dispoziții semnate trăiesc în ACEEAȘI stocare fizică (IStocareDocumente), dar sunt
+        // referențiate din CaleStocareSemnat-ul fiecăruia, nu din Documente. Fără includerea lor
+        // aici, scanerul le-ar clasifica FaraRandInDb și le-ar ȘTERGE (la dispoziții = PDF-uri de
+        // personal semnate → impact pe probe + arhivare).
         var pvSemnateDb = await _context.ProceseVerbale
                     .IgnoreQueryFilters()
                     .Where(p => p.CaleStocareSemnat != null)
@@ -279,9 +280,22 @@ public class MentenantaController : ControllerBase
             })
             .ToListAsync(ct);
 
+        var dispozitiiSemnateDb = await _context.Dispozitii
+            .IgnoreQueryFilters()
+            .Where(d => d.CaleStocareSemnat != null)
+            .Select(d => new
+            {
+                CaleStocare = d.CaleStocareSemnat!,
+                d.EsteSters,
+                d.StersLa,
+                d.InstitutieId
+            })
+            .ToListAsync(ct);
+
         var dictDb = documenteDb
             .Concat(pvSemnateDb)
             .Concat(hclSemnateDb)
+            .Concat(dispozitiiSemnateDb)
             .ToDictionary(d => d.CaleStocare);
 
         // 2. Enumerăm fișierele fizice și clasificăm

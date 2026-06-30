@@ -34,7 +34,7 @@ public class TesteMentenanta
     }
 
     [Fact]
-    public async Task OrfaniDocumente_ClasificareCorecta_SiPvSemnatProtejat()
+    public async Task OrfaniDocumente_ClasificareCorecta_SiActeSemnateProtejate()
     {
         var inst = await _factory.ProvisioneazaInstitutieAsync();
         using var admin = await _factory.ClientAutentificatAsync(inst.EmailAdmin, inst.ParolaAdmin);
@@ -55,6 +55,16 @@ public class TesteMentenanta
         Assert.Equal(HttpStatusCode.OK, uploadSemnat.StatusCode);
         var cheieSemnat = (await DbTest.CitesteCaleStocareSemnatAsync(sedintaId))!;
         ImbatranesteFisier(CaleDocument(cheieSemnat), TimeSpan.FromHours(2));
+
+        // Dispoziție semnată — aceeași stocare fizică; trebuie protejată de scan (PDF de personal)
+        var idDispozitie = await admin.CreeazaDispozitieAsync();
+        await admin.AtribuieNumarDispozitieAsync(idDispozitie);
+        await admin.SemneazaDispozitieAsync(idDispozitie);
+        var uploadDisp = await admin.IncarcaDispozitieSemnatAsync(
+            idDispozitie, Encoding.UTF8.GetBytes("%PDF dispozitie semnata"), "disp-semnat.pdf");
+        Assert.Equal(HttpStatusCode.OK, uploadDisp.StatusCode);
+        var cheieDispSemnat = (await DbTest.CitesteCaleStocareSemnatDispozitieAsync(idDispozitie))!;
+        ImbatranesteFisier(CaleDocument(cheieDispSemnat), TimeSpan.FromHours(2));
 
         var cheieOrfan = $"orfan-{Guid.NewGuid():N}.bin";
         ScrieFisierDirect(CaleDocument(cheieOrfan));
@@ -91,6 +101,7 @@ public class TesteMentenanta
         Assert.Equal((int)CategorieOrfan.SoftDeletedVechi, chei[cheieVechi]);
         Assert.False(chei.ContainsKey(cheieViu));
         Assert.False(chei.ContainsKey(cheieSemnat));
+        Assert.False(chei.ContainsKey(cheieDispSemnat));
         Assert.False(chei.ContainsKey(cheieProaspat));
         Assert.False(chei.ContainsKey(cheieRecent));
 
@@ -106,6 +117,7 @@ public class TesteMentenanta
         Assert.False(File.Exists(CaleDocument(cheieVechi)));
         Assert.True(File.Exists(CaleDocument(cheieViu)));
         Assert.True(File.Exists(CaleDocument(cheieSemnat)));
+        Assert.True(File.Exists(CaleDocument(cheieDispSemnat)));
         Assert.True(File.Exists(CaleDocument(cheieProaspat)));
         Assert.True(File.Exists(CaleDocument(cheieRecent)));
 

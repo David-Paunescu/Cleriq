@@ -85,6 +85,46 @@ public static class DbTest
         await ctx.SaveChangesAsync();
     }
 
+    // Semnarea dispoziției e Pas 6; până atunci forțăm statusul direct ca să testăm gărzile
+    // care se activează pe Semnat (editare/regenerare conținut blocate).
+    public static async Task SeteazaStatusDispozitieAsync(int dispozitieId, StatusActRedactional status)
+    {
+        await using var ctx = CreeazaContext();
+        var d = await ctx.Dispozitii.IgnoreQueryFilters().FirstAsync(x => x.Id == dispozitieId);
+        d.Status = status;
+        await ctx.SaveChangesAsync();
+    }
+
+    // Delete-ul de dispoziție e Pas 8; soft-ștergem direct ca să testăm „numărul ars" la numerotare
+    // (un act retras își păstrează numărul ars în registru). Oglindește soft-delete-ul real.
+    public static async Task SoftDeleteDispozitieAsync(int dispozitieId)
+    {
+        await using var ctx = CreeazaContext();
+        var d = await ctx.Dispozitii.IgnoreQueryFilters().FirstAsync(x => x.Id == dispozitieId);
+        d.EsteSters = true;
+        d.StersLa = DateTime.UtcNow;
+        await ctx.SaveChangesAsync();
+    }
+
+    // Latch-ul „intrat în circuit" se aprinde la publicare/comunicare (Pas 9/10); până atunci îl
+    // forțăm direct ca să testăm înghețarea variantei semnate (replace/delete blocate) + regula de revocare.
+    public static async Task SeteazaAIntratInCircuitDispozitieAsync(int dispozitieId, bool valoare = true)
+    {
+        await using var ctx = CreeazaContext();
+        var d = await ctx.Dispozitii.IgnoreQueryFilters().FirstAsync(x => x.Id == dispozitieId);
+        d.AIntratInCircuit = valoare;
+        await ctx.SaveChangesAsync();
+    }
+
+    // Publicarea e Pas 9; forțăm flag-ul direct ca să testăm garda de DELETE pe dispoziție publicată.
+    public static async Task SeteazaEstePublicatDispozitieAsync(int dispozitieId, bool valoare = true)
+    {
+        await using var ctx = CreeazaContext();
+        var d = await ctx.Dispozitii.IgnoreQueryFilters().FirstAsync(x => x.Id == dispozitieId);
+        d.EstePublicat = valoare;
+        await ctx.SaveChangesAsync();
+    }
+
     public static async Task<string?> CitesteCaleStocareSemnatAsync(int sedintaId)
     {
         await using var ctx = CreeazaContext();
@@ -102,6 +142,16 @@ public static class DbTest
             .IgnoreQueryFilters()
             .Where(h => h.Id == hclId)
             .Select(h => h.CaleStocareSemnat)
+            .FirstOrDefaultAsync();
+    }
+
+    public static async Task<string?> CitesteCaleStocareSemnatDispozitieAsync(int dispozitieId)
+    {
+        await using var ctx = CreeazaContext();
+        return await ctx.Dispozitii
+            .IgnoreQueryFilters()
+            .Where(d => d.Id == dispozitieId)
+            .Select(d => d.CaleStocareSemnat)
             .FirstOrDefaultAsync();
     }
 

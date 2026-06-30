@@ -102,37 +102,13 @@ public class HclController : ControllerBase
         if (hcl.CaleStocareSemnat != null && hcl.AIntratInCircuit)
             return Conflict("HCL intrat în circuit (publicat în MOL sau comunicat prefectului) — varianta semnată nu mai poate fi înlocuită.");
 
-        if (fisier is null || fisier.Length == 0)
-            return BadRequest("Fișier lipsă.");
-        if (fisier.Length > ValidareDocument.MarimeMaxima)
-            return BadRequest($"Fișierul depășește limita de {ValidareDocument.MarimeMaxima / (1024 * 1024)} MB.");
+        var eroare = VariantaSemnata.ValideazaPdf(fisier, "HCL semnat");
+        if (eroare != null) return BadRequest(eroare);
 
-        var extensie = Path.GetExtension(fisier.FileName);
-        if (!string.Equals(extensie, ".pdf", StringComparison.OrdinalIgnoreCase))
-            return BadRequest("Doar fișiere PDF sunt acceptate pentru HCL semnat.");
-
-        var caleVeche = hcl.CaleStocareSemnat;
-
-        FisierStocat stocat;
-        await using (var stream = fisier.OpenReadStream())
-        {
-            stocat = await _stocare.SalveazaAsync(
-                _context.InstitutieIdCurenta, fisier.FileName, stream, ct);
-        }
-
-        hcl.CaleStocareSemnat = stocat.Cheie;
-        hcl.NumeFisierSemnat = Path.GetFileName(fisier.FileName);
-        hcl.MarimeSemnat = stocat.Marime;
-        hcl.HashSha256Semnat = stocat.HashSha256;
-        hcl.DataIncarcareSemnat = DateTime.UtcNow;
-
+        var caleVeche = await VariantaSemnata.StocheazaAsync(
+            hcl, fisier, _stocare, _context.InstitutieIdCurenta, ct);
         await _context.SaveChangesAsync(ct);
-
-        if (!string.IsNullOrEmpty(caleVeche) && caleVeche != stocat.Cheie)
-        {
-            try { await _stocare.StergeAsync(caleVeche, ct); }
-            catch { }
-        }
+        await VariantaSemnata.StergeVecheAsync(_stocare, caleVeche, hcl.CaleStocareSemnat!, ct);
 
         var hclComplet = await ReincarcaCuIncludeAsync(id, ct);
         return Ok(MapareHcl.SpreDetaliiDto(hclComplet));
@@ -170,12 +146,7 @@ public class HclController : ControllerBase
         if (hcl.AIntratInCircuit)
             return Conflict("HCL intrat în circuit (publicat în MOL sau comunicat prefectului) — varianta semnată nu mai poate fi ștearsă.");
 
-        hcl.CaleStocareSemnat = null;
-        hcl.NumeFisierSemnat = null;
-        hcl.MarimeSemnat = null;
-        hcl.HashSha256Semnat = null;
-        hcl.DataIncarcareSemnat = null;
-
+        VariantaSemnata.Curata(hcl);
         await _context.SaveChangesAsync(ct);
         return NoContent();
     }
