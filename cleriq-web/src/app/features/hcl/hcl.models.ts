@@ -41,6 +41,7 @@ export interface HclDetalii {
   tipMajoritate: TipMajoritate;
   estePublicat: boolean;
   dataPublicareMol: string | null;
+  aIntratInCircuit: boolean;
   esteSemnat: boolean;
   numeFisierSemnat: string | null;
   marimeSemnat: number | null;
@@ -49,6 +50,7 @@ export interface HclDetalii {
   dataInvalidare: string | null;
   motivInvalidare: MotivInvalidare | null;
   refInvalidare: string | null;
+  motivInvalidareAltulText: string | null;
   institutieId: number;
   creatLa: string;
   semnatari: SemnatarHcl[];
@@ -171,6 +173,7 @@ export interface AdaugareSemnatar {
 
 export interface InvalidareHcl {
   motiv: MotivInvalidare;
+  motivAltulText: string | null;
   refInvalidare: string | null;
   confirmaCuRelatiiActive: boolean;
 }
@@ -180,7 +183,7 @@ export interface PublicareHcl {
 }
 
 export interface PublicareMol {
-  dataPublicareMol: string;  // ISO UTC (din date picker, fus instituție)
+  dataPublicareMol: string;  // DateOnly „yyyy-MM-dd" (din <input type="date">)
 }
 
 export interface MotivLipsaPresedinte {

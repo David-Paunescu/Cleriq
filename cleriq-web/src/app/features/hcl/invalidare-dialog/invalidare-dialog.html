@@ -3,8 +3,8 @@
 <form [formGroup]="form" (ngSubmit)="invalideaza()">
   <mat-dialog-content class="continut">
     <p class="indiciu">
-      Invalidarea marchează actul ca ieșit din vigoare (anulat / abrogat / retractat).
-      Actul NU se șterge — rămâne în registru cu motivul consemnat.
+      Invalidarea marchează actul ca nevalabil / ieșit din vigoare (anulat, abrogat,
+      retractat, caduc sau inexistent). Actul NU se șterge — rămâne în registru cu motivul consemnat.
     </p>
 
     <mat-form-field appearance="outline">
@@ -18,6 +18,16 @@
         <mat-error>Selectează un motiv.</mat-error>
       }
     </mat-form-field>
+
+    @if (esteAltul()) {
+      <mat-form-field appearance="outline">
+        <mat-label>Detaliază motivul</mat-label>
+        <input matInput formControlName="motivAltulText" maxlength="300" />
+        @if (form.controls.motivAltulText.hasError('required')) {
+          <mat-error>Textul este obligatoriu pentru motivul „Altul”.</mat-error>
+        }
+      </mat-form-field>
+    }
 
     <mat-form-field appearance="outline">
       <mat-label>Referință act (opțional)</mat-label>

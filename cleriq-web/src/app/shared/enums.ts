@@ -142,10 +142,13 @@ export enum TipRelatieHcl {
 }
 
 export enum MotivInvalidare {
-  AnulatPrefect = 1,
+  // 1 = fostul „AnulatPrefect", eliminat: prefectul atacă, instanța anulează. NU se reintroduce.
   AnulatInstanta = 2,
   AbrogatHclUlterior = 3,
-  Retractat = 4
+  Retractat = 4,
+  Caduc = 5,
+  Inexistent = 6,
+  Altul = 7
 }
 
 export enum CanalTransmiterePrefect {

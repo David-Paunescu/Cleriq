@@ -38,9 +38,13 @@ public class Hcl : EntitateDeBaza, IEntitateCuTenant
     public string? HashSha256Semnat { get; set; }
     public DateTime? DataIncarcareSemnat { get; set; }
 
-    // Publicare MOL (Monitorul Oficial Local)
-    public DateTime? DataPublicareMol { get; set; }
+    // Publicare MOL (Monitorul Oficial Local) — dată calendaristică (fără oră/fus)
+    public DateOnly? DataPublicareMol { get; set; }
     public int? PublicataDe { get; set; }
+
+    // Latch „intrat în circuit": true definitiv la prima publicare MOL SAU prima comunicare
+    // la prefect. Îngheață varianta semnată chiar dacă publicarea MOL e ulterior anulată.
+    public bool AIntratInCircuit { get; set; }
 
     // Publicare portal public
     public bool EstePublicat { get; set; }
@@ -54,6 +58,9 @@ public class Hcl : EntitateDeBaza, IEntitateCuTenant
     public MotivInvalidare? MotivInvalidare { get; set; }
     [MaxLength(200)]
     public string? RefInvalidare { get; set; }
+    // Text liber obligatoriu doar când MotivInvalidare == Altul
+    [MaxLength(300)]
+    public string? MotivInvalidareAltulText { get; set; }
     public int? InvalidatDe { get; set; }
 
     public int InstitutieId { get; set; }

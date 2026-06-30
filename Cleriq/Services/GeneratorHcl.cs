@@ -24,10 +24,13 @@ public class GeneratorHcl : IGeneratorHcl
         {
             var motivText = hcl.MotivInvalidare switch
             {
-                MotivInvalidare.AnulatPrefect => "anulată de prefect",
                 MotivInvalidare.AnulatInstanta => "anulată de instanță",
                 MotivInvalidare.AbrogatHclUlterior => "abrogată prin hotărâre ulterioară",
                 MotivInvalidare.Retractat => "retractată",
+                MotivInvalidare.Caduc => "constatată caducă",
+                MotivInvalidare.Inexistent => "constatată inexistentă",
+                MotivInvalidare.Altul when !string.IsNullOrWhiteSpace(hcl.MotivInvalidareAltulText)
+                    => $"invalidată ({hcl.MotivInvalidareAltulText.Trim()})",
                 _ => "invalidată"
             };
             var dataInvLocal = hcl.DataInvalidare.Value.LaFusOrar(institutie.FusOrar);

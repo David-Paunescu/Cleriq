@@ -12,7 +12,7 @@ public record PublicHclDto(
     DateOnly? DataIntrareInVigoare,
     StatusHclRedactional Status,
     bool EsteInvalidat,
-    DateTime? DataPublicareMol);
+    DateOnly? DataPublicareMol);
 
 public record PublicHclDetaliiDto(
     int Id,
@@ -29,7 +29,7 @@ public record PublicHclDetaliiDto(
     int VotAbtinere,
     TipMajoritate TipMajoritate,
     bool EsteSemnat,
-    DateTime? DataPublicareMol,
+    DateOnly? DataPublicareMol,
     string? MotivLipsaSemnaturaPresedinte,
     MotivInvalidare? MotivInvalidare,
     string? RefInvalidare,

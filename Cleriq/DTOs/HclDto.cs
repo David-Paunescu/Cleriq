@@ -12,12 +12,15 @@ public record AtribuireNumarHclDto(int Numar, bool ConfirmaCuLacune);
 
 public record InvalidareHclDto(
     MotivInvalidare Motiv,
+    string? MotivAltulText,
     string? RefInvalidare,
     bool ConfirmaCuRelatiiActive);
 
 public record PublicareHclDto(bool EstePublicat);
 
-public record PublicareMolDto(DateTime DataPublicareMol);
+public record PublicareMolDto(DateOnly DataPublicareMol);
+
+public record AnulareMolDto(string Motiv);
 
 // === Răspunsuri ===
 
@@ -31,7 +34,7 @@ public record HclDto(
     DateOnly? DataIntrareInVigoare,
     StatusHclRedactional Status,
     bool EstePublicat,
-    DateTime? DataPublicareMol,
+    DateOnly? DataPublicareMol,
     DateTime? DataInvalidare,
     MotivInvalidare? MotivInvalidare,
     int InstitutieId,
@@ -53,7 +56,8 @@ public record HclDetaliiDto(
     int VotAbtinere,
     TipMajoritate TipMajoritate,
     bool EstePublicat,
-    DateTime? DataPublicareMol,
+    DateOnly? DataPublicareMol,
+    bool AIntratInCircuit,
     bool EsteSemnat,
     string? NumeFisierSemnat,
     long? MarimeSemnat,
@@ -62,6 +66,7 @@ public record HclDetaliiDto(
     DateTime? DataInvalidare,
     MotivInvalidare? MotivInvalidare,
     string? RefInvalidare,
+    string? MotivInvalidareAltulText,
     int InstitutieId,
     DateTime CreatLa,
     List<SemnatarHclDto> Semnatari,

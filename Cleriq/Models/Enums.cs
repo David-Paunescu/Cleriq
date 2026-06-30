@@ -187,10 +187,14 @@ public enum RolSemnatar
 
 public enum MotivInvalidare
 {
-    AnulatPrefect = 1,
+    // 1 = fostul „AnulatPrefect", eliminat: prefectul atacă actul, instanța îl anulează
+    // (Constituție art. 123 alin. 5, Cod adm. art. 255). NU se reintroduce valoarea 1.
     AnulatInstanta = 2,
     AbrogatHclUlterior = 3,
-    Retractat = 4
+    Retractat = 4,
+    Caduc = 5,
+    Inexistent = 6,
+    Altul = 7
 }
 
 public enum TipDocumentHcl
@@ -209,4 +213,10 @@ public enum RaspunsPrefect
     RespinsLegalitate = 2,
     CereClarificari = 3,
     FaraRaspuns = 4
+}
+
+// Tipuri de acțiuni sensibile consemnate în jurnalul de audit al HCL (extensibil).
+public enum TipActiuneHcl
+{
+    AnulareMol = 1
 }

@@ -1,6 +1,6 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -40,20 +40,38 @@ export class InvalidareDialog {
 
   readonly etichetaMotivInvalidare = etichetaMotivInvalidare;
   readonly motive: MotivInvalidare[] = [
-    MotivInvalidare.AnulatPrefect, MotivInvalidare.AnulatInstanta,
-    MotivInvalidare.AbrogatHclUlterior, MotivInvalidare.Retractat
+    MotivInvalidare.AnulatInstanta, MotivInvalidare.AbrogatHclUlterior,
+    MotivInvalidare.Retractat, MotivInvalidare.Caduc,
+    MotivInvalidare.Inexistent, MotivInvalidare.Altul
   ];
 
   readonly form = this.fb.nonNullable.group({
     motiv: [null as MotivInvalidare | null, Validators.required],
+    motivAltulText: ['', Validators.maxLength(300)],
     refInvalidare: ['']
   });
+
+  private readonly motivSelectat = toSignal(
+    this.form.controls.motiv.valueChanges,
+    { initialValue: this.form.controls.motiv.value });
+  readonly esteAltul = computed(() => this.motivSelectat() === MotivInvalidare.Altul);
 
   constructor() {
     // Doar eroarea generică se resetează la editare; avertismentul de relații rămâne
     // (e despre legăturile actului, nu despre motiv) până la confirmarea explicită.
     this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
       if (this.eroare()) this.eroare.set(null);
+    });
+    // „Altul" → text liber obligatoriu (oglindă backend); altfel se curăță.
+    this.form.controls.motiv.valueChanges.pipe(takeUntilDestroyed()).subscribe(motiv => {
+      const ctrl = this.form.controls.motivAltulText;
+      if (motiv === MotivInvalidare.Altul) {
+        ctrl.addValidators(Validators.required);
+      } else {
+        ctrl.removeValidators(Validators.required);
+        ctrl.setValue('');
+      }
+      ctrl.updateValueAndValidity({ emitEvent: false });
     });
   }
 
@@ -86,6 +104,7 @@ export class InvalidareDialog {
     try {
       const rezultat = await this.api.invalideaza(this.date.hclId, {
         motiv: v.motiv!,
+        motivAltulText: v.motiv === MotivInvalidare.Altul ? v.motivAltulText.trim() : null,
         refInvalidare: v.refInvalidare.trim() || null,
         confirmaCuRelatiiActive
       });

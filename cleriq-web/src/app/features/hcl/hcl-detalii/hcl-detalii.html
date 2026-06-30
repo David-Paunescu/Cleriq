@@ -130,6 +130,15 @@
 
         <dt>Vot la adoptare</dt>
         <dd>{{ h.votPentru }} pentru · {{ h.votImpotriva }} împotrivă · {{ h.votAbtinere }} abținere</dd>
+
+        @if (h.dataInvalidare) {
+          <dt>Invalidare</dt>
+          <dd>
+            {{ etichetaMotivInvalidare(h.motivInvalidare) }}
+            @if (h.motivInvalidareAltulText) { — {{ h.motivInvalidareAltulText }} }
+            @if (h.refInvalidare) { · Ref.: {{ h.refInvalidare }} }
+          </dd>
+        }
       </dl>
     </mat-tab>
 

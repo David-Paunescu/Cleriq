@@ -117,7 +117,8 @@ public class TesteInvalidareHcl
 
             var invalidare = await admin.PostAsJsonAsync($"/api/Hcl/{hcl.HclId}/Invalidare", new
             {
-                motiv = MotivInvalidare.AnulatPrefect,
+                motiv = MotivInvalidare.Altul,
+                motivAltulText = "Imposibilitate de executare",
                 refInvalidare = (string?)null,
                 confirmaCuRelatiiActive = false
             });
@@ -133,6 +134,7 @@ public class TesteInvalidareHcl
             var detalii = await admin.GetFromJsonAsync<JsonElement>($"/api/Hcl/{hcl.HclId}");
             Assert.Equal(JsonValueKind.Null, detalii.GetProperty("dataInvalidare").ValueKind);
             Assert.Equal(JsonValueKind.Null, detalii.GetProperty("motivInvalidare").ValueKind);
+            Assert.Equal(JsonValueKind.Null, detalii.GetProperty("motivInvalidareAltulText").ValueKind);
         }
     }
 
@@ -145,6 +147,97 @@ public class TesteInvalidareHcl
             var hcl = await admin.GenereazaHclAdoptatAsync();
             var anulare = await admin.DeleteAsync($"/api/Hcl/{hcl.HclId}/Invalidare");
             Assert.Equal(HttpStatusCode.Conflict, anulare.StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task Invalidare_Altul_FaraText_400()
+    {
+        var admin = await AdminNouAsync();
+        using (admin)
+        {
+            var hcl = await admin.GenereazaHclAdoptatAsync();
+            await admin.AtribuieNumarHclAsync(hcl.HclId);
+
+            var raspuns = await admin.PostAsJsonAsync($"/api/Hcl/{hcl.HclId}/Invalidare", new
+            {
+                motiv = MotivInvalidare.Altul,
+                motivAltulText = "   ",
+                refInvalidare = (string?)null,
+                confirmaCuRelatiiActive = false
+            });
+            Assert.Equal(HttpStatusCode.BadRequest, raspuns.StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task Invalidare_Altul_CuText_200_TextPersistat()
+    {
+        var admin = await AdminNouAsync();
+        using (admin)
+        {
+            var hcl = await admin.GenereazaHclAdoptatAsync();
+            await admin.AtribuieNumarHclAsync(hcl.HclId);
+
+            var raspuns = await admin.PostAsJsonAsync($"/api/Hcl/{hcl.HclId}/Invalidare", new
+            {
+                motiv = MotivInvalidare.Altul,
+                motivAltulText = "Desuetudine — obiectul a dispărut",
+                refInvalidare = (string?)null,
+                confirmaCuRelatiiActive = false
+            });
+            Assert.Equal(HttpStatusCode.OK, raspuns.StatusCode);
+
+            var detalii = await admin.GetFromJsonAsync<JsonElement>($"/api/Hcl/{hcl.HclId}");
+            Assert.Equal((int)MotivInvalidare.Altul, detalii.GetProperty("motivInvalidare").GetInt32());
+            Assert.Equal("Desuetudine — obiectul a dispărut",
+                detalii.GetProperty("motivInvalidareAltulText").GetString());
+        }
+    }
+
+    [Fact]
+    public async Task Invalidare_MotivNonAltul_IgnoraTextLiber_200()
+    {
+        var admin = await AdminNouAsync();
+        using (admin)
+        {
+            var hcl = await admin.GenereazaHclAdoptatAsync();
+            await admin.AtribuieNumarHclAsync(hcl.HclId);
+
+            var raspuns = await admin.PostAsJsonAsync($"/api/Hcl/{hcl.HclId}/Invalidare", new
+            {
+                motiv = MotivInvalidare.Caduc,
+                motivAltulText = "ignorat — nu e Altul",
+                refInvalidare = "Termen expirat 31.12.2026",
+                confirmaCuRelatiiActive = false
+            });
+            Assert.Equal(HttpStatusCode.OK, raspuns.StatusCode);
+
+            var detalii = await admin.GetFromJsonAsync<JsonElement>($"/api/Hcl/{hcl.HclId}");
+            Assert.Equal((int)MotivInvalidare.Caduc, detalii.GetProperty("motivInvalidare").GetInt32());
+            // Textul liber se ignoră (null) pentru orice motiv != Altul
+            Assert.Equal(JsonValueKind.Null, detalii.GetProperty("motivInvalidareAltulText").ValueKind);
+        }
+    }
+
+    [Fact]
+    public async Task Invalidare_MotivNecunoscut_400()
+    {
+        var admin = await AdminNouAsync();
+        using (admin)
+        {
+            var hcl = await admin.GenereazaHclAdoptatAsync();
+            await admin.AtribuieNumarHclAsync(hcl.HclId);
+
+            // 1 = fostul „AnulatPrefect", eliminat din enum → respins de garda Enum.IsDefined
+            var raspuns = await admin.PostAsJsonAsync($"/api/Hcl/{hcl.HclId}/Invalidare", new
+            {
+                motiv = 1,
+                motivAltulText = (string?)null,
+                refInvalidare = (string?)null,
+                confirmaCuRelatiiActive = false
+            });
+            Assert.Equal(HttpStatusCode.BadRequest, raspuns.StatusCode);
         }
     }
 

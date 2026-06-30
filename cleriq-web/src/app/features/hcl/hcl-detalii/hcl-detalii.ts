@@ -21,7 +21,9 @@ import {
 import { ConfirmareDialog, DateConfirmare } from '../../../shared/confirmare/confirmare-dialog';
 import { formateazaDataOra } from '../../../shared/data';
 import { StatusHclRedactional } from '../../../shared/enums';
-import { etichetaStatusHcl, etichetaTipHcl, etichetaTipMajoritate } from '../../../shared/etichete';
+import {
+  etichetaMotivInvalidare, etichetaStatusHcl, etichetaTipHcl, etichetaTipMajoritate
+} from '../../../shared/etichete';
 import {
   AtribuieNumarDialog, DateAtribuireNumarDialog
 } from '../atribuie-numar-dialog/atribuie-numar-dialog';
@@ -29,6 +31,7 @@ import { DateInvalidareDialog, InvalidareDialog } from '../invalidare-dialog/inv
 import {
   DatePublicareMolDialog, PublicareMolDialog
 } from '../publicare-mol-dialog/publicare-mol-dialog';
+import { AnulareMolDialog, DateAnulareMolDialog } from '../anulare-mol-dialog/anulare-mol-dialog';
 import { SemnatariTab } from '../semnatari-tab/semnatari-tab';
 import { ComunicariTab } from '../comunicari-tab/comunicari-tab';
 import { RelatiiTab } from '../relatii-tab/relatii-tab';
@@ -118,6 +121,7 @@ export class HclDetaliiPagina implements OnInit, OnDestroy {
   readonly etichetaStatusHcl = etichetaStatusHcl;
   readonly etichetaTipHcl = etichetaTipHcl;
   readonly etichetaTipMajoritate = etichetaTipMajoritate;
+  readonly etichetaMotivInvalidare = etichetaMotivInvalidare;
   readonly formateazaDataOra = formateazaDataOra;
 
   private readonly handlerKeydown = (event: KeyboardEvent): void => {
@@ -411,16 +415,14 @@ export class HclDetaliiPagina implements OnInit, OnDestroy {
   }
 
   async anuleazaMol(): Promise<void> {
-    if (!this.actiuni().poateAnulaMol || this.actiuneStareLegala()) return;
-    const confirmat = await this.confirma({
-      titlu: 'Anulare publicare MOL',
-      mesaj: 'Se anulează data publicării în Monitorul Oficial Local. Folosit doar pentru corecții administrative.',
-      etichetaConfirmare: 'Anulează publicarea MOL',
-      periculos: true
-    });
-    if (!confirmat) return;
-    await this.executaStareLegala(
-      () => this.api.anuleazaMol(this.id), 'Publicarea în MOL a fost anulată.');
+    if (!this.actiuni().poateAnulaMol) return;
+    const date: DateAnulareMolDialog = { hclId: this.id };
+    const rezultat = await firstValueFrom(
+      this.dialog.open<AnulareMolDialog, DateAnulareMolDialog, HclDetalii | undefined>(
+        AnulareMolDialog, { data: date, width: '460px', maxWidth: '95vw' }).afterClosed());
+    if (!rezultat) return;
+    this.hcl.set(rezultat);
+    this.snackBar.open('Publicarea în MOL a fost anulată.', 'Închide', { duration: 4000 });
   }
 
   async deschideInvalidare(): Promise<void> {

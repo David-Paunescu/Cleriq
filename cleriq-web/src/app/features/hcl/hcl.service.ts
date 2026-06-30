@@ -90,8 +90,10 @@ export class HclService {
       this.http.put<HclDetalii>(`${this.urlBaza}/${id}/PublicareMol`, { dataPublicareMol }));
   }
 
-  anuleazaMol(id: number): Promise<HclDetalii> {
-    return firstValueFrom(this.http.delete<HclDetalii>(`${this.urlBaza}/${id}/PublicareMol`));
+  // „Anulează MOL" cere motiv obligatoriu → DELETE cu body (oglindă AnulareMolDto).
+  anuleazaMol(id: number, motiv: string): Promise<HclDetalii> {
+    return firstValueFrom(
+      this.http.delete<HclDetalii>(`${this.urlBaza}/${id}/PublicareMol`, { body: { motiv } }));
   }
 
   invalideaza(id: number, dto: InvalidareHcl): Promise<HclDetalii> {

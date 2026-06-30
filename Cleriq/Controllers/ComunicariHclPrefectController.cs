@@ -51,6 +51,10 @@ public class ComunicariHclPrefectController : ControllerBase
         if (hcl.Status < StatusHclRedactional.Numerotat)
             return Conflict("Comunicarea către prefect e posibilă doar după numerotarea HCL (Status >= Numerotat).");
 
+        // Comunicarea la prefect = intrare în circuitul de control de legalitate → îngheață
+        // definitiv varianta semnată (se persistă odată cu comunicarea, hcl fiind tracked).
+        hcl.AIntratInCircuit = true;
+
         var anRegistru = dto.DataTrimiteri.Year;
 
         // Compare-and-swap pe filtered unique (Institutie, AnRegistru, NumarOrdineInRegistru):

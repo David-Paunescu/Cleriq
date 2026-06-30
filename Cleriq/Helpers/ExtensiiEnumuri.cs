@@ -124,10 +124,12 @@ public static class ExtensiiEnumuri
 
     public static string Eticheta(this MotivInvalidare? m) => m switch
     {
-        MotivInvalidare.AnulatPrefect => "Anulat de prefect",
         MotivInvalidare.AnulatInstanta => "Anulat de instanță",
-        MotivInvalidare.AbrogatHclUlterior => "Abrogat de HCL ulterior",
+        MotivInvalidare.AbrogatHclUlterior => "Abrogat prin HCL ulterior",
         MotivInvalidare.Retractat => "Retractat",
+        MotivInvalidare.Caduc => "Caducitate (expirarea termenului / dispariția obiectului)",
+        MotivInvalidare.Inexistent => "Inexistent (nepublicat în MOL / lipsă element esențial)",
+        MotivInvalidare.Altul => "Altul",
         null => "—",
         _ => m.ToString()!
     };

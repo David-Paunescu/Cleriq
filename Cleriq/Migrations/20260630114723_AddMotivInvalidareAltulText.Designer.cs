@@ -4,6 +4,7 @@ using Cleriq.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Cleriq.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260630114723_AddMotivInvalidareAltulText")]
+    partial class AddMotivInvalidareAltulText
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -497,9 +500,6 @@ namespace Cleriq.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<bool>("AIntratInCircuit")
-                        .HasColumnType("bit");
-
                     b.Property<int?>("AnNumerotare")
                         .HasColumnType("int");
 
@@ -528,8 +528,8 @@ namespace Cleriq.Migrations
                     b.Property<DateTime?>("DataInvalidare")
                         .HasColumnType("datetime2");
 
-                    b.Property<DateOnly?>("DataPublicareMol")
-                        .HasColumnType("date");
+                    b.Property<DateTime?>("DataPublicareMol")
+                        .HasColumnType("datetime2");
 
                     b.Property<bool>("EstePublicat")
                         .HasColumnType("bit");
@@ -798,67 +798,6 @@ namespace Cleriq.Migrations
                         .IsUnique();
 
                     b.ToTable("Institutii");
-                });
-
-            modelBuilder.Entity("Cleriq.Models.IstoricActiuneHcl", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("AdresaIp")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<int?>("CreatDe")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatLa")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("EsteSters")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("HclId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("InstitutieId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("ModificatDe")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("ModificatLa")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Motiv")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
-
-                    b.Property<int?>("StersDe")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("StersLa")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Tip")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("HclId");
-
-                    b.HasIndex("InstitutieId");
-
-                    b.ToTable("IstoricActiuniHcl");
                 });
 
             modelBuilder.Entity("Cleriq.Models.Mandat", b =>
@@ -2099,25 +2038,6 @@ namespace Cleriq.Migrations
                         .IsRequired();
 
                     b.Navigation("Convocare");
-
-                    b.Navigation("Institutie");
-                });
-
-            modelBuilder.Entity("Cleriq.Models.IstoricActiuneHcl", b =>
-                {
-                    b.HasOne("Cleriq.Models.Hcl", "Hcl")
-                        .WithMany()
-                        .HasForeignKey("HclId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Cleriq.Models.Institutie", "Institutie")
-                        .WithMany()
-                        .HasForeignKey("InstitutieId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Hcl");
 
                     b.Navigation("Institutie");
                 });

@@ -99,8 +99,8 @@ public class HclController : ControllerBase
         if (hcl.Status != StatusHclRedactional.Semnat)
             return Conflict("Doar un HCL semnat poate primi varianta PDF semnată.");
 
-        if (hcl.CaleStocareSemnat != null && hcl.DataPublicareMol != null)
-            return Conflict("HCL publicat în MOL — varianta semnată nu mai poate fi înlocuită.");
+        if (hcl.CaleStocareSemnat != null && hcl.AIntratInCircuit)
+            return Conflict("HCL intrat în circuit (publicat în MOL sau comunicat prefectului) — varianta semnată nu mai poate fi înlocuită.");
 
         if (fisier is null || fisier.Length == 0)
             return BadRequest("Fișier lipsă.");
@@ -167,8 +167,8 @@ public class HclController : ControllerBase
         if (hcl is null || string.IsNullOrEmpty(hcl.CaleStocareSemnat))
             return NotFound("Nu există variantă semnată încărcată.");
 
-        if (hcl.DataPublicareMol != null)
-            return Conflict("HCL publicat în MOL — varianta semnată nu mai poate fi ștearsă.");
+        if (hcl.AIntratInCircuit)
+            return Conflict("HCL intrat în circuit (publicat în MOL sau comunicat prefectului) — varianta semnată nu mai poate fi ștearsă.");
 
         hcl.CaleStocareSemnat = null;
         hcl.NumeFisierSemnat = null;
@@ -393,6 +393,18 @@ public class HclController : ControllerBase
             .FirstOrDefaultAsync(h => h.Id == id);
         if (hcl is null) return NotFound();
 
+        if (!Enum.IsDefined(dto.Motiv))
+            return BadRequest("Motiv de invalidare necunoscut.");
+
+        var motivAltulText = dto.MotivAltulText?.Trim();
+        if (dto.Motiv == MotivInvalidare.Altul)
+        {
+            if (string.IsNullOrWhiteSpace(motivAltulText))
+                return BadRequest("Pentru motivul „Altul” este obligatoriu un text explicativ.");
+            if (motivAltulText.Length > 300)
+                return BadRequest("Textul motivului nu poate depăși 300 de caractere.");
+        }
+
         if (hcl.DataInvalidare != null)
             return Conflict("HCL-ul este deja invalidat.");
 
@@ -412,6 +424,7 @@ public class HclController : ControllerBase
         hcl.DataInvalidare = DateTime.UtcNow;
         hcl.InvalidatDe = _context.UserIdCurent;
         hcl.MotivInvalidare = dto.Motiv;
+        hcl.MotivInvalidareAltulText = dto.Motiv == MotivInvalidare.Altul ? motivAltulText : null;
         hcl.RefInvalidare = string.IsNullOrWhiteSpace(dto.RefInvalidare) ? null : dto.RefInvalidare.Trim();
 
         await _context.SaveChangesAsync();
@@ -429,6 +442,7 @@ public class HclController : ControllerBase
 
         hcl.DataInvalidare = null;
         hcl.MotivInvalidare = null;
+        hcl.MotivInvalidareAltulText = null;
         hcl.RefInvalidare = null;
         hcl.InvalidatDe = null;
 
@@ -462,21 +476,47 @@ public class HclController : ControllerBase
 
         hcl.DataPublicareMol = dto.DataPublicareMol;
         hcl.PublicataDe = _context.UserIdCurent;
+        hcl.AIntratInCircuit = true;   // intrare în circuit (aducere la cunoștință publică)
         await _context.SaveChangesAsync();
         return Ok(MapareHcl.SpreDetaliiDto(await ReincarcaCuIncludeAsync(id)));
     }
 
+    // „Anulează MOL" = doar corecție de metadată (data publicării), pentru o eroare de
+    // înregistrare înainte ca actul să fi intrat formal în circuit. NU dezgheață varianta
+    // semnată (AIntratInCircuit rămâne) și e blocată după comunicarea la prefect.
     [HttpDelete("{id}/PublicareMol")]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> AnuleazaPublicareMol(int id)
+    public async Task<IActionResult> AnuleazaPublicareMol(int id, [FromBody] AnulareMolDto dto)
     {
         var hcl = await _context.Hcluri.FirstOrDefaultAsync(h => h.Id == id);
         if (hcl is null) return NotFound();
         if (hcl.DataPublicareMol == null)
             return Conflict("HCL-ul nu are dată de publicare în MOL.");
 
+        // Punct de neîntoarcere: comunicarea la prefect (art. 197 Cod adm.). După ea, actul e în
+        // circuitul de control de legalitate → corecția se face prin act de îndreptare/erată.
+        if (await _context.ComunicariHclPrefect.AnyAsync(c => c.HclId == id))
+            return Conflict("HCL comunicat prefectului — publicarea în MOL nu se mai poate anula. "
+                + "Corecția se face printr-un act de îndreptare/erată (act nou), conform Legea 24/2000.");
+
+        var motiv = dto?.Motiv?.Trim();
+        if (string.IsNullOrWhiteSpace(motiv))
+            return BadRequest("Motivul anulării publicării în MOL este obligatoriu.");
+        if (motiv.Length > 1000)
+            return BadRequest("Motivul nu poate depăși 1000 de caractere.");
+
         hcl.DataPublicareMol = null;
         hcl.PublicataDe = null;
+        // AIntratInCircuit NU se resetează: varianta semnată rămâne înghețată definitiv.
+
+        _context.IstoricActiuniHcl.Add(new IstoricActiuneHcl
+        {
+            HclId = id,
+            Tip = TipActiuneHcl.AnulareMol,
+            Motiv = motiv,
+            AdresaIp = HttpContext.Connection.RemoteIpAddress?.ToString()
+        });
+
         await _context.SaveChangesAsync();
         return Ok(MapareHcl.SpreDetaliiDto(await ReincarcaCuIncludeAsync(id)));
     }

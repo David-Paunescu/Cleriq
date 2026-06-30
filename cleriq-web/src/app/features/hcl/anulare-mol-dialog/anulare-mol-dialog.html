@@ -1,0 +1,31 @@
+<h2 mat-dialog-title>Anulează publicarea în MOL</h2>
+
+<form [formGroup]="form" (ngSubmit)="anuleaza()">
+  <mat-dialog-content class="continut">
+    <p class="indiciu">
+      Anularea șterge doar data publicării în MOL — o corecție administrativă pentru o eroare de
+      înregistrare, înainte ca actul să fie comunicat prefectului. Varianta semnată rămâne blocată,
+      iar acțiunea se consemnează în jurnalul de audit.
+    </p>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Motivul anulării</mat-label>
+      <textarea matInput formControlName="motiv" rows="3" maxlength="1000"
+                placeholder="Ex: S-a publicat din greșeală fișierul altui HCL."></textarea>
+      @if (form.controls.motiv.hasError('required')) {
+        <mat-error>Motivul este obligatoriu.</mat-error>
+      }
+    </mat-form-field>
+
+    @if (eroare(); as mesaj) {
+      <p class="eroare">{{ mesaj }}</p>
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" mat-dialog-close>Renunță</button>
+    <button mat-flat-button type="submit" [disabled]="seSalveaza()">
+      {{ seSalveaza() ? 'Se anulează...' : 'Anulează publicarea MOL' }}
+    </button>
+  </mat-dialog-actions>
+</form>

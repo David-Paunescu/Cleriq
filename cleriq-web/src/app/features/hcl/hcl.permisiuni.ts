@@ -13,15 +13,15 @@ export interface ActiuniHcl {
   poatePublica: boolean;          // estePublicat false→true (Status >= Numerotat)
   poateDepublica: boolean;        // estePublicat true→false
   poatePublicaMol: boolean;       // Status == Semnat și fără MOL
-  poateAnulaMol: boolean;         // Admin + are MOL
+  poateAnulaMol: boolean;         // Admin + are MOL + fără comunicare la prefect
   poateInvalida: boolean;         // ne-invalidat
   poateAnulaInvalidare: boolean;  // Admin + invalidat
   // FE2 — semnatari
   poateGestionaSemnatari: boolean;// Status != Semnat
   // FE2 — variantă semnată (garda B)
-  poateIncarcaSemnat: boolean;    // Semnat + fără fișier (prima atașare, permisă chiar și post-MOL)
-  poateInlocuiSemnat: boolean;    // Semnat + are fișier + fără MOL
-  poateStergeSemnat: boolean;     // Admin + are fișier + fără MOL
+  poateIncarcaSemnat: boolean;    // Semnat + fără fișier (prima atașare, permisă chiar și post-circuit)
+  poateInlocuiSemnat: boolean;    // Semnat + are fișier + neintrat în circuit (latch)
+  poateStergeSemnat: boolean;     // Admin + are fișier + neintrat în circuit (latch)
   poateDescarcaSemnat: boolean;   // are fișier
 }
 
@@ -117,6 +117,8 @@ export function actiuniPermise(
 
   const estePublicat = hcl?.estePublicat ?? false;
   const areMol = hcl?.dataPublicareMol != null;
+  const aIntratInCircuit = hcl?.aIntratInCircuit ?? false; // latch: MOL sau comunicare prefect
+  const areComunicari = (hcl?.comunicari?.length ?? 0) > 0;
   const areVariantaSemnata = hcl?.esteSemnat ?? false;     // fișier PDF semnat atașat
   const esteInvalidat = hcl?.dataInvalidare != null;
 
@@ -131,15 +133,15 @@ export function actiuniPermise(
     poatePublica: esteAdminSauSecretar && hcl != null && celPutinNumerotat && !estePublicat,
     poateDepublica: esteAdminSauSecretar && hcl != null && estePublicat,
     poatePublicaMol: esteAdminSauSecretar && esteSemnat && !areMol,
-    poateAnulaMol: esteAdmin && areMol,
+    poateAnulaMol: esteAdmin && areMol && !areComunicari,
     poateInvalida: esteAdminSauSecretar && hcl != null && !esteInvalidat,
     poateAnulaInvalidare: esteAdmin && esteInvalidat,
 
     poateGestionaSemnatari: esteAdminSauSecretar && hcl != null && !esteSemnat,
 
     poateIncarcaSemnat: esteAdminSauSecretar && esteSemnat && !areVariantaSemnata,
-    poateInlocuiSemnat: esteAdminSauSecretar && esteSemnat && areVariantaSemnata && !areMol,
-    poateStergeSemnat: esteAdmin && areVariantaSemnata && !areMol,
+    poateInlocuiSemnat: esteAdminSauSecretar && esteSemnat && areVariantaSemnata && !aIntratInCircuit,
+    poateStergeSemnat: esteAdmin && areVariantaSemnata && !aIntratInCircuit,
     poateDescarcaSemnat: hcl != null && areVariantaSemnata
   };
 }

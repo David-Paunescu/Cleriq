@@ -250,14 +250,14 @@ public class TesteHcl
             // Semnare (semnatarii inițiali sunt compleți), apoi PublicareMol → Detalii
             await admin.SemneazaHclAsync(hcl.HclId);
             var mol = await admin.PutAsJsonAsync($"/api/Hcl/{hcl.HclId}/PublicareMol",
-                new { dataPublicareMol = DateTime.UtcNow });
+                new { dataPublicareMol = DateOnly.FromDateTime(DateTime.UtcNow) });
             Assert.Equal(HttpStatusCode.OK, mol.StatusCode);
             var dtoMol = await mol.Content.ReadFromJsonAsync<JsonElement>();
             Assert.NotEqual(JsonValueKind.Null, dtoMol.GetProperty("dataPublicareMol").ValueKind);
             Assert.Equal(2, dtoMol.GetProperty("semnatari").EnumerateArray().Count());
 
-            // AnuleazaPublicareMol → Detalii cu dataPublicareMol null (înainte: 204 NoContent)
-            var anulareMol = await admin.DeleteAsync($"/api/Hcl/{hcl.HclId}/PublicareMol");
+            // AnuleazaPublicareMol (motiv obligatoriu) → Detalii cu dataPublicareMol null
+            var anulareMol = await admin.AnuleazaMolAsync(hcl.HclId, "Corecție: dată de înregistrare greșită");
             Assert.Equal(HttpStatusCode.OK, anulareMol.StatusCode);
             var dtoAnulareMol = await anulareMol.Content.ReadFromJsonAsync<JsonElement>();
             Assert.Equal(JsonValueKind.Null, dtoAnulareMol.GetProperty("dataPublicareMol").ValueKind);
@@ -344,7 +344,7 @@ public class TesteHcl
             await admin.SemneazaHclAsync(hcl.HclId);
 
             var mol = await admin.PutAsJsonAsync($"/api/Hcl/{hcl.HclId}/PublicareMol",
-                new { dataPublicareMol = DateTime.UtcNow });
+                new { dataPublicareMol = DateOnly.FromDateTime(DateTime.UtcNow) });
             Assert.Equal(HttpStatusCode.OK, mol.StatusCode);
 
             // prima atașare post-MOL e permisă (upgrade benign — varianta B)

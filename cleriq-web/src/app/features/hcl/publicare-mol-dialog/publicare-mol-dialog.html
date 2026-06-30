@@ -10,7 +10,6 @@
     <mat-form-field appearance="outline">
       <mat-label>Data publicării</mat-label>
       <input matInput type="date" formControlName="data" />
-      <mat-hint>Fus orar instituție: {{ FUS_INSTITUTIE }}</mat-hint>
       @if (form.controls.data.hasError('required')) {
         <mat-error>Data este obligatorie.</mat-error>
       }

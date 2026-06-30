@@ -374,6 +374,19 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             .HasForeignKey(x => x.InstitutieId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // === IstoricActiuneHcl → Hcl + Institutie (Restrict; jurnal audit append-only) ===
+        modelBuilder.Entity<IstoricActiuneHcl>()
+            .HasOne(i => i.Hcl)
+            .WithMany()
+            .HasForeignKey(i => i.HclId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<IstoricActiuneHcl>()
+            .HasOne(i => i.Institutie)
+            .WithMany()
+            .HasForeignKey(i => i.InstitutieId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         // === Hcl → PunctOrdineZi (FK Restrict, IMUTABIL post-Numerotat) ===
         modelBuilder.Entity<Hcl>()
             .HasOne(h => h.PunctOrdineZi)
@@ -620,6 +633,7 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
                 CascadaPeColectie(SemnatariHcl.Where(s => s.HclId == h.Id), acum, userId, coada);
                 CascadaPeColectie(ComunicariHclPrefect.Where(c => c.HclId == h.Id), acum, userId, coada);
                 CascadaPeColectie(Documente.Where(d => d.HclId == h.Id), acum, userId, coada);
+                CascadaPeColectie(IstoricActiuniHcl.Where(i => i.HclId == h.Id), acum, userId, coada);
                 break;
 
             case Persoana pers:
@@ -665,4 +679,5 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
     public DbSet<SemnatarHcl> SemnatariHcl { get; set; }
     public DbSet<ComunicareHclPrefect> ComunicariHclPrefect { get; set; }
     public DbSet<RelatieHcl> RelatiiHcl { get; set; }
+    public DbSet<IstoricActiuneHcl> IstoricActiuniHcl { get; set; }
 }

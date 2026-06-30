@@ -434,6 +434,35 @@ public static class ExtensiiTeste
         return await admin.PostAsync($"/api/Hcl/{hclId}/Semnat", form);
     }
 
+    public static async Task PublicaMolAsync(this HttpClient admin, int hclId, DateOnly? data = null)
+    {
+        var raspuns = await admin.PutAsJsonAsync($"/api/Hcl/{hclId}/PublicareMol",
+            new { dataPublicareMol = data ?? DateOnly.FromDateTime(DateTime.UtcNow) });
+        await AsigurareSucces(raspuns, "Publicare MOL");
+    }
+
+    // „Anulează MOL" cere acum motiv în body → DELETE cu conținut.
+    public static Task<HttpResponseMessage> AnuleazaMolAsync(
+        this HttpClient admin, int hclId, string motiv = "Corecție administrativă")
+    {
+        var cerere = new HttpRequestMessage(HttpMethod.Delete, $"/api/Hcl/{hclId}/PublicareMol")
+        {
+            Content = JsonContent.Create(new { motiv })
+        };
+        return admin.SendAsync(cerere);
+    }
+
+    public static async Task AdaugaComunicarePrefectAsync(
+        this HttpClient admin, int hclId, DateOnly? dataTrimiteri = null)
+    {
+        var raspuns = await admin.PostAsJsonAsync($"/api/Hcl/{hclId}/Comunicari", new
+        {
+            dataTrimiteri = dataTrimiteri ?? new DateOnly(2026, 6, 15),
+            canalTransmitere = CanalTransmiterePrefect.EmailOficial
+        });
+        await AsigurareSucces(raspuns, "Adăugare comunicare prefect");
+    }
+
     // Anexă HCL: TipDocument trimis e Raport intenționat — backend-ul îl forțează la Altele.
     public static async Task<HttpResponseMessage> IncarcaAnexaHclAsync(
         this HttpClient admin, int hclId, byte[] continut, string numeFisier,

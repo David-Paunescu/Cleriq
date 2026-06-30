@@ -207,10 +207,13 @@ export function etichetaTipRelatieHclPasiv(t: TipRelatieHcl): string {
 export function etichetaMotivInvalidare(m: MotivInvalidare | null | undefined): string {
   if (m == null) return '—';
   switch (m) {
-    case MotivInvalidare.AnulatPrefect: return 'Anulat de prefect';
     case MotivInvalidare.AnulatInstanta: return 'Anulat de instanță';
     case MotivInvalidare.AbrogatHclUlterior: return 'Abrogat prin HCL ulterior';
     case MotivInvalidare.Retractat: return 'Retractat';
+    case MotivInvalidare.Caduc: return 'Caducitate (expirarea termenului / dispariția obiectului)';
+    case MotivInvalidare.Inexistent: return 'Inexistent (nepublicat în MOL / lipsă element esențial)';
+    case MotivInvalidare.Altul: return 'Altul';
+    default: return '—';  // valoare stocată necunoscută (ex. fostul „prefect")
   }
 }
 
