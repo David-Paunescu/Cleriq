@@ -4,6 +4,7 @@ using Cleriq.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Cleriq.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260630175637_GeneralizeazaAuditIstoricActiuneAct")]
+    partial class GeneralizeazaAuditIstoricActiuneAct
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -374,138 +377,6 @@ namespace Cleriq.Migrations
                         .HasFilter("[EsteSters] = 0");
 
                     b.ToTable("Convocari");
-                });
-
-            modelBuilder.Entity("Cleriq.Models.Dispozitie", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("AIntratInCircuit")
-                        .HasColumnType("bit");
-
-                    b.Property<int?>("AnNumerotare")
-                        .HasColumnType("int");
-
-                    b.Property<string>("CaleStocareSemnat")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("Continut")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("ContrasemnaturaRefuzata")
-                        .HasColumnType("bit");
-
-                    b.Property<int?>("CreatDe")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatLa")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("DataEmitere")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("DataIncarcareSemnat")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateOnly?>("DataIntrareInVigoare")
-                        .HasColumnType("date");
-
-                    b.Property<DateTime?>("DataInvalidare")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateOnly?>("DataPublicareMol")
-                        .HasColumnType("date");
-
-                    b.Property<DateTime?>("DataRefuzContrasemnare")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("EstePublicat")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("EsteSters")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("HashSha256Semnat")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<int>("InstitutieId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("InvalidatDe")
-                        .HasColumnType("int");
-
-                    b.Property<long?>("MarimeSemnat")
-                        .HasColumnType("bigint");
-
-                    b.Property<int?>("ModificatDe")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("ModificatLa")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("MotivInvalidare")
-                        .HasColumnType("int");
-
-                    b.Property<string>("MotivInvalidareAltulText")
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
-                    b.Property<int?>("Numar")
-                        .HasColumnType("int");
-
-                    b.Property<string>("NumeFisierSemnat")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<string>("ObiectieLegalitateSecretar")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
-                    b.Property<int?>("PublicataDe")
-                        .HasColumnType("int");
-
-                    b.Property<string>("RefInvalidare")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<int?>("RefuzContrasemnareDe")
-                        .HasColumnType("int");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("StersDe")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("StersLa")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("TipDispozitie")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Titlu")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("InstitutieId", "AnNumerotare", "Numar")
-                        .IsUnique()
-                        .HasFilter("[EsteSters] = 0 AND [Numar] IS NOT NULL");
-
-                    b.ToTable("Dispozitii");
                 });
 
             modelBuilder.Entity("Cleriq.Models.Document", b =>
@@ -1640,85 +1511,6 @@ namespace Cleriq.Migrations
                     b.ToTable("Sedinte");
                 });
 
-            modelBuilder.Entity("Cleriq.Models.SemnatarDispozitie", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("ConsilierId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("CreatDe")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatLa")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateOnly>("DataSemnare")
-                        .HasColumnType("date");
-
-                    b.Property<int>("DispozitieId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("EsteSters")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("InstitutieId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("ModificatDe")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("ModificatLa")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("OrdineAfisare")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("PersoanaId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("RolSemnatar")
-                        .HasColumnType("int");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
-
-                    b.Property<int?>("StersDe")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("StersLa")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ConsilierId");
-
-                    b.HasIndex("InstitutieId");
-
-                    b.HasIndex("PersoanaId");
-
-                    b.HasIndex(new[] { "DispozitieId" }, "IX_SemnatarDispozitie_EmitentActiv")
-                        .IsUnique()
-                        .HasFilter("[EsteSters] = 0 AND [RolSemnatar] = 1");
-
-                    b.HasIndex(new[] { "DispozitieId" }, "IX_SemnatarDispozitie_SecretarContrasemnaturaActiv")
-                        .IsUnique()
-                        .HasFilter("[EsteSters] = 0 AND [RolSemnatar] = 2");
-
-                    b.ToTable("SemnatariDispozitie", t =>
-                        {
-                            t.HasCheckConstraint("CK_SemnatarDispozitie_ExactUnSubject", "(CASE WHEN [PersoanaId] IS NULL THEN 0 ELSE 1 END +  CASE WHEN [ConsilierId] IS NULL THEN 0 ELSE 1 END) = 1");
-
-                            t.HasCheckConstraint("CK_SemnatarDispozitie_FkCorectaPerRol", "([RolSemnatar] = 2 AND [PersoanaId] IS NOT NULL AND [ConsilierId] IS NULL) OR ([RolSemnatar] = 1)");
-                        });
-                });
-
             modelBuilder.Entity("Cleriq.Models.SemnatarHcl", b =>
                 {
                     b.Property<int>("Id")
@@ -2245,17 +2037,6 @@ namespace Cleriq.Migrations
                     b.Navigation("Sedinta");
                 });
 
-            modelBuilder.Entity("Cleriq.Models.Dispozitie", b =>
-                {
-                    b.HasOne("Cleriq.Models.Institutie", "Institutie")
-                        .WithMany()
-                        .HasForeignKey("InstitutieId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Institutie");
-                });
-
             modelBuilder.Entity("Cleriq.Models.Document", b =>
                 {
                     b.HasOne("Cleriq.Models.Hcl", "Hcl")
@@ -2519,39 +2300,6 @@ namespace Cleriq.Migrations
                     b.Navigation("PresedinteSedinta");
                 });
 
-            modelBuilder.Entity("Cleriq.Models.SemnatarDispozitie", b =>
-                {
-                    b.HasOne("Cleriq.Models.Consilier", "Consilier")
-                        .WithMany()
-                        .HasForeignKey("ConsilierId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("Cleriq.Models.Dispozitie", "Dispozitie")
-                        .WithMany("Semnatari")
-                        .HasForeignKey("DispozitieId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Cleriq.Models.Institutie", "Institutie")
-                        .WithMany()
-                        .HasForeignKey("InstitutieId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Cleriq.Models.Persoana", "Persoana")
-                        .WithMany()
-                        .HasForeignKey("PersoanaId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Consilier");
-
-                    b.Navigation("Dispozitie");
-
-                    b.Navigation("Institutie");
-
-                    b.Navigation("Persoana");
-                });
-
             modelBuilder.Entity("Cleriq.Models.SemnatarHcl", b =>
                 {
                     b.HasOne("Cleriq.Models.Consilier", "Consilier")
@@ -2713,11 +2461,6 @@ namespace Cleriq.Migrations
             modelBuilder.Entity("Cleriq.Models.Convocare", b =>
                 {
                     b.Navigation("Incercari");
-                });
-
-            modelBuilder.Entity("Cleriq.Models.Dispozitie", b =>
-                {
-                    b.Navigation("Semnatari");
                 });
 
             modelBuilder.Entity("Cleriq.Models.Hcl", b =>

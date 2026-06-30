@@ -209,7 +209,7 @@ public class DocumenteController : ControllerBase
             if (hcl is null) return NotFound("HCL-ul asociat documentului nu există.");
 
             // NumarOrdinAnexa imutabil după semnare (referențiat textual în corpul HCL)
-            if (hcl.Status == StatusHclRedactional.Semnat && dto.NumarOrdinAnexa != doc.NumarOrdinAnexa)
+            if (hcl.Status == StatusActRedactional.Semnat && dto.NumarOrdinAnexa != doc.NumarOrdinAnexa)
                 return Conflict("HCL semnat — numărul de ordine al anexei nu mai poate fi schimbat (referențiat în corpul hotărârii).");
 
             if (dto.TipDocumentHcl == TipDocumentHcl.Anexa && dto.NumarOrdinAnexa is null)

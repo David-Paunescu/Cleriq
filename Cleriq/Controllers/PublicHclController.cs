@@ -41,7 +41,7 @@ public class PublicHclController : ControllerBase
         if (size <= 0 || size > 200) size = 50;
 
         var hcluri = await _context.Hcluri
-            .Where(h => h.EstePublicat && h.Status >= StatusHclRedactional.Numerotat)
+            .Where(h => h.EstePublicat && h.Status >= StatusActRedactional.Numerotat)
             .OrderByDescending(h => h.DataAdoptare)
             .ThenByDescending(h => h.Id)
             .Skip((page - 1) * size).Take(size)
@@ -65,7 +65,7 @@ public class PublicHclController : ControllerBase
             .Include(h => h.RelatiiTinta).ThenInclude(r => r.HclSursa)
             .Where(h => h.Id == id
                      && h.EstePublicat
-                     && h.Status >= StatusHclRedactional.Numerotat)
+                     && h.Status >= StatusActRedactional.Numerotat)
             .FirstOrDefaultAsync();
 
         if (hcl is null) return NotFound();
@@ -78,7 +78,7 @@ public class PublicHclController : ControllerBase
         var hcl = await _context.Hcluri.FirstOrDefaultAsync(h =>
             h.Id == id
             && h.EstePublicat
-            && h.Status >= StatusHclRedactional.Numerotat, ct);
+            && h.Status >= StatusActRedactional.Numerotat, ct);
         if (hcl is null) return NotFound();
 
         var institutie = await _context.Institutii.FirstOrDefaultAsync(ct);
@@ -104,7 +104,7 @@ public class PublicHclController : ControllerBase
         }
 
         byte[] pdf;
-        if (hcl.Status == StatusHclRedactional.Semnat)
+        if (hcl.Status == StatusActRedactional.Semnat)
         {
             var cheie = hcl.DataInvalidare.HasValue ? $"hcl:pdf:{id}:inv" : $"hcl:pdf:{id}";
             var dinCache = await CitestePdfDinCacheAsync(cheie, ct);
@@ -158,7 +158,7 @@ public class PublicHclController : ControllerBase
 
     private static PublicRelatieHclDto MapeazaCapatIntern(TipRelatieHcl tip, Hcl celalalt)
     {
-        if (celalalt.Status >= StatusHclRedactional.Numerotat)
+        if (celalalt.Status >= StatusActRedactional.Numerotat)
         {
             var numar = celalalt.Numar != null && celalalt.AnNumerotare != null
                 ? $"{celalalt.Numar}/{celalalt.AnNumerotare}"

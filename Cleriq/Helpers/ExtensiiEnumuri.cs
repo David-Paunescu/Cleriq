@@ -77,11 +77,11 @@ public static class ExtensiiEnumuri
         _ => t.ToString()
     };
 
-    public static string Eticheta(this StatusHclRedactional s) => s switch
+    public static string Eticheta(this StatusActRedactional s) => s switch
     {
-        StatusHclRedactional.Draft => "Draft",
-        StatusHclRedactional.Numerotat => "Numerotat",
-        StatusHclRedactional.Semnat => "Semnat",
+        StatusActRedactional.Draft => "Draft",
+        StatusActRedactional.Numerotat => "Numerotat",
+        StatusActRedactional.Semnat => "Semnat",
         _ => s.ToString()
     };
 

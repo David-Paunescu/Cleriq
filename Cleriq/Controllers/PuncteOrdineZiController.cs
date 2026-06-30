@@ -146,7 +146,7 @@ public class PuncteOrdineZiController : ControllerBase
 
         var areHclNumerotat = await _context.Hcluri
             .AnyAsync(h => h.PunctOrdineZiId == punctId
-                        && h.Status >= StatusHclRedactional.Numerotat);
+                        && h.Status >= StatusActRedactional.Numerotat);
         if (areHclNumerotat)
             return Conflict("Acest punct nu poate fi șters: din el a fost generat un HCL cu Status >= Numerotat (act administrativ adoptat conform OUG 57/2019).");
 

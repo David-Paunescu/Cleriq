@@ -51,7 +51,7 @@ public class GeneratorHcl : IGeneratorHcl
 
         var numarText = hcl.Numar.HasValue && hcl.AnNumerotare.HasValue
                     ? $"{hcl.Numar.Value}/{hcl.AnNumerotare.Value}"
-                    : PlaceholderHcl.NumarNeatribuit;
+                    : PlaceholderAct.NumarNeatribuit;
 
         var dataAdoptareLocala = hcl.DataAdoptare.LaFusOrar(institutie.FusOrar);
         var dataAdoptareText = dataAdoptareLocala.ToString("dd MMMM yyyy", CulturaRo);

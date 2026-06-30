@@ -25,7 +25,7 @@ public class TesteHcl
             var hcl = await admin.GenereazaHclAdoptatAsync();
 
             var detalii = await admin.GetFromJsonAsync<JsonElement>($"/api/Hcl/{hcl.HclId}");
-            Assert.Equal((int)StatusHclRedactional.Draft, detalii.GetProperty("status").GetInt32());
+            Assert.Equal((int)StatusActRedactional.Draft, detalii.GetProperty("status").GetInt32());
             Assert.Equal("Punct 1", detalii.GetProperty("titlu").GetString());
             Assert.Equal(1, detalii.GetProperty("votPentru").GetInt32());
             Assert.Equal(0, detalii.GetProperty("votImpotriva").GetInt32());
@@ -177,7 +177,7 @@ public class TesteHcl
             var peNumerotat = await admin.PostAsync($"/api/Hcl/{hcl.HclId}/Semneaza", null);
             Assert.Equal(HttpStatusCode.OK, peNumerotat.StatusCode);
             var dto = await peNumerotat.Content.ReadFromJsonAsync<JsonElement>();
-            Assert.Equal((int)StatusHclRedactional.Semnat, dto.GetProperty("status").GetInt32());
+            Assert.Equal((int)StatusActRedactional.Semnat, dto.GetProperty("status").GetInt32());
         }
     }
 
@@ -217,7 +217,7 @@ public class TesteHcl
             var semnare = await admin.PostAsync($"/api/Hcl/{hcl.HclId}/Semneaza", null);
             Assert.Equal(HttpStatusCode.OK, semnare.StatusCode);
             var dtoSemn = await semnare.Content.ReadFromJsonAsync<JsonElement>();
-            Assert.Equal((int)StatusHclRedactional.Semnat, dtoSemn.GetProperty("status").GetInt32());
+            Assert.Equal((int)StatusActRedactional.Semnat, dtoSemn.GetProperty("status").GetInt32());
             Assert.Equal(2, dtoSemn.GetProperty("semnatari").EnumerateArray().Count());
         }
     }

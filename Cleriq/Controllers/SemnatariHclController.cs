@@ -45,7 +45,7 @@ public class SemnatariHclController : ControllerBase
             .FirstOrDefaultAsync(h => h.Id == hclId);
         if (hcl is null) return NotFound("HCL inexistent.");
 
-        if (hcl.Status == StatusHclRedactional.Semnat)
+        if (hcl.Status == StatusActRedactional.Semnat)
             return Conflict("HCL semnat — lista de semnatari nu mai poate fi modificată.");
 
         // XOR Persoana/Consilier
@@ -125,7 +125,7 @@ public class SemnatariHclController : ControllerBase
         var hcl = await _context.Hcluri.FirstOrDefaultAsync(h => h.Id == hclId);
         if (hcl is null) return NotFound("HCL inexistent.");
 
-        if (hcl.Status == StatusHclRedactional.Semnat)
+        if (hcl.Status == StatusActRedactional.Semnat)
             return Conflict("HCL semnat — semnatarii fac parte din actul finalizat și nu mai pot fi eliminați.");
 
         var semnatar = await _context.SemnatariHcl

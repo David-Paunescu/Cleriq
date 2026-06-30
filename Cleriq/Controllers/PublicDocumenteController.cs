@@ -62,7 +62,7 @@ public class PublicDocumenteController : ControllerBase
             vizibil = await _context.Hcluri.AnyAsync(h =>
                 h.Id == doc.HclId.Value
                 && h.EstePublicat
-                && h.Status >= StatusHclRedactional.Numerotat);
+                && h.Status >= StatusActRedactional.Numerotat);
         }
         else
         {

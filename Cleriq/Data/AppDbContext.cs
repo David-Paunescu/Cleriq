@@ -374,14 +374,9 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             .HasForeignKey(x => x.InstitutieId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // === IstoricActiuneHcl → Hcl + Institutie (Restrict; jurnal audit append-only) ===
-        modelBuilder.Entity<IstoricActiuneHcl>()
-            .HasOne(i => i.Hcl)
-            .WithMany()
-            .HasForeignKey(i => i.HclId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        modelBuilder.Entity<IstoricActiuneHcl>()
+        // === IstoricActiuneAct → Institutie (Restrict). Referință slabă (TipAct, ActId) către
+        // act — FĂRĂ FK/navigație, ca jurnalul să supraviețuiască soft-delete-ului actului. ===
+        modelBuilder.Entity<IstoricActiuneAct>()
             .HasOne(i => i.Institutie)
             .WithMany()
             .HasForeignKey(i => i.InstitutieId)
@@ -513,6 +508,70 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
                     "OR ([RolSemnatar] IN (1, 3) AND [ConsilierId] IS NOT NULL AND [PersoanaId] IS NULL)");
             });
 
+        // === Modul C Dispoziții (paritar HCL) ===
+        modelBuilder.Entity<Dispozitie>()
+            .HasOne(x => x.Institutie)
+            .WithMany()
+            .HasForeignKey(x => x.InstitutieId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<SemnatarDispozitie>()
+            .HasOne(x => x.Institutie)
+            .WithMany()
+            .HasForeignKey(x => x.InstitutieId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<SemnatarDispozitie>()
+            .HasOne(s => s.Dispozitie)
+            .WithMany(d => d.Semnatari)
+            .HasForeignKey(s => s.DispozitieId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<SemnatarDispozitie>()
+            .HasOne(s => s.Persoana)
+            .WithMany()
+            .HasForeignKey(s => s.PersoanaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<SemnatarDispozitie>()
+            .HasOne(s => s.Consilier)
+            .WithMany()
+            .HasForeignKey(s => s.ConsilierId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Registru propriu de numerotare — ambele tipuri (Normativ/Individual) în aceeași secvență
+        modelBuilder.Entity<Dispozitie>()
+            .HasIndex(d => new { d.InstitutieId, d.AnNumerotare, d.Numar })
+            .IsUnique()
+            .HasFilter("[EsteSters] = 0 AND [Numar] IS NOT NULL");
+
+        // Max 1 Emitent activ + max 1 SecretarContrasemnatura activ per dispoziție
+        modelBuilder.Entity<SemnatarDispozitie>()
+            .HasIndex(s => s.DispozitieId, "IX_SemnatarDispozitie_EmitentActiv")
+            .IsUnique()
+            .HasFilter("[EsteSters] = 0 AND [RolSemnatar] = 1");
+
+        modelBuilder.Entity<SemnatarDispozitie>()
+            .HasIndex(s => s.DispozitieId, "IX_SemnatarDispozitie_SecretarContrasemnaturaActiv")
+            .IsUnique()
+            .HasFilter("[EsteSters] = 0 AND [RolSemnatar] = 2");
+
+        // XOR subiect + FK-corectă-per-rol: Emitent = Persoana SAU Consilier (viceprimar-înlocuitor);
+        // SecretarContrasemnatura = doar Persoana
+        modelBuilder.Entity<SemnatarDispozitie>()
+            .ToTable(t =>
+            {
+                t.HasCheckConstraint(
+                    "CK_SemnatarDispozitie_ExactUnSubject",
+                    "(CASE WHEN [PersoanaId] IS NULL THEN 0 ELSE 1 END + " +
+                    " CASE WHEN [ConsilierId] IS NULL THEN 0 ELSE 1 END) = 1");
+
+                t.HasCheckConstraint(
+                    "CK_SemnatarDispozitie_FkCorectaPerRol",
+                    "([RolSemnatar] = 2 AND [PersoanaId] IS NOT NULL AND [ConsilierId] IS NULL) " +
+                    "OR ([RolSemnatar] = 1)");
+            });
+
         // Filtru global automat: soft-delete + tenant
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
@@ -613,6 +672,7 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
                 CascadaPeColectie(ComisieMembri.Where(m => m.ConsilierId == c.Id), acum, userId, coada);
                 CascadaPeColectie(Mandate.Where(m => m.ConsilierId == c.Id), acum, userId, coada);
                 CascadaPeColectie(SemnatariHcl.Where(s => s.ConsilierId == c.Id), acum, userId, coada);
+                CascadaPeColectie(SemnatariDispozitie.Where(s => s.ConsilierId == c.Id), acum, userId, coada);
                 break;
 
             case Sedinta s:
@@ -633,12 +693,18 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
                 CascadaPeColectie(SemnatariHcl.Where(s => s.HclId == h.Id), acum, userId, coada);
                 CascadaPeColectie(ComunicariHclPrefect.Where(c => c.HclId == h.Id), acum, userId, coada);
                 CascadaPeColectie(Documente.Where(d => d.HclId == h.Id), acum, userId, coada);
-                CascadaPeColectie(IstoricActiuniHcl.Where(i => i.HclId == h.Id), acum, userId, coada);
+                // Auditul (IstoricActiuneAct) NU se cascadează — log imutabil care supraviețuiește actului.
+                break;
+
+            case Dispozitie d:
+                CascadaPeColectie(SemnatariDispozitie.Where(s => s.DispozitieId == d.Id), acum, userId, coada);
+                // ComunicariDispozitiePrefect — adăugat la Pas 10. Auditul NU se cascadează.
                 break;
 
             case Persoana pers:
                 CascadaPeColectie(MandateFunctie.Where(mf => mf.PersoanaId == pers.Id), acum, userId, coada);
                 CascadaPeColectie(SemnatariHcl.Where(s => s.PersoanaId == pers.Id), acum, userId, coada);
+                CascadaPeColectie(SemnatariDispozitie.Where(s => s.PersoanaId == pers.Id), acum, userId, coada);
                 break;
         }
     }
@@ -679,5 +745,7 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
     public DbSet<SemnatarHcl> SemnatariHcl { get; set; }
     public DbSet<ComunicareHclPrefect> ComunicariHclPrefect { get; set; }
     public DbSet<RelatieHcl> RelatiiHcl { get; set; }
-    public DbSet<IstoricActiuneHcl> IstoricActiuniHcl { get; set; }
+    public DbSet<IstoricActiuneAct> IstoricActiuniAct { get; set; }
+    public DbSet<Dispozitie> Dispozitii { get; set; }
+    public DbSet<SemnatarDispozitie> SemnatariDispozitie { get; set; }
 }

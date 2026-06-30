@@ -45,7 +45,7 @@ public class ServiciuComunicareHclPrefect : IServiciuComunicareHclPrefect
         // comunicare a fost ștearsă, HCL trebuie recomunicat).
         var candidati = await _context.Hcluri
             .Where(h => h.InstitutieId == institutieId
-                     && h.Status >= StatusHclRedactional.Numerotat
+                     && h.Status >= StatusActRedactional.Numerotat
                      && h.DataInvalidare == null
                      && !_context.ComunicariHclPrefect.Any(c => c.HclId == h.Id))
             .Select(h => new

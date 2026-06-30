@@ -145,7 +145,7 @@ public enum TipFunctie
     SecretarUat = 3
 }
 
-public enum StatusHclRedactional
+public enum StatusActRedactional
 {
     Draft = 1,
     Numerotat = 2,
@@ -215,8 +215,28 @@ public enum RaspunsPrefect
     FaraRaspuns = 4
 }
 
-// Tipuri de acțiuni sensibile consemnate în jurnalul de audit al HCL (extensibil).
-public enum TipActiuneHcl
+// Tipuri de acțiuni sensibile consemnate în jurnalul de audit al actelor (extensibil).
+public enum TipActiuneAct
 {
-    AnulareMol = 1
+    AnulareMol = 1,
+    PublicareIndividualaOverride = 2
+}
+
+// Discriminator pentru jurnalul de audit cross-act (referință slabă către act).
+public enum TipAct
+{
+    Hcl = 1,
+    Dispozitie = 2
+}
+
+public enum TipDispozitie
+{
+    Normativ = 1,
+    Individual = 2
+}
+
+public enum RolSemnatarDispozitie
+{
+    Emitent = 1,
+    SecretarContrasemnatura = 2
 }

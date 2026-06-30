@@ -48,7 +48,7 @@ public class ComunicariHclPrefectController : ControllerBase
         var hcl = await _context.Hcluri.FirstOrDefaultAsync(h => h.Id == hclId);
         if (hcl is null) return NotFound("HCL inexistent.");
 
-        if (hcl.Status < StatusHclRedactional.Numerotat)
+        if (hcl.Status < StatusActRedactional.Numerotat)
             return Conflict("Comunicarea către prefect e posibilă doar după numerotarea HCL (Status >= Numerotat).");
 
         // Comunicarea la prefect = intrare în circuitul de control de legalitate → îngheață

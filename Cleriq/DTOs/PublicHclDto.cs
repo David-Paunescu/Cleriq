@@ -10,7 +10,7 @@ public record PublicHclDto(
     string Titlu,
     DateTime DataAdoptare,
     DateOnly? DataIntrareInVigoare,
-    StatusHclRedactional Status,
+    StatusActRedactional Status,
     bool EsteInvalidat,
     DateOnly? DataPublicareMol);
 
@@ -23,7 +23,7 @@ public record PublicHclDetaliiDto(
     string? Continut,
     DateTime DataAdoptare,
     DateOnly? DataIntrareInVigoare,
-    StatusHclRedactional Status,
+    StatusActRedactional Status,
     int VotPentru,
     int VotImpotriva,
     int VotAbtinere,

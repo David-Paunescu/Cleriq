@@ -40,7 +40,7 @@ public class HclController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> Lista(
         [FromQuery] int? an,
-        [FromQuery] StatusHclRedactional? status,
+        [FromQuery] StatusActRedactional? status,
         [FromQuery] TipHcl? tipHcl,
         [FromQuery] int skip = 0,
         [FromQuery] int take = 50)
@@ -96,7 +96,7 @@ public class HclController : ControllerBase
         var hcl = await _context.Hcluri.FirstOrDefaultAsync(h => h.Id == id, ct);
         if (hcl is null) return NotFound();
 
-        if (hcl.Status != StatusHclRedactional.Semnat)
+        if (hcl.Status != StatusActRedactional.Semnat)
             return Conflict("Doar un HCL semnat poate primi varianta PDF semnată.");
 
         if (hcl.CaleStocareSemnat != null && hcl.AIntratInCircuit)
@@ -231,7 +231,7 @@ public class HclController : ControllerBase
             TipHcl = dto.TipHcl,
             Titlu = punct.Titlu,
             DataAdoptare = sedinta.DataOra,
-            Status = StatusHclRedactional.Draft,
+            Status = StatusActRedactional.Draft,
             EstePublicat = false,
             PunctOrdineZiId = punct.Id,
             VotPentru = pentru,
@@ -279,7 +279,7 @@ public class HclController : ControllerBase
     {
         var hcl = await _context.Hcluri.FirstOrDefaultAsync(h => h.Id == id);
         if (hcl is null) return NotFound();
-        if (hcl.Status == StatusHclRedactional.Semnat)
+        if (hcl.Status == StatusActRedactional.Semnat)
             return Conflict("HCL semnat — conținutul nu mai poate fi editat.");
 
         hcl.Continut = dto.Continut;
@@ -300,7 +300,7 @@ public class HclController : ControllerBase
             .FirstOrDefaultAsync(h => h.Id == id);
 
         if (hcl is null) return NotFound();
-        if (hcl.Status == StatusHclRedactional.Semnat)
+        if (hcl.Status == StatusActRedactional.Semnat)
             return Conflict("HCL semnat — conținutul nu mai poate fi regenerat.");
 
         hcl.Continut = _generator.GenereazaContinut(hcl);
@@ -361,7 +361,7 @@ public class HclController : ControllerBase
             .FirstOrDefaultAsync(h => h.Id == id);
         if (hcl is null) return NotFound();
 
-        if (hcl.Status != StatusHclRedactional.Numerotat)
+        if (hcl.Status != StatusActRedactional.Numerotat)
             return Conflict($"Semnarea e posibilă doar din starea Numerotat (curent: {hcl.Status}).");
 
         var secretari = hcl.Semnatari.Count(s => s.RolSemnatar == RolSemnatar.SecretarUat);
@@ -378,7 +378,7 @@ public class HclController : ControllerBase
         if (!arePresedinte && !areAlternativi)
             return BadRequest("Trebuie fie un președinte de ședință, fie minim 2 semnatari alternativi (art. 140 alin. 2) cu motivul lipsei semnăturii completat.");
 
-        hcl.Status = StatusHclRedactional.Semnat;
+        hcl.Status = StatusActRedactional.Semnat;
         await _context.SaveChangesAsync();
         return Ok(MapareHcl.SpreDetaliiDto(await ReincarcaCuIncludeAsync(id)));
     }
@@ -457,7 +457,7 @@ public class HclController : ControllerBase
         var hcl = await _context.Hcluri.FirstOrDefaultAsync(h => h.Id == id);
         if (hcl is null) return NotFound();
 
-        if (dto.EstePublicat && hcl.Status < StatusHclRedactional.Numerotat)
+        if (dto.EstePublicat && hcl.Status < StatusActRedactional.Numerotat)
             return Conflict("HCL-ul poate fi publicat doar după ce a primit număr (Status >= Numerotat).");
 
         hcl.EstePublicat = dto.EstePublicat;
@@ -471,7 +471,7 @@ public class HclController : ControllerBase
     {
         var hcl = await _context.Hcluri.FirstOrDefaultAsync(h => h.Id == id);
         if (hcl is null) return NotFound();
-        if (hcl.Status != StatusHclRedactional.Semnat)
+        if (hcl.Status != StatusActRedactional.Semnat)
             return Conflict("Publicarea în MOL e posibilă doar pentru HCL semnat.");
 
         hcl.DataPublicareMol = dto.DataPublicareMol;
@@ -509,10 +509,11 @@ public class HclController : ControllerBase
         hcl.PublicataDe = null;
         // AIntratInCircuit NU se resetează: varianta semnată rămâne înghețată definitiv.
 
-        _context.IstoricActiuniHcl.Add(new IstoricActiuneHcl
+        _context.IstoricActiuniAct.Add(new IstoricActiuneAct
         {
-            HclId = id,
-            Tip = TipActiuneHcl.AnulareMol,
+            TipAct = TipAct.Hcl,
+            ActId = id,
+            Tip = TipActiuneAct.AnulareMol,
             Motiv = motiv,
             AdresaIp = HttpContext.Connection.RemoteIpAddress?.ToString()
         });
@@ -543,7 +544,7 @@ public class HclController : ControllerBase
         }
 
         // 3. Semnat → 409 (act juridic finalizat — corecții doar prin Erată, Faza 7)
-        if (hcl.Status == StatusHclRedactional.Semnat)
+        if (hcl.Status == StatusActRedactional.Semnat)
             return Conflict("HCL-ul nu poate fi șters: este semnat (act juridic finalizat).");
 
         // 4. Publicat → 409 (depublică întâi)
@@ -562,7 +563,7 @@ public class HclController : ControllerBase
     {
         var hcl = await _context.Hcluri.FirstOrDefaultAsync(h => h.Id == id);
         if (hcl is null) return NotFound();
-        if (hcl.Status == StatusHclRedactional.Semnat)
+        if (hcl.Status == StatusActRedactional.Semnat)
             return Conflict("HCL semnat — motivul lipsei semnăturii nu mai poate fi modificat.");
         if (string.IsNullOrWhiteSpace(dto.Motiv))
             return BadRequest("Motivul este obligatoriu.");

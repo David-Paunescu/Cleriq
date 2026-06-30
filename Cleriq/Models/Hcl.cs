@@ -1,8 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Cleriq.Models;
 
-public class Hcl : EntitateDeBaza, IEntitateCuTenant
+public class Hcl : EntitateDeBaza, IEntitateCuTenant, IActNumerotat
 {
     public int? Numar { get; set; }
     public int? AnNumerotare { get; set; }
@@ -17,7 +18,12 @@ public class Hcl : EntitateDeBaza, IEntitateCuTenant
     public DateTime DataAdoptare { get; set; }
     public DateOnly? DataIntrareInVigoare { get; set; }
 
-    public StatusHclRedactional Status { get; set; } = StatusHclRedactional.Draft;
+    public StatusActRedactional Status { get; set; } = StatusActRedactional.Draft;
+
+    // IActNumerotat — alias in-memory pentru anul de registru; serviciul generic de
+    // numerotare aplică fusul orar. [NotMapped] = fără coloană, fără migrație.
+    [NotMapped]
+    public DateTime DataReferintaNumerotare => DataAdoptare;
 
     public int PunctOrdineZiId { get; set; }
     public PunctOrdineZi PunctOrdineZi { get; set; } = null!;

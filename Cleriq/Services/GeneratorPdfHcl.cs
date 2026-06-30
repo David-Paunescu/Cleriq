@@ -24,7 +24,7 @@ public class GeneratorPdfHcl : IGeneratorPdfHcl
             watermark = "INVALIDAT";
             watermarkFontSize = 75f;
         }
-        else if (hcl.Status != StatusHclRedactional.Semnat)
+        else if (hcl.Status != StatusActRedactional.Semnat)
         {
             watermark = "DRAFT";
         }

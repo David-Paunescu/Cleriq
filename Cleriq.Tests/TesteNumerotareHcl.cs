@@ -26,7 +26,7 @@ public class TesteNumerotareHcl
             Assert.Equal(HttpStatusCode.OK, raspuns.StatusCode);
 
             var detalii = await admin.GetFromJsonAsync<JsonElement>($"/api/Hcl/{hcl.HclId}");
-            Assert.Equal((int)StatusHclRedactional.Numerotat, detalii.GetProperty("status").GetInt32());
+            Assert.Equal((int)StatusActRedactional.Numerotat, detalii.GetProperty("status").GetInt32());
             var numar = detalii.GetProperty("numar").GetInt32();
             var an = detalii.GetProperty("anNumerotare").GetInt32();
             Assert.Equal(1, numar);

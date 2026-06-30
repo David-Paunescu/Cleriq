@@ -101,6 +101,7 @@ builder.Services.AddScoped<IServiciuRefreshTokens, ServiciuRefreshTokens>();
 builder.Services.AddScoped<IGeneratorConvocare, GeneratorConvocare>();
 builder.Services.AddScoped<IGeneratorPdfProcesVerbal, GeneratorPdfProcesVerbal>();
 builder.Services.AddSingleton<ICalculatorZileLucratoare, CalculatorZileLucratoare>();
+builder.Services.AddScoped<IServiciuNumerotareActe, ServiciuNumerotareActe>();
 builder.Services.AddScoped<IServiciuNumerotareHcl, ServiciuNumerotareHcl>();
 builder.Services.AddScoped<IServiciuComunicareHclPrefect, ServiciuComunicareHclPrefect>();
 builder.Services.AddScoped<IGeneratorHcl, GeneratorHcl>();

@@ -10,7 +10,7 @@ public record HclUrgentDto(
     DateOnly DataAdoptare,
     DateOnly DataLimitaComunicare,
     int ZileRamase,
-    StatusHclRedactional Status);
+    StatusActRedactional Status);
 
 public interface IServiciuComunicareHclPrefect
 {

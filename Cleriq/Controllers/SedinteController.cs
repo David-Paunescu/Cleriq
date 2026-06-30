@@ -85,7 +85,7 @@ public class SedinteController : ControllerBase
         // Gardă nouă (extensie D7): HCL Status >= Numerotat generat din punctele acestei ședințe.
         var areHclNumerotat = await _context.Hcluri
             .AnyAsync(h => h.PunctOrdineZi.SedintaId == id
-                        && h.Status >= StatusHclRedactional.Numerotat);
+                        && h.Status >= StatusActRedactional.Numerotat);
         if (areHclNumerotat)
             return Conflict("Această ședință nu poate fi ștearsă: din punctele ei au fost generate HCL-uri cu Status >= Numerotat (act administrativ adoptat conform OUG 57/2019).");
 

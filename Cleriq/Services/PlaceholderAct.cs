@@ -1,6 +1,6 @@
-﻿namespace Cleriq.Services;
+namespace Cleriq.Services;
 
-public static class PlaceholderHcl
+public static class PlaceholderAct
 {
     public const string NumarNeatribuit = "_[urmează să fie atribuit]_";
 }
