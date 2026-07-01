@@ -1,0 +1,30 @@
+<h2 mat-dialog-title>Publică pe portal (dispoziție individuală)</h2>
+
+<form [formGroup]="form" (ngSubmit)="publica()">
+  <mat-dialog-content class="continut">
+    <div class="avertisment">
+      <mat-icon>privacy_tip</mat-icon>
+      <p>{{ avertismentIndividual }}</p>
+    </div>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Motivul publicării</mat-label>
+      <textarea matInput formControlName="motiv" rows="3" maxlength="1000"
+                placeholder="Ex: publicare cerută de instanță / necesară procedurii."></textarea>
+      @if (form.controls.motiv.hasError('required')) {
+        <mat-error>Motivul este obligatoriu.</mat-error>
+      }
+    </mat-form-field>
+
+    @if (eroare(); as mesaj) {
+      <p class="eroare">{{ mesaj }}</p>
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" mat-dialog-close>Renunță</button>
+    <button mat-flat-button type="submit" [disabled]="seSalveaza()">
+      {{ seSalveaza() ? 'Se publică...' : 'Publică pe portal' }}
+    </button>
+  </mat-dialog-actions>
+</form>

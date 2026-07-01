@@ -218,6 +218,18 @@ export function etichetaMotivInvalidare(m: MotivInvalidare | null | undefined): 
   }
 }
 
+// Etichetă act-aware pentru DISPOZIȚIE (oglindă MotivInvalidare.EtichetaDispozitie din backend):
+// „Retractat" și „AbrogatHclUlterior" au formulări proprii — cuvântul „hotărâre"/„HCL" din globalul HCL
+// e greșit pe o dispoziție; restul deleagă la eticheta globală. Folosit în invalidare-dialog (alegerea
+// motivului); afișarea pe detaliu folosește `motivInvalidareEticheta` venit direct de la backend.
+export function etichetaMotivInvalidareDispozitie(m: MotivInvalidare | null | undefined): string {
+  switch (m) {
+    case MotivInvalidare.Retractat: return 'Revocat de primar (emitent)';
+    case MotivInvalidare.AbrogatHclUlterior: return 'Abrogată prin dispoziție ulterioară';
+    default: return etichetaMotivInvalidare(m);
+  }
+}
+
 export function etichetaCanalTransmiterePrefect(c: CanalTransmiterePrefect): string {
   switch (c) {
     case CanalTransmiterePrefect.Posta: return 'Poștă';

@@ -1,0 +1,97 @@
+<div class="antet">
+  <h2>Comunicări către prefect</h2>
+  <div class="antet-actiuni">
+    @if (actiuni().poateAdauga) {
+      <button mat-flat-button (click)="adauga()">
+        <mat-icon>outgoing_mail</mat-icon>
+        Adaugă comunicare
+      </button>
+    }
+  </div>
+</div>
+
+@if (seIncarca() && comunicari().length === 0) {
+  <div class="centru"><mat-spinner diameter="40" /></div>
+} @else if (eroare(); as mesaj) {
+  <div class="centru">
+    <p class="eroare">{{ mesaj }}</p>
+    <button mat-stroked-button (click)="incarca()">Reîncearcă</button>
+  </div>
+} @else if (comunicari().length === 0) {
+  @if (status() < StatusActRedactional.Numerotat) {
+    <p class="gol">Comunicarea către prefect devine disponibilă după numerotarea dispoziției.</p>
+  } @else {
+    <p class="gol">Nicio comunicare către prefect înregistrată.</p>
+  }
+} @else {
+  <div class="tabel-container">
+    <table mat-table [dataSource]="comunicari()" class="tabel">
+      <ng-container matColumnDef="nrOrdine">
+        <th mat-header-cell *matHeaderCellDef class="col-ordine">Nr. registru</th>
+        <td mat-cell *matCellDef="let c" class="col-ordine">
+          {{ c.numarOrdineInRegistru }}/{{ c.anRegistru }}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="dataTrimiteri">
+        <th mat-header-cell *matHeaderCellDef>Data trimiterii</th>
+        <td mat-cell *matCellDef="let c">{{ formateazaDataDoar(c.dataTrimiteri) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="canal">
+        <th mat-header-cell *matHeaderCellDef>Canal</th>
+        <td mat-cell *matCellDef="let c">
+          <div class="celula-canal">
+            <span>{{ etichetaCanal(c.canalTransmitere) }}</span>
+            @if (c.nrInregistrarePrefect) {
+              <span class="sub">Nr. {{ c.nrInregistrarePrefect }}</span>
+            }
+          </div>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="raspuns">
+        <th mat-header-cell *matHeaderCellDef>Răspuns prefect</th>
+        <td mat-cell *matCellDef="let c">
+          <div class="celula-raspuns">
+            <span [class]="claseBadgeRaspuns(c.raspunsPrefect)">
+              {{ c.raspunsPrefect === null ? '—' : etichetaRaspuns(c.raspunsPrefect) }}
+            </span>
+            @if (c.dataRaspunsPrefect) {
+              <span class="sub">{{ formateazaDataDoar(c.dataRaspunsPrefect) }}</span>
+            }
+            @if (c.obiectiiMotivate) {
+              <mat-icon class="icon-info" [matTooltip]="c.obiectiiMotivate" matTooltipPosition="right">
+                info_outline
+              </mat-icon>
+            }
+          </div>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="actiuni">
+        <th mat-header-cell *matHeaderCellDef class="col-actiuni"></th>
+        <td mat-cell *matCellDef="let c" class="col-actiuni">
+          @if (actiuni().poateEdita) {
+            <button mat-icon-button matTooltip="Editează răspuns prefect" (click)="editeazaRaspuns(c)">
+              <mat-icon>rate_review</mat-icon>
+            </button>
+          }
+          @if (actiuni().poateSterge) {
+            <button mat-icon-button matTooltip="Șterge" (click)="sterge(c)"
+                    [disabled]="esteRandBlocat(c.id)">
+              @if (esteRandBlocat(c.id)) {
+                <mat-spinner diameter="18" />
+              } @else {
+                <mat-icon>delete</mat-icon>
+              }
+            </button>
+          }
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="coloane()"></tr>
+      <tr mat-row *matRowDef="let row; columns: coloane()"></tr>
+    </table>
+  </div>
+}

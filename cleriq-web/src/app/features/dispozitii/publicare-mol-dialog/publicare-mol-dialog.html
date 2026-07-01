@@ -1,0 +1,45 @@
+<h2 mat-dialog-title>Publicare în Monitorul Oficial Local</h2>
+
+<form [formGroup]="form" (ngSubmit)="publica()">
+  <mat-dialog-content class="continut">
+    <p class="indiciu">
+      Data publicării în MOL. După înregistrare, varianta semnată devine intangibilă
+      (nu mai poate fi înlocuită sau ștearsă).
+    </p>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Data publicării</mat-label>
+      <input matInput type="date" formControlName="data" />
+      @if (form.controls.data.hasError('required')) {
+        <mat-error>Data este obligatorie.</mat-error>
+      }
+    </mat-form-field>
+
+    @if (esteIndividual) {
+      <div class="avertisment">
+        <mat-icon>privacy_tip</mat-icon>
+        <p>{{ avertismentIndividual }}</p>
+      </div>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Motivul publicării</mat-label>
+        <textarea matInput formControlName="motiv" rows="3" maxlength="1000"
+                  placeholder="Ex: publicare cerută de instanță / necesară procedurii."></textarea>
+        @if (form.controls.motiv.hasError('required')) {
+          <mat-error>Motivul este obligatoriu la publicarea unei dispoziții individuale.</mat-error>
+        }
+      </mat-form-field>
+    }
+
+    @if (eroare(); as mesaj) {
+      <p class="eroare">{{ mesaj }}</p>
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" mat-dialog-close>Renunță</button>
+    <button mat-flat-button type="submit" [disabled]="seSalveaza()">
+      {{ seSalveaza() ? 'Se publică...' : 'Publică în MOL' }}
+    </button>
+  </mat-dialog-actions>
+</form>

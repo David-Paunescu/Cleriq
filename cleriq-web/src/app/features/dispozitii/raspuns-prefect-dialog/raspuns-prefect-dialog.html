@@ -1,0 +1,65 @@
+<h2 mat-dialog-title>Răspuns prefect</h2>
+
+<form [formGroup]="form" (ngSubmit)="salveaza()">
+  <mat-dialog-content class="continut">
+    <div class="context">
+      <span class="context-rand">
+        <span class="eticheta">Comunicare</span>
+        <span>nr. {{ comunicare.numarOrdineInRegistru }}/{{ comunicare.anRegistru }}</span>
+      </span>
+      <span class="context-rand">
+        <span class="eticheta">Trimisă</span>
+        <span>{{ formateazaDataDoar(comunicare.dataTrimiteri) }}
+          · {{ etichetaCanal(comunicare.canalTransmitere) }}</span>
+      </span>
+    </div>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Răspuns prefect</mat-label>
+      <mat-select formControlName="raspuns">
+        <mat-option [value]="null">— neînregistrat —</mat-option>
+        @for (r of raspunsuri; track r) {
+          <mat-option [value]="r">{{ etichetaRaspuns(r) }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Data răspunsului</mat-label>
+      <input matInput type="date" formControlName="dataRaspuns" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Obiecții motivate</mat-label>
+      <textarea matInput formControlName="obiectiiMotivate" rows="3" maxlength="2000"
+                placeholder="Opțional — la respingere pe motive de legalitate"></textarea>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Nr. înregistrare prefectură</mat-label>
+      <input matInput formControlName="nrInregistrarePrefect" maxlength="100" placeholder="Opțional" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Data confirmării prefectură</mat-label>
+      <input matInput type="date" formControlName="dataConfirmarePrefect" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Observații interne</mat-label>
+      <textarea matInput formControlName="observatiiInterne" rows="2" maxlength="1000"
+                placeholder="Opțional"></textarea>
+    </mat-form-field>
+
+    @if (eroare(); as mesaj) {
+      <p class="eroare">{{ mesaj }}</p>
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" mat-dialog-close>Renunță</button>
+    <button mat-flat-button type="submit" [disabled]="seSalveaza()">
+      {{ seSalveaza() ? 'Se salvează...' : 'Salvează' }}
+    </button>
+  </mat-dialog-actions>
+</form>

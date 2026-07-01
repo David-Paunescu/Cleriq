@@ -1,7 +1,7 @@
 import {
   Component, ElementRef, OnDestroy, OnInit, computed, effect, inject, signal, viewChild
 } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
@@ -18,12 +18,25 @@ import {
 } from '../../../core/modificari/modificari-nesalvate.service';
 import { ConfirmareDialog, DateConfirmare } from '../../../shared/confirmare/confirmare-dialog';
 import { formateazaDataOra } from '../../../shared/data';
-import { StatusActRedactional } from '../../../shared/enums';
+import { StatusActRedactional, TipDispozitie } from '../../../shared/enums';
 import { etichetaStatusActRedactional, etichetaTipDispozitie } from '../../../shared/etichete';
 import {
   AtribuieNumarDispozitieDialog, DateAtribuireNumarDispozitieDialog
 } from '../atribuie-numar-dialog/atribuie-numar-dialog';
+import {
+  DateInvalidareDispozitieDialog, InvalidareDispozitieDialog
+} from '../invalidare-dialog/invalidare-dialog';
+import {
+  DatePublicarePortalDispozitieDialog, PublicarePortalDispozitieDialog
+} from '../publicare-portal-dialog/publicare-portal-dialog';
+import {
+  DatePublicareMolDispozitieDialog, PublicareMolDispozitieDialog
+} from '../publicare-mol-dialog/publicare-mol-dialog';
+import {
+  DateAnulareMolDispozitieDialog, AnulareMolDispozitieDialog
+} from '../anulare-mol-dialog/anulare-mol-dialog';
 import { SemnatariDispozitieTab } from '../semnatari-tab/semnatari-tab';
+import { ComunicariDispozitieTab } from '../comunicari-tab/comunicari-tab';
 import { DispozitieDetalii } from '../dispozitii.models';
 import { actiuniPermise } from '../dispozitii.permisiuni';
 import { DispozitiiService } from '../dispozitii.service';
@@ -33,8 +46,8 @@ const DEBOUNCE_AUTOSAVE_MS = 2000;
 @Component({
   selector: 'app-dispozitie-detalii',
   imports: [
-    MatTabsModule, MatIconModule, MatButtonModule,
-    MatMenuModule, MatTooltipModule, MatProgressSpinnerModule, SemnatariDispozitieTab
+    MatTabsModule, MatIconModule, MatButtonModule, MatMenuModule, MatTooltipModule,
+    MatProgressSpinnerModule, RouterLink, SemnatariDispozitieTab, ComunicariDispozitieTab
   ],
   templateUrl: './dispozitie-detalii.html',
   styleUrl: './dispozitie-detalii.scss'
@@ -57,6 +70,7 @@ export class DispozitieDetaliiPagina implements OnInit, OnDestroy {
 
   readonly seSemneaza = signal(false);
   readonly seDescarcaPdf = signal(false);
+  readonly actiuneStareLegala = signal(false);
 
   // === Editor (paritate hcl-detalii / ProcesVerbalTab) ===
   readonly valoareEditor = signal('');
@@ -341,6 +355,131 @@ export class DispozitieDetaliiPagina implements OnInit, OnDestroy {
     } finally {
       this.seDescarcaPdf.set(false);
     }
+  }
+
+  // === Stări legale (antet, meniul ⋮) ===
+
+  async comutaPublicare(): Promise<void> {
+    const act = this.actiuni();
+    if (this.actiuneStareLegala()) return;
+
+    if (act.poatePublica) {
+      // Individual → override deliberat (avertisment GDPR + motiv); Normativ → toggle direct.
+      if (this.dispozitie()!.tipDispozitie === TipDispozitie.Individual) {
+        const date: DatePublicarePortalDispozitieDialog = { dispozitieId: this.id };
+        const rezultat = await firstValueFrom(
+          this.dialog.open<PublicarePortalDispozitieDialog, DatePublicarePortalDispozitieDialog, DispozitieDetalii | undefined>(
+            PublicarePortalDispozitieDialog, { data: date, width: '480px', maxWidth: '95vw' }).afterClosed());
+        if (!rezultat) return;
+        this.dispozitie.set(rezultat);
+        this.snackBar.open('Dispoziția a fost publicată pe portal.', 'Închide', { duration: 4000 });
+        return;
+      }
+      await this.executaStareLegala(
+        () => this.api.publica(this.id, true), 'Dispoziția a fost publicată pe portal.');
+      return;
+    }
+    if (act.poateDepublica) {
+      const confirmat = await this.confirma({
+        titlu: 'Retragere de pe portal',
+        mesaj: 'Dispoziția nu va mai fi vizibilă pe portalul public. O poți republica oricând.',
+        etichetaConfirmare: 'Retrage',
+        periculos: true
+      });
+      if (!confirmat) return;
+      await this.executaStareLegala(
+        () => this.api.publica(this.id, false), 'Dispoziția a fost retrasă de pe portal.');
+    }
+  }
+
+  async deschidePublicareMol(): Promise<void> {
+    if (!this.actiuni().poatePublicaMol) return;
+    const date: DatePublicareMolDispozitieDialog = {
+      dispozitieId: this.id, tip: this.dispozitie()!.tipDispozitie
+    };
+    const rezultat = await firstValueFrom(
+      this.dialog.open<PublicareMolDispozitieDialog, DatePublicareMolDispozitieDialog, DispozitieDetalii | undefined>(
+        PublicareMolDispozitieDialog, { data: date, width: '480px', maxWidth: '95vw' }).afterClosed());
+    if (!rezultat) return;
+    this.dispozitie.set(rezultat);
+    this.snackBar.open('Dispoziția a fost publicată în MOL.', 'Închide', { duration: 4000 });
+  }
+
+  async anuleazaMol(): Promise<void> {
+    if (!this.actiuni().poateAnulaMol) return;
+    const date: DateAnulareMolDispozitieDialog = { dispozitieId: this.id };
+    const rezultat = await firstValueFrom(
+      this.dialog.open<AnulareMolDispozitieDialog, DateAnulareMolDispozitieDialog, DispozitieDetalii | undefined>(
+        AnulareMolDispozitieDialog, { data: date, width: '460px', maxWidth: '95vw' }).afterClosed());
+    if (!rezultat) return;
+    this.dispozitie.set(rezultat);
+    this.snackBar.open('Publicarea în MOL a fost anulată.', 'Închide', { duration: 4000 });
+  }
+
+  async deschideInvalidare(): Promise<void> {
+    if (!this.actiuni().poateInvalida) return;
+    const date: DateInvalidareDispozitieDialog = { dispozitieId: this.id };
+    const rezultat = await firstValueFrom(
+      this.dialog.open<InvalidareDispozitieDialog, DateInvalidareDispozitieDialog, DispozitieDetalii | undefined>(
+        InvalidareDispozitieDialog, { data: date, width: '520px', maxWidth: '95vw' }).afterClosed());
+    if (!rezultat) return;
+    this.dispozitie.set(rezultat);
+    this.snackBar.open('Dispoziția a fost invalidată.', 'Închide', { duration: 4000 });
+  }
+
+  async anuleazaInvalidare(): Promise<void> {
+    if (!this.actiuni().poateAnulaInvalidare || this.actiuneStareLegala()) return;
+    const confirmat = await this.confirma({
+      titlu: 'Anulare invalidare',
+      mesaj: 'Dispoziția revine în vigoare (se șterg motivul și referința invalidării). Folosit doar pentru corecții administrative.',
+      etichetaConfirmare: 'Anulează invalidarea',
+      periculos: true
+    });
+    if (!confirmat) return;
+    await this.executaStareLegala(
+      () => this.api.anuleazaInvalidare(this.id), 'Invalidarea a fost anulată.');
+  }
+
+  async sterge(): Promise<void> {
+    if (!this.actiuni().poateSterge || this.actiuneStareLegala()) return;
+    const confirmat = await this.confirma({
+      titlu: 'Ștergere dispoziție',
+      mesaj: 'Dispoziția va fi ștearsă definitiv. Numărul atribuit rămâne consumat în registru (nu se reutilizează).',
+      etichetaConfirmare: 'Șterge',
+      periculos: true
+    });
+    if (!confirmat) return;
+
+    this.actiuneStareLegala.set(true);
+    try {
+      await this.api.sterge(this.id);
+      // Actul e șters → nu bloca navigarea cu „modificări nesalvate" din editorul de conținut.
+      this.modificari.retragere(this.proprietar.id);
+      this.snackBar.open('Dispoziția a fost ștearsă.', 'Închide', { duration: 4000 });
+      this.router.navigate(['/dispozitii']);
+    } catch (err) {
+      this.snackBar.open(extrageMesajEroare(err), 'Închide', { duration: 5000 });
+      this.actiuneStareLegala.set(false);
+    }
+  }
+
+  private async executaStareLegala(
+    actiune: () => Promise<DispozitieDetalii>, mesajSucces: string): Promise<void> {
+    this.actiuneStareLegala.set(true);
+    try {
+      this.dispozitie.set(await actiune());
+      this.snackBar.open(mesajSucces, 'Închide', { duration: 4000 });
+    } catch (err) {
+      this.snackBar.open(extrageMesajEroare(err), 'Închide', { duration: 5000 });
+    } finally {
+      this.actiuneStareLegala.set(false);
+    }
+  }
+
+  private async confirma(date: DateConfirmare): Promise<boolean> {
+    return !!(await firstValueFrom(
+      this.dialog.open(ConfirmareDialog, { data: date, width: '520px', maxWidth: '95vw' })
+        .afterClosed()));
   }
 
   inapoiLaLista(): void {

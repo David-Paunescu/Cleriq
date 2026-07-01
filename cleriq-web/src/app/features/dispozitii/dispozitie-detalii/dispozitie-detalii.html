@@ -64,6 +64,59 @@
           PDF
         </button>
       }
+
+      @if (actiuni().poatePublica) {
+        <button mat-stroked-button (click)="comutaPublicare()" [disabled]="actiuneStareLegala()">
+          <mat-icon>public</mat-icon>
+          Publică pe portal
+        </button>
+      } @else if (actiuni().poateDepublica) {
+        <button mat-stroked-button (click)="comutaPublicare()" [disabled]="actiuneStareLegala()">
+          <mat-icon>public_off</mat-icon>
+          Retrage de pe portal
+        </button>
+      }
+
+      @if (actiuni().poatePublicaMol || actiuni().poateAnulaMol
+           || actiuni().poateInvalida || actiuni().poateAnulaInvalidare
+           || actiuni().poateSterge) {
+        <button mat-icon-button [matMenuTriggerFor]="meniuAntet"
+                [disabled]="actiuneStareLegala()" matTooltip="Mai multe acțiuni">
+          <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #meniuAntet="matMenu">
+          @if (actiuni().poatePublicaMol) {
+            <button mat-menu-item (click)="deschidePublicareMol()">
+              <mat-icon>menu_book</mat-icon>
+              <span>Publică în MOL</span>
+            </button>
+          }
+          @if (actiuni().poateAnulaMol) {
+            <button mat-menu-item (click)="anuleazaMol()">
+              <mat-icon>undo</mat-icon>
+              <span>Anulează publicarea MOL</span>
+            </button>
+          }
+          @if (actiuni().poateInvalida) {
+            <button mat-menu-item (click)="deschideInvalidare()">
+              <mat-icon>gavel</mat-icon>
+              <span>Invalidează</span>
+            </button>
+          }
+          @if (actiuni().poateAnulaInvalidare) {
+            <button mat-menu-item (click)="anuleazaInvalidare()">
+              <mat-icon>restore</mat-icon>
+              <span>Anulează invalidarea</span>
+            </button>
+          }
+          @if (actiuni().poateSterge) {
+            <button mat-menu-item (click)="sterge()">
+              <mat-icon>delete</mat-icon>
+              <span>Șterge dispoziția</span>
+            </button>
+          }
+        </mat-menu>
+      }
     </div>
   </div>
 
@@ -85,6 +138,16 @@
 
         <dt>Status</dt>
         <dd><span [class]="claseStatus(d.status)">{{ etichetaStatusActRedactional(d.status) }}</span></dd>
+
+        @if (d.sedintaId) {
+          <dt>Convocare</dt>
+          <dd>
+            Dispoziție de convocare —
+            <a class="link-sedinta" [routerLink]="['/sedinte', d.sedintaId]">
+              ședința #{{ d.sedintaId }}
+            </a>
+          </dd>
+        }
 
         @if (d.dataInvalidare) {
           <dt>Invalidare</dt>
@@ -146,6 +209,11 @@
     <mat-tab label="Semnatari">
       <app-semnatari-dispozitie-tab
         [dispozitie]="d" [actiuni]="actiuni()" (actualizat)="dispozitie.set($event)" />
+    </mat-tab>
+
+    <mat-tab label="Comunicări">
+      <app-comunicari-dispozitie-tab
+        [dispozitieId]="d.id" [status]="d.status" (schimbat)="incarca()" />
     </mat-tab>
   </mat-tab-group>
 }

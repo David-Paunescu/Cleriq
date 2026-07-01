@@ -1,0 +1,44 @@
+<h2 mat-dialog-title>Adaugă comunicare către prefect</h2>
+
+<form [formGroup]="form" (ngSubmit)="adauga()">
+  <mat-dialog-content class="continut">
+    <mat-form-field appearance="outline">
+      <mat-label>Data trimiterii</mat-label>
+      <input matInput type="date" formControlName="dataTrimiteri" />
+      @if (form.controls.dataTrimiteri.hasError('required')) {
+        <mat-error>Data este obligatorie.</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Canal de transmitere</mat-label>
+      <mat-select formControlName="canalTransmitere">
+        @for (c of canale; track c) {
+          <mat-option [value]="c">{{ etichetaCanal(c) }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Nr. înregistrare prefectură</mat-label>
+      <input matInput formControlName="nrInregistrarePrefect" maxlength="100" placeholder="Opțional" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Observații interne</mat-label>
+      <textarea matInput formControlName="observatiiInterne" rows="3" maxlength="1000"
+                placeholder="Opțional"></textarea>
+    </mat-form-field>
+
+    @if (eroare(); as mesaj) {
+      <p class="eroare">{{ mesaj }}</p>
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" mat-dialog-close>Renunță</button>
+    <button mat-flat-button type="submit" [disabled]="seSalveaza()">
+      {{ seSalveaza() ? 'Se salvează...' : 'Adaugă' }}
+    </button>
+  </mat-dialog-actions>
+</form>
