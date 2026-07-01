@@ -245,7 +245,7 @@ export function etichetaRaspunsPrefect(r: RaspunsPrefect | null | undefined): st
   if (r == null) return 'Fără răspuns';
   switch (r) {
     case RaspunsPrefect.Acceptat: return 'Acceptat';
-    case RaspunsPrefect.RespinsLegalitate: return 'Respins pe legalitate';
+    case RaspunsPrefect.RespinsLegalitate: return 'Respins';
     case RaspunsPrefect.CereClarificari: return 'Cere clarificări';
     case RaspunsPrefect.FaraRaspuns: return 'Fără răspuns';
   }
