@@ -12,7 +12,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { extrageMesajEroare } from '../../../core/http/erori';
 import { ConfirmareDialog, DateConfirmare } from '../../../shared/confirmare/confirmare-dialog';
 import { formateazaDataDoar } from '../../../shared/data';
-import { RaspunsPrefect, StatusHclRedactional } from '../../../shared/enums';
+import { RaspunsPrefect, StatusActRedactional } from '../../../shared/enums';
 import { etichetaCanalTransmiterePrefect, etichetaRaspunsPrefect } from '../../../shared/etichete';
 import {
   ComunicareDialog, DateComunicareDialog
@@ -43,7 +43,7 @@ export class ComunicariTab implements OnInit {
   private readonly router = inject(Router);
 
   readonly hclId = input.required<number>();
-  readonly status = input.required<StatusHclRedactional>();
+  readonly status = input.required<StatusActRedactional>();
 
   readonly seIncarca = signal(false);
   readonly eroare = signal<string | null>(null);
@@ -58,7 +58,7 @@ export class ComunicariTab implements OnInit {
   readonly coloane = computed(() =>
     this.actiuni().poateEdita || this.actiuni().poateSterge ? [...COLOANE, 'actiuni'] : COLOANE);
 
-  readonly StatusHclRedactional = StatusHclRedactional;
+  readonly StatusActRedactional = StatusActRedactional;
   readonly etichetaCanal = etichetaCanalTransmiterePrefect;
   readonly etichetaRaspuns = etichetaRaspunsPrefect;
   readonly formateazaDataDoar = formateazaDataDoar;

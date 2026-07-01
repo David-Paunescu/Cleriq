@@ -1,4 +1,4 @@
-import { RolSemnatar, StatusHclRedactional } from '../../shared/enums';
+import { RolSemnatar, StatusActRedactional } from '../../shared/enums';
 import { HclDetalii } from './hcl.models';
 
 export interface ActiuniHcl {
@@ -34,12 +34,12 @@ export interface ActiuniComunicari {
 }
 
 export function actiuniComunicari(
-  status: StatusHclRedactional | null,
+  status: StatusActRedactional | null,
   esteAdminSauSecretar: boolean,
   esteAdmin: boolean
 ): ActiuniComunicari {
-  const celPutinNumerotat = status === StatusHclRedactional.Numerotat
-    || status === StatusHclRedactional.Semnat;
+  const celPutinNumerotat = status === StatusActRedactional.Numerotat
+    || status === StatusActRedactional.Semnat;
   return {
     poateAdauga: esteAdminSauSecretar && celPutinNumerotat,
     poateEdita: esteAdminSauSecretar,
@@ -73,14 +73,14 @@ export interface ActiuniAnexe {
 }
 
 export function actiuniAnexe(
-  status: StatusHclRedactional | null,
+  status: StatusActRedactional | null,
   esteAdminSauSecretar: boolean
 ): ActiuniAnexe {
   return {
     poateAdauga: esteAdminSauSecretar,
     poateEdita: esteAdminSauSecretar,
     poateSterge: esteAdminSauSecretar,
-    numarOrdinBlocat: status === StatusHclRedactional.Semnat
+    numarOrdinBlocat: status === StatusActRedactional.Semnat
   };
 }
 
@@ -110,9 +110,9 @@ export function actiuniPermise(
   esteAdmin: boolean
 ): ActiuniHcl {
   const status = hcl?.status ?? null;
-  const esteSemnat = status === StatusHclRedactional.Semnat;
-  const esteDraft = status === StatusHclRedactional.Draft;
-  const esteNumerotat = status === StatusHclRedactional.Numerotat;
+  const esteSemnat = status === StatusActRedactional.Semnat;
+  const esteDraft = status === StatusActRedactional.Draft;
+  const esteNumerotat = status === StatusActRedactional.Numerotat;
   const celPutinNumerotat = esteNumerotat || esteSemnat;  // Status >= Numerotat
 
   const estePublicat = hcl?.estePublicat ?? false;

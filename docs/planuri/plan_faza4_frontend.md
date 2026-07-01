@@ -88,12 +88,15 @@ publicare, comunicări); excludem ce ține de altă fază. ◆ Am renunțat la g
   `etichetaStatusHcl → etichetaStatusActRedactional` în `shared/etichete.ts`. Motiv: un al doilea enum
   FE cu aceleași valori = drift garantat; redenumirea oglindește backend-ul (o singură sursă de adevăr).
   Valorile int rămân (`Draft=1, Numerotat=2, Semnat=3`) → JSON neschimbat.
-  - **Execuție (la F1):** pas **izolat**, cu HCL verde (build+lint+smoke) ÎNAINTE de orice cod de
-    dispoziție. **Grep repo-wide** (nu doar `features/hcl/` — `shared/enums.ts`+`shared/etichete.ts` îl
-    importă), **`.ts` ȘI `.html`**. Ca să atingi cât mai puțin `.html` HCL: redenumești enum-ul + funcția
-    în `shared/`, dar **lași proprietățile locale din componentele HCL cu numele vechi**
-    (`readonly etichetaStatusHcl = etichetaStatusActRedactional`) — enum-ul rămâne curat, doar câteva
-    alias-uri interne rămân legacy.
+  - ◆ **Execuție (la F1) — rename complet și curat, FĂRĂ alias.** Rename-ul tipului atinge oricum toate
+    fișierele `.ts` HCL care referă enum-ul (fiecare `StatusHclRedactional.X` + adnotare de tip), deci
+    alias-ul (`etichetaStatusHcl = etichetaStatusActRedactional`) ar salva doar ~2 referințe din
+    `hcl-detalii.html` — economie neglijabilă pentru un nume permanent inconsecvent. Deci redenumim și
+    proprietățile locale din componentele HCL + referințele din `.html`. Pas **izolat**, **grep repo-wide**
+    (`shared/enums.ts`+`shared/etichete.ts` îl importă), **`.ts` ȘI `.html`**, cu HCL verde (build + lint +
+    smoke) ca plasă — schimbarea e pur mecanică, iar build-ul + AOT prind orice referință scăpată.
+    *Fallback (doar dacă vrei churn zero pe HCL acum):* nu redenumi — dispoziția importă
+    `StatusHclRedactional` ca atare, redenumirea = cleanup ulterior. NU folosim varianta cu alias pe jumătate.
 - **`TipDispozitie`** (nou, separat de `TipHcl`): `Normativ=1, Individual=2` + `etichetaTipDispozitie`.
   ◆ Corect enum nou (backend ține `TipDispozitie` separat de `TipHcl`).
 - **`RolSemnatarDispozitie`** (nou): `Emitent=1, SecretarContrasemnatura=2` + `etichetaRolSemnatarDispozitie`
@@ -131,9 +134,11 @@ Cunoaștem `tipDispozitie` client-side → **ramificăm proactiv** (nu așteptă
 - **Depublicarea** (Individual) e liberă (backend gatează doar când `estePublicat=true`) → „Retrage de pe
   portal" rămâne toggle simplu la ambele tipuri.
 
-**Recomandare:** un singur dialog reutilizabil `publicare-individuala-dialog` (avertisment + motiv) pentru
-calea „portal"; `publicare-mol-dialog` include blocul condițional. Ambele citesc constanta GDPR partajată
-(§3) + validează motivul la fel.
+**Recomandare:** dialogul de portal-individual (avertisment + motiv obligatoriu ≤1000) e structural identic
+cu `anulare-mol-dialog` → ◆ **adaptăm forma aceluia**, nu o componentă complet nouă (o singură formă de
+validare). `publicare-mol-dialog` include blocul condițional. ◆ Ambele dialoguri au nevoie de `tipDispozitie`
+în `MAT_DIALOG_DATA` (date dialog = `{ dispozitieId, tip }`) ca să deseneze condiționat blocul individual.
+Ambele citesc constanta GDPR partajată (§3) + validează motivul la fel.
 
 ### B. Ireversibilitatea latch-ului (`aIntratInCircuit`)
 
@@ -227,6 +232,12 @@ serviciul apelat), nu parametrizare cu token/`input`.
   **înlocuiește** `poateGestionaSemnatari` din HCL.
 - Variantă semnată (latch): `poateIncarcaSemnat` / `poateInlocuiSemnat` / `poateStergeSemnat` /
   `poateDescarcaSemnat` — identic HCL (`Semnat`, fișier, `!aIntratInCircuit`, Admin la ștergere).
+- ◆ **Două capcane de nume (aceleași ca la HCL) — de fixat din start, altfel oglinda driftează tăcut:**
+  (1) `esteSemnat` (bool DTO = are PDF semnat atașat) **≠** `status === Semnat` (ciclu de viață); DTO-ul are
+  ambele câmpuri distinct. (2) `poateIncarcaSemnat` **NU** verifică `!aIntratInCircuit` — prima atașare e
+  permisă și după intrarea în circuit (gardă backend: freeze doar când există DEJA fișier,
+  `DispozitiiController.cs:336`; doar `poateInlocui`/`poateSterge` verifică latch-ul). Un mirror naiv care
+  adaugă latch-ul la Încarcă rupe upload-ul legitim post-circuit.
 - ◆ `poateSterge` (act întreg): boolean exact din matricea controllerului (liniile 547-571):
   **`Admin && !areComunicari && (invalidat || (!Semnat && !Publicat))`**. Atenție la precedență: invalidat
   → OK **chiar dacă e Semnat/Publicat** (un mirror naiv `!Semnat && !Publicat` ar ascunde greșit butonul pe
@@ -247,14 +258,17 @@ serviciul apelat), nu parametrizare cu token/`input`.
 
 **Cadență de verificare (FE):** după fiecare pas — `npm run build` + `npm run lint` curat + **smoke manual**
 în app pe fluxul atins (rulez eu, îți arăt rezultatul). Pentru logica pură recomand **un spec Vitest** pe
-`dispozitii.permisiuni.ts` (oglinda gărzilor — high-value, ieftin). NU forțăm test-per-componentă (nu e
-cultura FE aici).
+`dispozitii.permisiuni.ts` (oglinda gărzilor — high-value, ieftin). ◆ Specul fixează explicit **exact
+locurile unde oglinda driftează fără eroare de compilare**: `poateIncarcaSemnat` permis post-circuit (fără
+latch); `esteSemnat` vs `status===Semnat`; `poateSterge` = true pe invalidat+semnat; `semnatariCompleti` pe
+calea de refuz (secretar soft-șters + obiecție). NU forțăm test-per-componentă (nu e cultura FE aici).
 
 ### Faza FE-A — Fundație (fără ecrane)
-- **F1 — ◆ redenumire enum + enums/etichete noi.** Redenumire `StatusHclRedactional → StatusActRedactional`
-  (+ `etichetaStatusHcl → etichetaStatusActRedactional`), **izolat, grep repo-wide `.ts`+`.html`, HCL verde**
-  (§3). Apoi enum-urile noi `TipDispozitie`, `RolSemnatarDispozitie` + etichetele + constanta GDPR partajată.
-  Checkpoint: build + lint + smoke HCL (dovadă zero regresie pe redenumire).
+- **F1 — ◆ redenumire enum (complet, fără alias) + enums/etichete noi.** Redenumire
+  `StatusHclRedactional → StatusActRedactional` (+ `etichetaStatusHcl → etichetaStatusActRedactional`),
+  **complet** (inclusiv proprietăți locale HCL + referințe `.html`), **izolat, grep repo-wide `.ts`+`.html`,
+  HCL verde** (§3). Apoi enum-urile noi `TipDispozitie`, `RolSemnatarDispozitie` + etichetele + constanta
+  GDPR partajată. Checkpoint: build + lint + smoke HCL (dovadă zero regresie pe redenumire).
 - **F2 — models + service + permisiuni.** `dispozitii.models.ts` (oglindă `DispozitieDto` /
   `DispozitieDetaliiDto` / `SemnatarDispozitieDto` / `ComunicareDispozitiePrefectDto`), `dispozitii.service.ts`
   (toate endpoint-urile din §8), `dispozitii.permisiuni.ts` (§6). Checkpoint: build + lint + spec permisiuni.
@@ -272,8 +286,9 @@ cultura FE aici).
 - **F6 — `dispozitie-detalii` (schelet).** Antet cu badge-uri (Tip / Status / Invalidat / Publicat /
   Publicat MOL / Convocare / Contrasemnătură refuzată) + acțiuni (Atribuie număr / Semnează / PDF); tab
   **Detalii** (`<dl>`) + tab **Conținut** (editor auto-save, reuse pattern). ◆ NU afișa `DataIntrareInVigoare`
-  (backend nu-l setează — mereu null). Reuse `atribuie-numar-dialog` (copie, §5). Checkpoint: Creează →
-  editează → numerotează → PDF.
+  (backend nu-l setează — mereu null). Reuse `atribuie-numar-dialog` (copie, §5). ◆ **Prerechizită de date
+  dev:** calea semnabilă cere mandat de primar ȘI de secretar valide „azi" (altfel `Creeaza` dă 400) — de
+  confirmat mandatele seedate înainte de smoke. Checkpoint: Creează → editează → numerotează → PDF.
 
 ### Faza FE-C — Semnatari + refuz + variantă semnată
 - **F7 — `semnatari-tab`.** Afișare read-only Emitent + Secretar/refuz (card „Contrasemnătură refuzată" =
@@ -341,9 +356,11 @@ cultura FE aici).
 
 ## 9. ◆ Decizii — REZOLVATE
 
-1. **Numele enum-ului de status pe FE.** **REZOLVAT: redenumire** `StatusHclRedactional → StatusActRedactional`
-   (+ eticheta), izolat la F1, grep repo-wide `.ts`+`.html`, HCL verde. Oglindește backend-ul (unificat la
-   Pas 1) → o singură sursă. NU enum paralel (drift).
+1. **Numele enum-ului de status pe FE.** **REZOLVAT: redenumire completă, fără alias**
+   `StatusHclRedactional → StatusActRedactional` (+ eticheta + proprietăți locale HCL + referințe `.html`),
+   izolat la F1, grep repo-wide `.ts`+`.html`, HCL verde. Oglindește backend-ul (unificat la Pas 1) → o
+   singură sursă. NU enum paralel (drift), NU alias pe jumătate (nume inconsecvent). *Fallback:* dacă vrei
+   churn zero pe HCL acum, nu redenumi deloc (dispoziția importă `StatusHclRedactional`) + cleanup ulterior.
 2. **Comunicări: generalizare vs. paralel.** **REZOLVAT: paralel** (copie sub `dispozitii/`), fiindcă
    dialogurile injectează `HclService` + fac ele apelul → generalizarea e mai invazivă mid-feature; drift mic.
    **Copia adaugă output-ul de staleness** care lipsește în HCL (add+delete → hub refetch). Generalizarea
@@ -355,8 +372,13 @@ cultura FE aici).
    pe 400 → mesaj brut inline, **fără string-matching**. Filtrarea la viceprimari (via mandate) = enhancement
    ulterior.
 
-**În afara Fazei 4 (de urmărit separat):** bug-ul geamăn din HCL — `comunicari-tab` HCL n-are output →
-aceeași scăpare de staleness (latch fără refetch la părinte). Îl reparăm printr-un task dedicat, nu aici.
+**În afara Fazei 4 (de urmărit ca tichete separate):**
+- Bug-ul geamăn din HCL — `comunicari-tab` HCL n-are output → aceeași scăpare de staleness (latch fără
+  refetch la părinte). Task dedicat, nu aici.
+- ◆ **Authz GDPR pe individuale (backend, preexistent):** `GET {id}` / `{id}/Pdf` / `{id}/Semnat` n-au
+  gardă de rol — orice utilizator autentificat (inclusiv un consilier) poate deschide o dispoziție de
+  personal + PDF-ul ei semnat. `research_dispozitii.md` §8 cere control de acces intern pe individuale.
+  FE-ul doar oglindește backend-ul (nu introduce el problema), dar merită un tichet de authz backend.
 
 ---
 

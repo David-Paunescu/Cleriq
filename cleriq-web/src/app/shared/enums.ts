@@ -115,7 +115,7 @@ export enum RolComisie {
 
 // === HCL (Modul A) ===
 
-export enum StatusHclRedactional {
+export enum StatusActRedactional {
   Draft = 1,
   Numerotat = 2,
   Semnat = 3
@@ -174,4 +174,16 @@ export enum TipDocumentHcl {
   AvizComisie = 4,
   Justificativ = 5,
   Altul = 6
+}
+
+// === Dispoziții (Modul C) ===
+
+export enum TipDispozitie {
+  Normativ = 1,
+  Individual = 2
+}
+
+export enum RolSemnatarDispozitie {
+  Emitent = 1,
+  SecretarContrasemnatura = 2
 }

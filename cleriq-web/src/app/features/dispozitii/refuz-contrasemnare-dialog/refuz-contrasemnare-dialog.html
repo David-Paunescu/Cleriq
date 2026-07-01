@@ -1,0 +1,30 @@
+<h2 mat-dialog-title>Refuz de contrasemnare</h2>
+
+<mat-dialog-content>
+  <p class="avertisment">
+    Consemnezi refuzul secretarului de a contrasemna pentru nelegalitate (art. 197 alin. (3) Cod adm.).
+    Rândul de contrasemnătură va fi eliminat, iar primarul va putea semna pe răspundere proprie.
+    <strong>Acțiunea nu poate fi anulată.</strong>
+  </p>
+
+  <form [formGroup]="form">
+    <mat-form-field appearance="outline" class="camp-obiectie">
+      <mat-label>Obiecția de legalitate motivată</mat-label>
+      <textarea matInput formControlName="obiectie" rows="5" maxlength="2000"
+                placeholder="Motivele de nelegalitate invocate de secretar."></textarea>
+      <mat-hint align="end">max. 2000</mat-hint>
+      <mat-error>Obiecția de legalitate este obligatorie.</mat-error>
+    </mat-form-field>
+  </form>
+
+  @if (eroare(); as mesaj) {
+    <p class="eroare-inline">{{ mesaj }}</p>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close [disabled]="seSalveaza()">Anulează</button>
+  <button mat-flat-button (click)="refuza()" [disabled]="seSalveaza()">
+    {{ seSalveaza() ? 'Se salvează...' : 'Consemnează refuzul' }}
+  </button>
+</mat-dialog-actions>

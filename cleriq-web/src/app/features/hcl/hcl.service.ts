@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { StatusHclRedactional, TipHcl } from '../../shared/enums';
+import { StatusActRedactional, TipHcl } from '../../shared/enums';
 import {
   ActualizareComunicare, AdaugareSemnatar, AtribuireNumarHcl, ComunicareHclPrefect, CreareComunicare,
   CreareHcl, CreareRelatie, EditareContinutHcl, Hcl, HclDetalii, InvalidareHcl, RelatieHcl, RelatiiHcl,
@@ -11,7 +11,7 @@ import {
 
 export interface FiltreHcl {
   an?: number;
-  status?: StatusHclRedactional;
+  status?: StatusActRedactional;
   tipHcl?: TipHcl;
   skip?: number;
   take?: number;

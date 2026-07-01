@@ -1,8 +1,9 @@
 import { ModDesfasurare, StatusSedinta, TipSedinta, OptiuneVot, RezultatPunct, StatusPrezenta,
          TipMajoritate, TipPunct, TipVot, TipDocument, StatusTrimitere, StatusConvocare,
          CanalNotificare, StatusIncercare, StatusTranscriere, StatusProcesVerbal, TipFunctie,
-         RolComisie, StatusHclRedactional, TipHcl, RolSemnatar, TipRelatieHcl, MotivInvalidare,
-         CanalTransmiterePrefect, RaspunsPrefect, TipDocumentHcl  } from './enums';
+         RolComisie, StatusActRedactional, TipHcl, RolSemnatar, TipRelatieHcl, MotivInvalidare,
+         CanalTransmiterePrefect, RaspunsPrefect, TipDocumentHcl, TipDispozitie,
+         RolSemnatarDispozitie  } from './enums';
 
 export function etichetaTipSedinta(t: TipSedinta): string {
   switch (t) {
@@ -159,11 +160,11 @@ export function etichetaRolComisie(r: RolComisie): string {
 
 // === HCL (Modul A) ===
 
-export function etichetaStatusHcl(s: StatusHclRedactional): string {
+export function etichetaStatusActRedactional(s: StatusActRedactional): string {
   switch (s) {
-    case StatusHclRedactional.Draft: return 'Draft';
-    case StatusHclRedactional.Numerotat: return 'Numerotat';
-    case StatusHclRedactional.Semnat: return 'Semnat';
+    case StatusActRedactional.Draft: return 'Draft';
+    case StatusActRedactional.Numerotat: return 'Numerotat';
+    case StatusActRedactional.Semnat: return 'Semnat';
   }
 }
 
@@ -247,5 +248,21 @@ export function etichetaTipDocumentHcl(t: TipDocumentHcl | null | undefined): st
     case TipDocumentHcl.AvizComisie: return 'Aviz comisie';
     case TipDocumentHcl.Justificativ: return 'Document justificativ';
     case TipDocumentHcl.Altul: return 'Altul';
+  }
+}
+
+// === Dispoziții (Modul C) ===
+
+export function etichetaTipDispozitie(t: TipDispozitie): string {
+  switch (t) {
+    case TipDispozitie.Normativ: return 'Normativ';
+    case TipDispozitie.Individual: return 'Individual';
+  }
+}
+
+export function etichetaRolSemnatarDispozitie(r: RolSemnatarDispozitie): string {
+  switch (r) {
+    case RolSemnatarDispozitie.Emitent: return 'Emitent (primar)';
+    case RolSemnatarDispozitie.SecretarContrasemnatura: return 'Secretar general (contrasemnătură)';
   }
 }

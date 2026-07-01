@@ -1,0 +1,47 @@
+<h2 mat-dialog-title>Creează dispoziție</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="form" class="form-creare">
+    <mat-form-field appearance="outline">
+      <mat-label>Tip</mat-label>
+      <mat-select formControlName="tipDispozitie">
+        @for (t of tipuri; track t) {
+          <mat-option [value]="t">{{ etichetaTip(t) }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Titlu</mat-label>
+      <input matInput formControlName="titlu" maxlength="500" placeholder="Obiectul dispoziției" />
+      <mat-error>Titlul este obligatoriu.</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Data emiterii</mat-label>
+      <input matInput type="date" formControlName="dataEmitere" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Emitent înlocuitor de drept (opțional)</mat-label>
+      <mat-select formControlName="emitentConsilierId">
+        <mat-option [value]="null">Primarul de la data emiterii (implicit)</mat-option>
+        @for (c of consilieri(); track c.id) {
+          <mat-option [value]="c.id">{{ c.numeComplet }} — viceprimar înlocuitor de drept</mat-option>
+        }
+      </mat-select>
+      <mat-hint>Lasă gol dacă emite primarul. Alege un consilier doar la vacanță/suspendare („p. Primar").</mat-hint>
+    </mat-form-field>
+
+    @if (eroare(); as mesaj) {
+      <p class="eroare-inline">{{ mesaj }}</p>
+    }
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close [disabled]="seSalveaza()">Anulează</button>
+  <button mat-flat-button (click)="creeaza()" [disabled]="seSalveaza()">
+    {{ seSalveaza() ? 'Se creează...' : 'Creează' }}
+  </button>
+</mat-dialog-actions>

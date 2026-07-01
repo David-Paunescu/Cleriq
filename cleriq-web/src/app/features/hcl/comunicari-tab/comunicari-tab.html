@@ -24,7 +24,7 @@
     <button mat-stroked-button (click)="incarca()">Reîncearcă</button>
   </div>
 } @else if (comunicari().length === 0) {
-  @if (status() < StatusHclRedactional.Numerotat) {
+  @if (status() < StatusActRedactional.Numerotat) {
     <p class="gol">Comunicarea către prefect devine disponibilă după numerotarea hotărârii.</p>
   } @else {
     <p class="gol">Nicio comunicare către prefect înregistrată.</p>

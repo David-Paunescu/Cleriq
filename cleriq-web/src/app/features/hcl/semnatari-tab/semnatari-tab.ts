@@ -13,7 +13,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { extrageMesajEroare } from '../../../core/http/erori';
 import { ConfirmareDialog, DateConfirmare } from '../../../shared/confirmare/confirmare-dialog';
 import { formateazaDataOra } from '../../../shared/data';
-import { RolSemnatar, StatusHclRedactional } from '../../../shared/enums';
+import { RolSemnatar, StatusActRedactional } from '../../../shared/enums';
 import { etichetaRolSemnatar } from '../../../shared/etichete';
 import { HclDetalii, SemnatarHcl, formateazaMarime } from '../hcl.models';
 import { ActiuniHcl } from '../hcl.permisiuni';
@@ -52,7 +52,7 @@ export class SemnatariTab {
   readonly formateazaDataOra = formateazaDataOra;
   readonly formateazaMarime = formateazaMarime;
 
-  readonly esteSemnatStatus = computed(() => this.hcl().status === StatusHclRedactional.Semnat);
+  readonly esteSemnatStatus = computed(() => this.hcl().status === StatusActRedactional.Semnat);
   readonly arePresedinte = computed(() =>
     this.hcl().semnatari.some(s => s.rolSemnatar === RolSemnatar.PresedinteSedinta));
   readonly afiseazaMotiv = computed(() =>

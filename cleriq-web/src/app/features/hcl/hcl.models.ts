@@ -1,5 +1,5 @@
 import {
-  StatusHclRedactional, TipHcl, TipMajoritate, RolSemnatar, TipRelatieHcl,
+  StatusActRedactional, TipHcl, TipMajoritate, RolSemnatar, TipRelatieHcl,
   MotivInvalidare, CanalTransmiterePrefect, RaspunsPrefect, TipDocumentHcl
 } from '../../shared/enums';
 
@@ -14,7 +14,7 @@ export interface Hcl {
   titlu: string;
   dataAdoptare: string;
   dataIntrareInVigoare: string | null;
-  status: StatusHclRedactional;
+  status: StatusActRedactional;
   estePublicat: boolean;
   dataPublicareMol: string | null;
   dataInvalidare: string | null;
@@ -33,7 +33,7 @@ export interface HclDetalii {
   continut: string | null;
   dataAdoptare: string;
   dataIntrareInVigoare: string | null;
-  status: StatusHclRedactional;
+  status: StatusActRedactional;
   punctOrdineZiId: number;
   votPentru: number;
   votImpotriva: number;
@@ -143,7 +143,7 @@ export interface HclUrgent {
   dataAdoptare: string;
   dataLimitaComunicare: string;
   zileRamase: number;
-  status: StatusHclRedactional;
+  status: StatusActRedactional;
 }
 
 // === Cereri (FE1) ===

@@ -1,0 +1,16 @@
+.form-creare {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 360px;
+}
+
+.form-creare mat-form-field {
+  width: 100%;
+}
+
+.eroare-inline {
+  color: var(--mat-sys-error);
+  margin: 4px 0 0;
+  font-size: 14px;
+}

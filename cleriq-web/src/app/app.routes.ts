@@ -87,6 +87,19 @@ export const routes: Routes = [
         canDeactivate: [ghidModificariNesalvate],
         loadComponent: () =>
           import('./features/hcl/hcl-detalii/hcl-detalii').then(m => m.HclDetaliiPagina)
+      },
+      {
+        path: 'dispozitii',
+        loadComponent: () =>
+          import('./features/dispozitii/dispozitii-lista/dispozitii-lista')
+            .then(m => m.DispozitiiLista)
+      },
+      {
+        path: 'dispozitii/:id',
+        canDeactivate: [ghidModificariNesalvate],
+        loadComponent: () =>
+          import('./features/dispozitii/dispozitie-detalii/dispozitie-detalii')
+            .then(m => m.DispozitieDetaliiPagina)
       }
     ]
   },

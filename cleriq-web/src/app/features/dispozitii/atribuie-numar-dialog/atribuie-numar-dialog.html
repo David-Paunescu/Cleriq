@@ -1,0 +1,57 @@
+<h2 mat-dialog-title>Atribuie număr</h2>
+
+<form [formGroup]="form" (ngSubmit)="atribuie()">
+  <mat-dialog-content class="continut">
+    @if (seIncarcaSugestie()) {
+      <div class="centru-mic"><mat-spinner diameter="28" /></div>
+    } @else {
+      <p class="indiciu">Numărul sugerat e următorul liber din registru. Îl poți modifica.</p>
+
+      <div class="rand-numar">
+        <mat-form-field appearance="outline" class="camp-numar">
+          <mat-label>Număr</mat-label>
+          <input matInput type="number" min="1" formControlName="numar" />
+          @if (form.controls.numar.hasError('required')) {
+            <mat-error>Obligatoriu.</mat-error>
+          } @else if (form.controls.numar.hasError('min')) {
+            <mat-error>Minim 1.</mat-error>
+          }
+        </mat-form-field>
+        <span class="an-sufix">/ {{ an() ?? '—' }}</span>
+      </div>
+
+      @if (lacune(); as l) {
+        <div class="avertisment">
+          <mat-icon>warning</mat-icon>
+          <span>Numerele {{ l.join(', ') }} ar rămâne libere. Confirmi atribuirea cu lacune?</span>
+        </div>
+      } @else if (sugestieAlternativa(); as s) {
+        <div class="avertisment avertisment-eroare">
+          <mat-icon>error_outline</mat-icon>
+          <div>
+            <p>{{ eroare() }}</p>
+            <button mat-stroked-button type="button" (click)="folosesteSugestia()">
+              Folosește nr. {{ s }}
+            </button>
+          </div>
+        </div>
+      } @else if (eroare(); as mesaj) {
+        <p class="eroare">{{ mesaj }}</p>
+      }
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" mat-dialog-close>Renunță</button>
+    @if (lacune()) {
+      <button mat-flat-button type="button" (click)="atribuie(true)" [disabled]="seSalveaza()">
+        {{ seSalveaza() ? 'Se atribuie...' : 'Confirmă cu lacune' }}
+      </button>
+    } @else {
+      <button mat-flat-button type="submit"
+              [disabled]="seSalveaza() || seIncarcaSugestie()">
+        {{ seSalveaza() ? 'Se atribuie...' : 'Atribuie' }}
+      </button>
+    }
+  </mat-dialog-actions>
+</form>

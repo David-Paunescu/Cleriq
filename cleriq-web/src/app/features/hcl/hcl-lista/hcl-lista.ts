@@ -10,8 +10,8 @@ import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { extrageMesajEroare } from '../../../core/http/erori';
 import { formateazaDataScurta } from '../../../shared/data';
-import { StatusHclRedactional, TipHcl } from '../../../shared/enums';
-import { etichetaStatusHcl, etichetaTipHcl } from '../../../shared/etichete';
+import { StatusActRedactional, TipHcl } from '../../../shared/enums';
+import { etichetaStatusActRedactional, etichetaTipHcl } from '../../../shared/etichete';
 import { normalizeazaPentruCautare } from '../../../shared/text';
 import { Hcl } from '../hcl.models';
 import { FiltreHcl, HclService } from '../hcl.service';
@@ -37,14 +37,14 @@ export class HclLista {
 
   readonly filtru = signal('');
   readonly anFiltru = signal<number | 'toate'>('toate');
-  readonly statusFiltru = signal<StatusHclRedactional | 'toate'>('toate');
+  readonly statusFiltru = signal<StatusActRedactional | 'toate'>('toate');
   readonly tipFiltru = signal<TipHcl | 'toate'>('toate');
 
   readonly coloane = COLOANE;
-  readonly statusuri: StatusHclRedactional[] = [
-    StatusHclRedactional.Draft,
-    StatusHclRedactional.Numerotat,
-    StatusHclRedactional.Semnat
+  readonly statusuri: StatusActRedactional[] = [
+    StatusActRedactional.Draft,
+    StatusActRedactional.Numerotat,
+    StatusActRedactional.Semnat
   ];
   readonly tipuri: TipHcl[] = [TipHcl.Normativ, TipHcl.Individual];
   // Anii recenți pentru filtrul de numerotare (an curent → an curent − 5).
@@ -70,7 +70,7 @@ export class HclLista {
 
     const filtre: FiltreHcl = {};
     if (this.anFiltru() !== 'toate') filtre.an = this.anFiltru() as number;
-    if (this.statusFiltru() !== 'toate') filtre.status = this.statusFiltru() as StatusHclRedactional;
+    if (this.statusFiltru() !== 'toate') filtre.status = this.statusFiltru() as StatusActRedactional;
     if (this.tipFiltru() !== 'toate') filtre.tipHcl = this.tipFiltru() as TipHcl;
 
     try {
@@ -88,7 +88,7 @@ export class HclLista {
 
   // Filtrele an/status/tip sunt server-side → re-fetch la schimbare. Căutarea e client-side.
   laAnSchimbat(v: number | 'toate'): void { this.anFiltru.set(v); this.incarca(); }
-  laStatusSchimbat(v: StatusHclRedactional | 'toate'): void { this.statusFiltru.set(v); this.incarca(); }
+  laStatusSchimbat(v: StatusActRedactional | 'toate'): void { this.statusFiltru.set(v); this.incarca(); }
   laTipSchimbat(v: TipHcl | 'toate'): void { this.tipFiltru.set(v); this.incarca(); }
 
   deschide(h: Hcl): void {
@@ -100,14 +100,14 @@ export class HclLista {
   }
 
   formateaza = formateazaDataScurta;
-  etichetaStatus = etichetaStatusHcl;
+  etichetaStatus = etichetaStatusActRedactional;
   etichetaTip = etichetaTipHcl;
 
-  claseStatus(status: StatusHclRedactional): string {
+  claseStatus(status: StatusActRedactional): string {
     switch (status) {
-      case StatusHclRedactional.Draft: return 'badge badge-draft';
-      case StatusHclRedactional.Numerotat: return 'badge badge-numerotat';
-      case StatusHclRedactional.Semnat: return 'badge badge-semnat';
+      case StatusActRedactional.Draft: return 'badge badge-draft';
+      case StatusActRedactional.Numerotat: return 'badge badge-numerotat';
+      case StatusActRedactional.Semnat: return 'badge badge-semnat';
     }
   }
 }

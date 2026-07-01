@@ -1,0 +1,109 @@
+<div class="antet">
+  <h1>Dispoziții</h1>
+  @if (esteAdminSauSecretar()) {
+    <button mat-flat-button (click)="deschideCreare()">
+      <mat-icon>add</mat-icon>
+      Creează dispoziție
+    </button>
+  }
+</div>
+
+<div class="filtre">
+  <mat-form-field appearance="outline" class="cautare">
+    <mat-label>Caută</mat-label>
+    <input matInput type="search" (input)="laCautare($event)" placeholder="Titlu sau număr" />
+    <mat-icon matSuffix>search</mat-icon>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="filtru-mic">
+    <mat-label>An</mat-label>
+    <mat-select [value]="anFiltru()" (valueChange)="laAnSchimbat($event)">
+      <mat-option value="toate">Toți</mat-option>
+      @for (an of ani; track an) {
+        <mat-option [value]="an">{{ an }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="filtru-mic">
+    <mat-label>Status</mat-label>
+    <mat-select [value]="statusFiltru()" (valueChange)="laStatusSchimbat($event)">
+      <mat-option value="toate">Toate</mat-option>
+      @for (st of statusuri; track st) {
+        <mat-option [value]="st">{{ etichetaStatus(st) }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="filtru-mic">
+    <mat-label>Tip</mat-label>
+    <mat-select [value]="tipFiltru()" (valueChange)="laTipSchimbat($event)">
+      <mat-option value="toate">Toate</mat-option>
+      @for (t of tipuri; track t) {
+        <mat-option [value]="t">{{ etichetaTip(t) }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+</div>
+
+@if (seIncarca()) {
+  <div class="centru"><mat-spinner diameter="40" /></div>
+} @else if (eroare()) {
+  <div class="centru">
+    <p class="eroare">{{ eroare() }}</p>
+    <button mat-stroked-button (click)="incarca()">Reîncearcă</button>
+  </div>
+} @else {
+  <div class="tabel-container">
+    <table mat-table [dataSource]="dispozitiiFiltrate()" class="tabel">
+      <ng-container matColumnDef="titlu">
+        <th mat-header-cell *matHeaderCellDef>Titlu</th>
+        <td mat-cell *matCellDef="let d">
+          <div class="celula-titlu">
+            <span class="titlu-principal">{{ d.titlu }}</span>
+            @if (numarFormatat(d); as nr) {
+              <span class="numar">Dispoziție {{ nr }}</span>
+            }
+          </div>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="tip">
+        <th mat-header-cell *matHeaderCellDef>Tip</th>
+        <td mat-cell *matCellDef="let d">{{ etichetaTip(d.tipDispozitie) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="dataEmitere">
+        <th mat-header-cell *matHeaderCellDef>Emitere</th>
+        <td mat-cell *matCellDef="let d">{{ formateaza(d.dataEmitere) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>Status</th>
+        <td mat-cell *matCellDef="let d">
+          <span [class]="claseStatus(d.status)">{{ etichetaStatus(d.status) }}</span>
+          @if (esteConvocare(d)) {
+            <span class="badge badge-convocare">Convocare</span>
+          }
+          @if (d.dataInvalidare) {
+            <span class="badge badge-invalidat">Invalidat</span>
+          }
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="coloane"></tr>
+      <tr mat-row *matRowDef="let row; columns: coloane"
+          class="rand-clickabil" (click)="deschide(row)"></tr>
+    </table>
+  </div>
+
+  @if (dispozitiiFiltrate().length === 0) {
+    <p class="gol">
+      @if (filtru() || anFiltru() !== 'toate' || statusFiltru() !== 'toate' || tipFiltru() !== 'toate') {
+        Nicio dispoziție nu corespunde filtrelor.
+      } @else {
+        Nu există dispoziții înregistrate.
+      }
+    </p>
+  }
+}

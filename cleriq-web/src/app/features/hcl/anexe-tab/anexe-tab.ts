@@ -10,7 +10,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthService } from '../../../core/auth/auth.service';
 import { extrageMesajEroare } from '../../../core/http/erori';
 import { ConfirmareDialog, DateConfirmare } from '../../../shared/confirmare/confirmare-dialog';
-import { StatusHclRedactional } from '../../../shared/enums';
+import { StatusActRedactional } from '../../../shared/enums';
 import { etichetaTipDocumentHcl } from '../../../shared/etichete';
 import { Document, formateazaMarime } from '../../documente/documente.models';
 import { DocumenteService } from '../../documente/documente.service';
@@ -35,7 +35,7 @@ export class AnexeTab implements OnInit {
   private readonly snackBar = inject(MatSnackBar);
 
   readonly hclId = input.required<number>();
-  readonly status = input.required<StatusHclRedactional>();
+  readonly status = input.required<StatusActRedactional>();
 
   readonly seIncarca = signal(false);
   readonly eroare = signal<string | null>(null);

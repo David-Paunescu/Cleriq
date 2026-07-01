@@ -2,10 +2,8 @@ import {
   Component, ElementRef, OnDestroy, OnInit, computed, effect, inject, signal, viewChild
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { firstValueFrom } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
@@ -21,39 +19,28 @@ import {
 import { ConfirmareDialog, DateConfirmare } from '../../../shared/confirmare/confirmare-dialog';
 import { formateazaDataOra } from '../../../shared/data';
 import { StatusActRedactional } from '../../../shared/enums';
+import { etichetaStatusActRedactional, etichetaTipDispozitie } from '../../../shared/etichete';
 import {
-  etichetaMotivInvalidare, etichetaStatusActRedactional, etichetaTipHcl, etichetaTipMajoritate
-} from '../../../shared/etichete';
-import {
-  AtribuieNumarDialog, DateAtribuireNumarDialog
+  AtribuieNumarDispozitieDialog, DateAtribuireNumarDispozitieDialog
 } from '../atribuie-numar-dialog/atribuie-numar-dialog';
-import { DateInvalidareDialog, InvalidareDialog } from '../invalidare-dialog/invalidare-dialog';
-import {
-  DatePublicareMolDialog, PublicareMolDialog
-} from '../publicare-mol-dialog/publicare-mol-dialog';
-import { AnulareMolDialog, DateAnulareMolDialog } from '../anulare-mol-dialog/anulare-mol-dialog';
-import { SemnatariTab } from '../semnatari-tab/semnatari-tab';
-import { ComunicariTab } from '../comunicari-tab/comunicari-tab';
-import { RelatiiTab } from '../relatii-tab/relatii-tab';
-import { AnexeTab } from '../anexe-tab/anexe-tab';
-import { HclDetalii } from '../hcl.models';
-import { actiuniPermise } from '../hcl.permisiuni';
-import { HclService } from '../hcl.service';
+import { SemnatariDispozitieTab } from '../semnatari-tab/semnatari-tab';
+import { DispozitieDetalii } from '../dispozitii.models';
+import { actiuniPermise } from '../dispozitii.permisiuni';
+import { DispozitiiService } from '../dispozitii.service';
 
 const DEBOUNCE_AUTOSAVE_MS = 2000;
 
 @Component({
-  selector: 'app-hcl-detalii',
+  selector: 'app-dispozitie-detalii',
   imports: [
-    MatCardModule, MatTabsModule, MatIconModule, MatButtonModule,
-    MatMenuModule, MatTooltipModule, MatProgressSpinnerModule, SemnatariTab, ComunicariTab,
-    RelatiiTab, AnexeTab
+    MatTabsModule, MatIconModule, MatButtonModule,
+    MatMenuModule, MatTooltipModule, MatProgressSpinnerModule, SemnatariDispozitieTab
   ],
-  templateUrl: './hcl-detalii.html',
-  styleUrl: './hcl-detalii.scss'
+  templateUrl: './dispozitie-detalii.html',
+  styleUrl: './dispozitie-detalii.scss'
 })
-export class HclDetaliiPagina implements OnInit, OnDestroy {
-  private readonly api = inject(HclService);
+export class DispozitieDetaliiPagina implements OnInit, OnDestroy {
+  private readonly api = inject(DispozitiiService);
   private readonly auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -61,18 +48,17 @@ export class HclDetaliiPagina implements OnInit, OnDestroy {
   private readonly snackBar = inject(MatSnackBar);
   private readonly modificari = inject(ModificariNesalvateService);
 
-  id = Number(this.route.snapshot.paramMap.get('id'));
+  readonly id = Number(this.route.snapshot.paramMap.get('id'));
 
   readonly seIncarca = signal(false);
   readonly eroare = signal<string | null>(null);
-  readonly hcl = signal<HclDetalii | null>(null);
+  readonly dispozitie = signal<DispozitieDetalii | null>(null);
   readonly indexTabActiv = signal(Number(this.route.snapshot.queryParamMap.get('tab')) || 0);
 
   readonly seSemneaza = signal(false);
   readonly seDescarcaPdf = signal(false);
-  readonly actiuneStareLegala = signal(false);
 
-  // === Editor (paritate ProcesVerbalTab) ===
+  // === Editor (paritate hcl-detalii / ProcesVerbalTab) ===
   readonly valoareEditor = signal('');
   readonly ultimaValoareSalvata = signal('');
   readonly valoareEditorInitializata = signal(false);
@@ -85,12 +71,15 @@ export class HclDetaliiPagina implements OnInit, OnDestroy {
   readonly textareaEditor = viewChild<ElementRef<HTMLTextAreaElement>>('textareaEditor');
 
   private vizibilitateHandler: (() => void) | null = null;
-  private proprietar!: ProprietarStareModificari;
+  private readonly proprietar: ProprietarStareModificari = {
+    id: `dispozitie-continut-${this.id}`,
+    areModificariNesalvate: () => this.esteDirty()
+  };
 
   readonly esteAdmin = computed(() => this.auth.areRol('Admin'));
   readonly esteAdminSauSecretar = computed(() => this.auth.areOricareRol('Admin', 'Secretar'));
   readonly actiuni = computed(() =>
-    actiuniPermise(this.hcl(), this.esteAdminSauSecretar(), this.esteAdmin()));
+    actiuniPermise(this.dispozitie(), this.esteAdminSauSecretar(), this.esteAdmin()));
 
   readonly esteDirty = computed(() => this.valoareEditor() !== this.ultimaValoareSalvata());
 
@@ -117,11 +106,8 @@ export class HclDetaliiPagina implements OnInit, OnDestroy {
     return null;
   });
 
-  readonly StatusActRedactional = StatusActRedactional;
   readonly etichetaStatusActRedactional = etichetaStatusActRedactional;
-  readonly etichetaTipHcl = etichetaTipHcl;
-  readonly etichetaTipMajoritate = etichetaTipMajoritate;
-  readonly etichetaMotivInvalidare = etichetaMotivInvalidare;
+  readonly etichetaTipDispozitie = etichetaTipDispozitie;
   readonly formateazaDataOra = formateazaDataOra;
 
   private readonly handlerKeydown = (event: KeyboardEvent): void => {
@@ -137,9 +123,9 @@ export class HclDetaliiPagina implements OnInit, OnDestroy {
   constructor() {
     // Inițializare editor din conținut — o singură dată.
     effect(() => {
-      const h = this.hcl();
-      if (h && !this.valoareEditorInitializata()) {
-        const v = h.continut ?? '';
+      const d = this.dispozitie();
+      if (d && !this.valoareEditorInitializata()) {
+        const v = d.continut ?? '';
         this.valoareEditor.set(v);
         this.ultimaValoareSalvata.set(v);
         this.valoareEditorInitializata.set(true);
@@ -170,11 +156,7 @@ export class HclDetaliiPagina implements OnInit, OnDestroy {
       });
     });
 
-    // Reîncarcă la schimbarea :id (navigare HCL→HCL: relații, registru), fiindcă
-    // Angular reutilizează componenta pe aceeași rută /hcl/:id.
-    this.route.paramMap.pipe(takeUntilDestroyed()).subscribe(params => {
-      this.initPentruHcl(Number(params.get('id')));
-    });
+    this.modificari.inregistreaza(this.proprietar);
   }
 
   ngOnInit(): void {
@@ -186,24 +168,6 @@ export class HclDetaliiPagina implements OnInit, OnDestroy {
     };
     document.addEventListener('visibilitychange', this.vizibilitateHandler);
     window.addEventListener('keydown', this.handlerKeydown);
-  }
-
-  private initPentruHcl(idNou: number): void {
-    this.id = idNou;
-    this.hcl.set(null);
-    this.eroare.set(null);
-    this.valoareEditor.set('');
-    this.ultimaValoareSalvata.set('');
-    this.valoareEditorInitializata.set(false);
-    this.eroareSalvare.set(null);
-    this.dataUltimeiSalvari.set(null);
-    this.indexTabActiv.set(Number(this.route.snapshot.queryParamMap.get('tab')) || 0);
-    if (this.proprietar) this.modificari.retragere(this.proprietar.id);
-    this.proprietar = {
-      id: `hcl-continut-${idNou}`,
-      areModificariNesalvate: () => this.esteDirty()
-    };
-    this.modificari.inregistreaza(this.proprietar);
     this.incarca();
   }
 
@@ -220,7 +184,7 @@ export class HclDetaliiPagina implements OnInit, OnDestroy {
     this.seIncarca.set(true);
     this.eroare.set(null);
     try {
-      this.hcl.set(await this.api.detalii(this.id));
+      this.dispozitie.set(await this.api.detalii(this.id));
     } catch (err) {
       this.eroare.set(extrageMesajEroare(err));
     } finally {
@@ -242,7 +206,7 @@ export class HclDetaliiPagina implements OnInit, OnDestroy {
 
     try {
       const rezultat = await this.api.editeazaContinut(this.id, { continut: valoare });
-      this.hcl.set(rezultat);
+      this.dispozitie.set(rezultat);
       this.ultimaValoareSalvata.set(valoare);
 
       if (!this.esteDirty()) {
@@ -273,7 +237,7 @@ export class HclDetaliiPagina implements OnInit, OnDestroy {
 
     const date: DateConfirmare = {
       titlu: 'Regenerare conținut',
-      mesaj: 'Toate editările manuale vor fi pierdute definitiv. Conținutul va fi regenerat din datele actuale ale hotărârii (titlu, vot, semnatari).',
+      mesaj: 'Toate editările manuale vor fi pierdute definitiv. Conținutul va fi regenerat din datele actuale ale dispoziției (titlu, tip, semnatari).',
       etichetaConfirmare: 'Regenerează',
       periculos: true
     };
@@ -296,11 +260,11 @@ export class HclDetaliiPagina implements OnInit, OnDestroy {
   }
 
   // Adoptă conținutul venit server-side (regenerare / numerotare) în editor, suprascriind valoarea.
-  private adoptaContinut(h: HclDetalii): void {
-    const v = h.continut ?? '';
+  private adoptaContinut(d: DispozitieDetalii): void {
+    const v = d.continut ?? '';
     this.valoareEditor.set(v);
     this.ultimaValoareSalvata.set(v);
-    this.hcl.set(h);
+    this.dispozitie.set(d);
   }
 
   async deschideAtribuieNumar(): Promise<void> {
@@ -315,15 +279,15 @@ export class HclDetaliiPagina implements OnInit, OnDestroy {
       }
     }
 
-    const date: DateAtribuireNumarDialog = { hclId: this.id };
+    const date: DateAtribuireNumarDispozitieDialog = { dispozitieId: this.id };
     const rezultat = await firstValueFrom(
-      this.dialog.open<AtribuieNumarDialog, DateAtribuireNumarDialog, HclDetalii | undefined>(
-        AtribuieNumarDialog, { data: date, width: '440px', maxWidth: '95vw' }).afterClosed());
+      this.dialog.open<AtribuieNumarDispozitieDialog, DateAtribuireNumarDispozitieDialog, DispozitieDetalii | undefined>(
+        AtribuieNumarDispozitieDialog, { data: date, width: '440px', maxWidth: '95vw' }).afterClosed());
     if (!rezultat) return;
 
     this.adoptaContinut(rezultat);  // conținut cu numărul înlocuit + status Numerotat
     this.snackBar.open(
-      `Hotărârea a primit numărul ${rezultat.numar}/${rezultat.anNumerotare}.`,
+      `Dispoziția a primit numărul ${rezultat.numar}/${rezultat.anNumerotare}.`,
       'Închide', { duration: 4000 });
   }
 
@@ -339,8 +303,8 @@ export class HclDetaliiPagina implements OnInit, OnDestroy {
     }
 
     const date: DateConfirmare = {
-      titlu: 'Semnare hotărâre',
-      mesaj: 'După semnare, hotărârea devine act juridic finalizat: conținutul nu mai poate fi editat sau regenerat.',
+      titlu: 'Semnare dispoziție',
+      mesaj: 'După semnare, dispoziția devine act juridic finalizat: conținutul nu mai poate fi editat sau regenerat.',
       etichetaConfirmare: 'Semnează',
       periculos: true
     };
@@ -352,8 +316,8 @@ export class HclDetaliiPagina implements OnInit, OnDestroy {
     this.actiuneInCurs.set(true);
     try {
       const rezultat = await this.api.semneaza(this.id);
-      this.hcl.set(rezultat);
-      this.snackBar.open('Hotărârea a fost semnată.', 'Închide', { duration: 4000 });
+      this.dispozitie.set(rezultat);
+      this.snackBar.open('Dispoziția a fost semnată.', 'Închide', { duration: 4000 });
     } catch (err) {
       this.snackBar.open(extrageMesajEroare(err), 'Închide', { duration: 5000 });
     } finally {
@@ -367,10 +331,10 @@ export class HclDetaliiPagina implements OnInit, OnDestroy {
 
     this.seDescarcaPdf.set(true);
     try {
-      const h = this.hcl()!;
-      const nume = h.numar != null
-        ? `hcl-${h.numar}-${h.anNumerotare}.pdf`
-        : `hcl-draft-${h.id}.pdf`;
+      const d = this.dispozitie()!;
+      const nume = d.numar != null
+        ? `dispozitie-${d.numar}-${d.anNumerotare}.pdf`
+        : `dispozitie-draft-${d.id}.pdf`;
       await this.api.descarcaPdf(this.id, nume);
     } catch (err) {
       this.snackBar.open(extrageMesajEroare(err), 'Închide', { duration: 5000 });
@@ -379,97 +343,8 @@ export class HclDetaliiPagina implements OnInit, OnDestroy {
     }
   }
 
-  // === FE2 — stări legale (antet) ===
-
-  async comutaPublicare(): Promise<void> {
-    const act = this.actiuni();
-    if (this.actiuneStareLegala()) return;
-
-    if (act.poatePublica) {
-      await this.executaStareLegala(
-        () => this.api.publica(this.id, true), 'Hotărârea a fost publicată pe portal.');
-      return;
-    }
-    if (act.poateDepublica) {
-      const confirmat = await this.confirma({
-        titlu: 'Retragere de pe portal',
-        mesaj: 'Hotărârea nu va mai fi vizibilă pe portalul public. O poți republica oricând.',
-        etichetaConfirmare: 'Retrage',
-        periculos: true
-      });
-      if (!confirmat) return;
-      await this.executaStareLegala(
-        () => this.api.publica(this.id, false), 'Hotărârea a fost retrasă de pe portal.');
-    }
-  }
-
-  async deschidePublicareMol(): Promise<void> {
-    if (!this.actiuni().poatePublicaMol) return;
-    const date: DatePublicareMolDialog = { hclId: this.id };
-    const rezultat = await firstValueFrom(
-      this.dialog.open<PublicareMolDialog, DatePublicareMolDialog, HclDetalii | undefined>(
-        PublicareMolDialog, { data: date, width: '440px', maxWidth: '95vw' }).afterClosed());
-    if (!rezultat) return;
-    this.hcl.set(rezultat);
-    this.snackBar.open('Hotărârea a fost publicată în MOL.', 'Închide', { duration: 4000 });
-  }
-
-  async anuleazaMol(): Promise<void> {
-    if (!this.actiuni().poateAnulaMol) return;
-    const date: DateAnulareMolDialog = { hclId: this.id };
-    const rezultat = await firstValueFrom(
-      this.dialog.open<AnulareMolDialog, DateAnulareMolDialog, HclDetalii | undefined>(
-        AnulareMolDialog, { data: date, width: '460px', maxWidth: '95vw' }).afterClosed());
-    if (!rezultat) return;
-    this.hcl.set(rezultat);
-    this.snackBar.open('Publicarea în MOL a fost anulată.', 'Închide', { duration: 4000 });
-  }
-
-  async deschideInvalidare(): Promise<void> {
-    if (!this.actiuni().poateInvalida) return;
-    const date: DateInvalidareDialog = { hclId: this.id };
-    const rezultat = await firstValueFrom(
-      this.dialog.open<InvalidareDialog, DateInvalidareDialog, HclDetalii | undefined>(
-        InvalidareDialog, { data: date, width: '520px', maxWidth: '95vw' }).afterClosed());
-    if (!rezultat) return;
-    this.hcl.set(rezultat);
-    this.snackBar.open('Hotărârea a fost invalidată.', 'Închide', { duration: 4000 });
-  }
-
-  async anuleazaInvalidare(): Promise<void> {
-    if (!this.actiuni().poateAnulaInvalidare || this.actiuneStareLegala()) return;
-    const confirmat = await this.confirma({
-      titlu: 'Anulare invalidare',
-      mesaj: 'Hotărârea revine în vigoare (se șterg motivul și referința invalidării). Folosit doar pentru corecții administrative.',
-      etichetaConfirmare: 'Anulează invalidarea',
-      periculos: true
-    });
-    if (!confirmat) return;
-    await this.executaStareLegala(
-      () => this.api.anuleazaInvalidare(this.id), 'Invalidarea a fost anulată.');
-  }
-
-  private async executaStareLegala(
-    actiune: () => Promise<HclDetalii>, mesajSucces: string): Promise<void> {
-    this.actiuneStareLegala.set(true);
-    try {
-      this.hcl.set(await actiune());
-      this.snackBar.open(mesajSucces, 'Închide', { duration: 4000 });
-    } catch (err) {
-      this.snackBar.open(extrageMesajEroare(err), 'Închide', { duration: 5000 });
-    } finally {
-      this.actiuneStareLegala.set(false);
-    }
-  }
-
-  private async confirma(date: DateConfirmare): Promise<boolean> {
-    return !!(await firstValueFrom(
-      this.dialog.open(ConfirmareDialog, { data: date, width: '520px', maxWidth: '95vw' })
-        .afterClosed()));
-  }
-
   inapoiLaLista(): void {
-    this.router.navigate(['/hcl']);
+    this.router.navigate(['/dispozitii']);
   }
 
   laSchimbareTab(index: number): void {
@@ -482,8 +357,8 @@ export class HclDetaliiPagina implements OnInit, OnDestroy {
     });
   }
 
-  numarAfisat(h: HclDetalii): string {
-    return h.numar != null && h.anNumerotare != null ? `${h.numar}/${h.anNumerotare}` : '—';
+  numarAfisat(d: DispozitieDetalii): string {
+    return d.numar != null && d.anNumerotare != null ? `${d.numar}/${d.anNumerotare}` : '—';
   }
 
   claseStatus(status: StatusActRedactional): string {

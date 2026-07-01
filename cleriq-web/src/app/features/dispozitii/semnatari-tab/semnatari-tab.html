@@ -1,0 +1,142 @@
+<input #inputFisierSemnat type="file" accept=".pdf" (change)="laFisierSemnatSelectat($event)" hidden />
+
+@let d = dispozitie();
+@let act = actiuni();
+
+<div class="tab-semnatari">
+  <!-- Semnatari (derivați automat la creare — read-only) -->
+  <section class="sectiune">
+    <div class="sectiune-antet">
+      <h3>Semnatari</h3>
+      @if (act.poateRefuzaContrasemnare) {
+        <button mat-stroked-button (click)="deschideRefuz()">
+          <mat-icon>block</mat-icon>
+          Refuză contrasemnarea
+        </button>
+      }
+    </div>
+    @if (d.semnatari.length === 0) {
+      <p class="gol">Niciun semnatar.</p>
+    } @else {
+      <ul class="lista-semnatari">
+        @for (s of d.semnatari; track s.id) {
+          <li class="rand-semnatar">
+            <div class="semnatar-info">
+              <span class="semnatar-nume">{{ s.nume }}</span>
+              <span class="semnatar-rol">{{ etichetaRolSemnatarDispozitie(s.rolSemnatar) }}</span>
+            </div>
+          </li>
+        }
+      </ul>
+    }
+    <p class="nota">
+      Emitentul (primar) și secretarul contrasemnatar sunt derivați automat la creare, din funcțiile
+      oficiale valabile la data emiterii.
+    </p>
+  </section>
+
+  <!-- Contrasemnătură refuzată (art. 197 alin. (3)) -->
+  @if (d.contrasemnaturaRefuzata) {
+    <section class="sectiune">
+      <h3>Contrasemnătură refuzată</h3>
+      <mat-card class="card-refuz">
+        <mat-card-content>
+          <div class="refuz-antet">
+            <mat-icon class="icon-refuz">gavel</mat-icon>
+            <span>
+              Secretarul a refuzat contrasemnarea pentru nelegalitate; primarul emite pe răspundere proprie.
+              @if (d.dataRefuzContrasemnare; as data) {
+                · {{ formateazaDataOra(data) }}
+              }
+            </span>
+          </div>
+          @if (d.obiectieLegalitateSecretar; as obiectie) {
+            <p class="refuz-obiectie">{{ obiectie }}</p>
+          }
+        </mat-card-content>
+      </mat-card>
+    </section>
+  }
+
+  <!-- Variantă semnată (PDF scanat) -->
+  @if (esteSemnatStatus()) {
+    <section class="sectiune">
+      <h3>Variantă semnată (PDF scanat)</h3>
+      @if (d.esteSemnat) {
+        <mat-card class="card-semnat">
+          <mat-card-content>
+            <div class="semnat-randul">
+              <mat-icon class="icon-semnat">verified</mat-icon>
+              <div class="semnat-text">
+                <div class="semnat-titlu">{{ d.numeFisierSemnat }}</div>
+                <div class="semnat-meta">
+                  @if (d.marimeSemnat; as marime) {
+                    {{ formateazaMarime(marime) }}
+                  }
+                  @if (d.dataIncarcareSemnat; as data) {
+                    · Încărcat: {{ formateazaDataOra(data) }}
+                  }
+                </div>
+              </div>
+            </div>
+            <div class="semnat-actiuni">
+              <button mat-flat-button (click)="descarcaSemnat()" [disabled]="seDescarcaSemnat()">
+                @if (seDescarcaSemnat()) {
+                  <mat-spinner diameter="16" />
+                } @else {
+                  <mat-icon>download</mat-icon>
+                }
+                Descarcă
+              </button>
+              @if (act.poateInlocuiSemnat) {
+                <button mat-stroked-button (click)="incepInlocuireSemnat()"
+                        [disabled]="seIncarcaSemnat()">
+                  @if (seIncarcaSemnat()) {
+                    <mat-spinner diameter="16" />
+                  } @else {
+                    <mat-icon>swap_horiz</mat-icon>
+                  }
+                  Înlocuiește
+                </button>
+              }
+              @if (act.poateStergeSemnat) {
+                <button mat-icon-button [matMenuTriggerFor]="meniuSemnat" matTooltip="Mai multe">
+                  <mat-icon>more_vert</mat-icon>
+                </button>
+                <mat-menu #meniuSemnat="matMenu">
+                  <button mat-menu-item (click)="stergeSemnat()">
+                    <mat-icon>delete</mat-icon>
+                    <span>Șterge varianta semnată</span>
+                  </button>
+                </mat-menu>
+              }
+            </div>
+          </mat-card-content>
+        </mat-card>
+        @if (d.aIntratInCircuit) {
+          <p class="nota nota-atentie">
+            <mat-icon>lock</mat-icon>
+            <span>Dispoziție intrată în circuit — varianta semnată e înghețată definitiv.
+              Corecțiile se fac prin erată (Faza 7).</span>
+          </p>
+        }
+      } @else if (act.poateIncarcaSemnat) {
+        <mat-card class="card-upload">
+          <mat-card-content>
+            <p>Încarcă PDF-ul semnat olograf (scanat) al dispoziției.</p>
+            <button mat-flat-button (click)="incepIncarcareSemnat()" [disabled]="seIncarcaSemnat()">
+              @if (seIncarcaSemnat()) {
+                <mat-spinner diameter="16" />
+              } @else {
+                <mat-icon>upload_file</mat-icon>
+              }
+              Încarcă PDF semnat
+            </button>
+          </mat-card-content>
+        </mat-card>
+      } @else {
+        <p class="gol">Nicio variantă semnată încărcată.</p>
+      }
+    </section>
+  }
+</div>
