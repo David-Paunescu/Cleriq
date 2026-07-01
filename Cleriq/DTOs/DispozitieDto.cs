@@ -24,6 +24,24 @@ public record InvalidareDispozitieDto(
     string? MotivAltulText,
     string? RefInvalidare);
 
+// Publicare pe portal (EstePublicat), reversibilă — portalul public e Faza 9, aici ținem doar starea
+// internă. Individualele sunt nepublice implicit: publicarea lor e un override deliberat
+// (ConfirmaPublicareIndividuala=true + Motiv, gatat în controller); câmpurile sunt ignorate la Normativ.
+public record PublicareDispozitieDto(
+    bool EstePublicat,
+    bool ConfirmaPublicareIndividuala = false,
+    string? Motiv = null);
+
+// Publicare în MOL (aducere la cunoștință publică, art. 198) — setează latch-ul AIntratInCircuit.
+// Aceleași câmpuri de override pentru individuale ca la publicarea pe portal.
+public record PublicareMolDispozitieDto(
+    DateOnly DataPublicareMol,
+    bool ConfirmaPublicareIndividuala = false,
+    string? Motiv = null);
+
+// „Anulează MOL" = corecție de metadată (motiv obligatoriu + audit); NU resetează latch-ul.
+public record AnulareMolDispozitieDto(string Motiv);
+
 // === Răspunsuri ===
 
 public record DispozitieDto(
@@ -39,6 +57,7 @@ public record DispozitieDto(
     DateOnly? DataPublicareMol,
     DateTime? DataInvalidare,
     MotivInvalidare? MotivInvalidare,
+    int? SedintaId,
     int InstitutieId,
     DateTime CreatLa);
 
@@ -67,9 +86,11 @@ public record DispozitieDetaliiDto(
     string? MotivInvalidareEticheta,
     string? RefInvalidare,
     string? MotivInvalidareAltulText,
+    int? SedintaId,
     int InstitutieId,
     DateTime CreatLa,
-    List<SemnatarDispozitieDto> Semnatari);
+    List<SemnatarDispozitieDto> Semnatari,
+    List<ComunicareDispozitiePrefectDto> Comunicari);
 
 public record SemnatarDispozitieDto(
     int Id,

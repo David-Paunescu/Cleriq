@@ -1,10 +1,4 @@
-﻿using Cleriq.Models;
-using QuestPDF.Fluent;
-using QuestPDF.Helpers;
-using QuestPDF.Infrastructure;
-
-// Alias necesar: „Document" există și în Cleriq.Models, și în QuestPDF.Fluent.
-using PdfDocument = QuestPDF.Fluent.Document;
+using Cleriq.Models;
 
 namespace Cleriq.Services;
 
@@ -16,54 +10,11 @@ public class GeneratorPdfProcesVerbal : IGeneratorPdfProcesVerbal
             ? "_(Procesul verbal nu are conținut.)_"
             : pv.Continut;
 
-        var esteDraft = pv.Status == StatusProcesVerbal.Draft;
+        // Draft → watermark „DRAFT"; Finalizat → document curat.
+        WatermarkPdf? watermark = pv.Status == StatusProcesVerbal.Draft
+            ? new WatermarkPdf("DRAFT", 110f)
+            : null;
 
-        var pdf = PdfDocument.Create(container =>
-        {
-            container.Page(page =>
-            {
-                page.Size(PageSizes.A4);
-                page.Margin(2.2f, Unit.Centimetre);
-                page.DefaultTextStyle(s => s.FontSize(10.5f).LineHeight(1.35f));
-
-                if (esteDraft)
-                {
-                    page.Background()
-                        .AlignCenter()
-                        .AlignMiddle()
-                        .Text("DRAFT")
-                        .FontSize(110).Bold()
-                        .FontColor(Colors.Red.Lighten3);
-                }
-
-                page.Header()
-                    .PaddingBottom(6)
-                    .BorderBottom(0.75f)
-                    .BorderColor(Colors.Grey.Lighten2)
-                    .Text(institutie.Denumire)
-                    .FontSize(9).FontColor(Colors.Grey.Darken1);
-
-                page.Content()
-                    .PaddingTop(12)
-                    .Column(col =>
-                    {
-                        col.Spacing(6);
-                        RandareMarkdownPdf.RandeazaIn(col, markdown);
-                    });
-
-                page.Footer()
-                    .AlignCenter()
-                    .Text(t =>
-                    {
-                        t.DefaultTextStyle(s => s.FontSize(9).FontColor(Colors.Grey.Darken1));
-                        t.Span("Pagina ");
-                        t.CurrentPageNumber();
-                        t.Span(" din ");
-                        t.TotalPages();
-                    });
-            });
-        });
-
-        return pdf.GeneratePdf();
+        return GeneratorPdfAct.Genereaza(markdown, institutie, watermark);
     }
 }

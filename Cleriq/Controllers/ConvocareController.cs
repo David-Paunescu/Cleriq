@@ -16,13 +16,16 @@ public class ConvocareController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly IGeneratorConvocare _generator;
+    private readonly IServiciuDispozitieConvocare _dispozitieConvocare;
 
     public ConvocareController(
         AppDbContext context,
-        IGeneratorConvocare generator)
+        IGeneratorConvocare generator,
+        IServiciuDispozitieConvocare dispozitieConvocare)
     {
         _context = context;
         _generator = generator;
+        _dispozitieConvocare = dispozitieConvocare;
     }
 
     // POST: înregistrează intenția de convocare.
@@ -148,6 +151,11 @@ public class ConvocareController : ControllerBase
             sedinta.ConvocareTrimisaLa = acum;
 
         await _context.SaveChangesAsync(ct);
+
+        // Pas 12: dispoziția de convocare a primarului (act individual/de organizare, art. 134 alin.
+        // (1) lit. a) — best-effort, o singură dată per ședință; nu blochează convocarea dacă lipsesc
+        // mandatele de primar/secretar la data emiterii.
+        await _dispozitieConvocare.CreeazaDacaLipsesteAsync(sedinta, ct);
 
         return Ok(new RezultatConvocareDto(
             TotalConsilieri: rezultate.Count,

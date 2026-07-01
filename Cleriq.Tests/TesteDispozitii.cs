@@ -337,7 +337,7 @@ public class TesteDispozitii
             var id = await admin.CreeazaDispozitieAsync();
             await admin.AtribuieNumarDispozitieAsync(id);
             await admin.SemneazaDispozitieAsync(id);
-            await DbTest.SeteazaAIntratInCircuitDispozitieAsync(id);
+            await admin.PublicaMolDispozitieAsync(id); // intrare în circuit prin calea reală (MOL)
 
             // prima atașare post-circuit e permisă (upgrade benign — paritar HCL varianta B)
             var prima = await admin.IncarcaDispozitieSemnatAsync(
@@ -501,7 +501,7 @@ public class TesteDispozitii
         {
             var id = await admin.CreeazaDispozitieAsync();
             await admin.AtribuieNumarDispozitieAsync(id);
-            await DbTest.SeteazaEstePublicatDispozitieAsync(id);
+            await admin.PublicaDispozitieAsync(id); // publicare reală (portal), nu shim DbTest
 
             var stergere = await admin.DeleteAsync($"/api/Dispozitii/{id}");
             Assert.Equal(HttpStatusCode.Conflict, stergere.StatusCode);
@@ -569,6 +569,283 @@ public class TesteDispozitii
                 Assert.Equal(HttpStatusCode.NotFound, raspuns.StatusCode);
             }
         }
+    }
+
+    // === Publicare + MOL + latch (Pas 9) ===
+
+    [Fact]
+    public async Task PublicareMol_Normativ_SeteazaDataSiLatch()
+    {
+        var admin = await AdminNouAsync();
+        using (admin)
+        {
+            var id = await admin.CreeazaDispozitieAsync(TipDispozitie.Normativ);
+            await admin.AtribuieNumarDispozitieAsync(id);
+            await admin.SemneazaDispozitieAsync(id);
+
+            var raspuns = await admin.PutAsJsonAsync($"/api/Dispozitii/{id}/PublicareMol",
+                new { dataPublicareMol = DateOnly.FromDateTime(DateTime.UtcNow) });
+            Assert.Equal(HttpStatusCode.OK, raspuns.StatusCode);
+
+            var dto = await raspuns.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.NotEqual(JsonValueKind.Null, dto.GetProperty("dataPublicareMol").ValueKind);
+            Assert.True(dto.GetProperty("aIntratInCircuit").GetBoolean());
+        }
+    }
+
+    [Fact]
+    public async Task PublicareMol_Nesemnata_409()
+    {
+        var admin = await AdminNouAsync();
+        using (admin)
+        {
+            var id = await admin.CreeazaDispozitieAsync(TipDispozitie.Normativ);
+            await admin.AtribuieNumarDispozitieAsync(id); // rămâne Numerotat, nu Semnat
+
+            var raspuns = await admin.PutAsJsonAsync($"/api/Dispozitii/{id}/PublicareMol",
+                new { dataPublicareMol = DateOnly.FromDateTime(DateTime.UtcNow) });
+            Assert.Equal(HttpStatusCode.Conflict, raspuns.StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task Publicare_Normativ_ToggleOnOff()
+    {
+        var admin = await AdminNouAsync();
+        using (admin)
+        {
+            var id = await admin.CreeazaDispozitieAsync(TipDispozitie.Normativ);
+            await admin.AtribuieNumarDispozitieAsync(id);
+
+            var on = await admin.PutAsJsonAsync($"/api/Dispozitii/{id}/Publicare", new { estePublicat = true });
+            Assert.Equal(HttpStatusCode.OK, on.StatusCode);
+            var dtoOn = await on.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.True(dtoOn.GetProperty("estePublicat").GetBoolean());
+
+            var off = await admin.PutAsJsonAsync($"/api/Dispozitii/{id}/Publicare", new { estePublicat = false });
+            Assert.Equal(HttpStatusCode.OK, off.StatusCode);
+            var dtoOff = await off.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.False(dtoOff.GetProperty("estePublicat").GetBoolean());
+        }
+    }
+
+    [Fact]
+    public async Task Publicare_InainteDeNumerotare_409()
+    {
+        var admin = await AdminNouAsync();
+        using (admin)
+        {
+            var id = await admin.CreeazaDispozitieAsync(TipDispozitie.Normativ); // rămâne Draft
+            var raspuns = await admin.PutAsJsonAsync($"/api/Dispozitii/{id}/Publicare", new { estePublicat = true });
+            Assert.Equal(HttpStatusCode.Conflict, raspuns.StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task AnulareMol_CuMotiv_200_LatchRamane()
+    {
+        var admin = await AdminNouAsync();
+        using (admin)
+        {
+            var id = await PublicatInMolAsync(admin);
+
+            var anulare = await admin.AnuleazaMolDispozitieAsync(id, "Corecție: dată de înregistrare greșită");
+            Assert.Equal(HttpStatusCode.OK, anulare.StatusCode);
+
+            var dto = await anulare.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Equal(JsonValueKind.Null, dto.GetProperty("dataPublicareMol").ValueKind);
+            Assert.True(dto.GetProperty("aIntratInCircuit").GetBoolean()); // latch-ul NU se resetează
+        }
+    }
+
+    [Fact]
+    public async Task AnulareMol_FaraMotiv_400()
+    {
+        var admin = await AdminNouAsync();
+        using (admin)
+        {
+            var id = await PublicatInMolAsync(admin);
+            var anulare = await admin.AnuleazaMolDispozitieAsync(id, "   ");
+            Assert.Equal(HttpStatusCode.BadRequest, anulare.StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task AnulareMol_FaraPublicare_409()
+    {
+        var admin = await AdminNouAsync();
+        using (admin)
+        {
+            var id = await admin.CreeazaDispozitieAsync(TipDispozitie.Normativ);
+            var anulare = await admin.AnuleazaMolDispozitieAsync(id, "motiv oarecare");
+            Assert.Equal(HttpStatusCode.Conflict, anulare.StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task AnulareMol_CaSecretar_403()
+    {
+        var admin = await AdminNouAsync();
+        using (admin)
+        {
+            var id = await PublicatInMolAsync(admin);
+            var secretar = await _factory.ClientSecretarAsync(admin);
+            using (secretar)
+            {
+                var anulare = await secretar.AnuleazaMolDispozitieAsync(id, "motiv");
+                Assert.Equal(HttpStatusCode.Forbidden, anulare.StatusCode);
+            }
+        }
+    }
+
+    // --- Override publicare individuală (9b): nepublic implicit + confirmare + motiv + audit ---
+
+    [Fact]
+    public async Task PublicareMol_Individual_FaraConfirmare_SoftConflict()
+    {
+        var admin = await AdminNouAsync();
+        using (admin)
+        {
+            var id = await admin.CreeazaDispozitieAsync(TipDispozitie.Individual);
+            await admin.AtribuieNumarDispozitieAsync(id);
+            await admin.SemneazaDispozitieAsync(id);
+
+            var raspuns = await admin.PutAsJsonAsync($"/api/Dispozitii/{id}/PublicareMol",
+                new { dataPublicareMol = DateOnly.FromDateTime(DateTime.UtcNow) });
+            Assert.Equal(HttpStatusCode.Conflict, raspuns.StatusCode);
+
+            var payload = await raspuns.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.True(payload.GetProperty("necesitaConfirmarePublicareIndividuala").GetBoolean());
+
+            // nimic mutat: nepublicat + latch neaprins
+            var detalii = await admin.GetFromJsonAsync<JsonElement>($"/api/Dispozitii/{id}");
+            Assert.Equal(JsonValueKind.Null, detalii.GetProperty("dataPublicareMol").ValueKind);
+            Assert.False(detalii.GetProperty("aIntratInCircuit").GetBoolean());
+        }
+    }
+
+    [Fact]
+    public async Task PublicareMol_Individual_CuConfirmareSiMotiv_200_Latch()
+    {
+        var admin = await AdminNouAsync();
+        using (admin)
+        {
+            var id = await admin.CreeazaDispozitieAsync(TipDispozitie.Individual);
+            await admin.AtribuieNumarDispozitieAsync(id);
+            await admin.SemneazaDispozitieAsync(id);
+
+            var raspuns = await admin.PutAsJsonAsync($"/api/Dispozitii/{id}/PublicareMol",
+                new
+                {
+                    dataPublicareMol = DateOnly.FromDateTime(DateTime.UtcNow),
+                    confirmaPublicareIndividuala = true,
+                    motiv = "Numire comisie publică, act anonimizat — fără date personale."
+                });
+            Assert.Equal(HttpStatusCode.OK, raspuns.StatusCode);
+
+            var dto = await raspuns.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.NotEqual(JsonValueKind.Null, dto.GetProperty("dataPublicareMol").ValueKind);
+            Assert.True(dto.GetProperty("aIntratInCircuit").GetBoolean());
+        }
+    }
+
+    [Fact]
+    public async Task PublicareMol_Individual_ConfirmareFaraMotiv_400()
+    {
+        var admin = await AdminNouAsync();
+        using (admin)
+        {
+            var id = await admin.CreeazaDispozitieAsync(TipDispozitie.Individual);
+            await admin.AtribuieNumarDispozitieAsync(id);
+            await admin.SemneazaDispozitieAsync(id);
+
+            var raspuns = await admin.PutAsJsonAsync($"/api/Dispozitii/{id}/PublicareMol",
+                new
+                {
+                    dataPublicareMol = DateOnly.FromDateTime(DateTime.UtcNow),
+                    confirmaPublicareIndividuala = true,
+                    motiv = "   "
+                });
+            Assert.Equal(HttpStatusCode.BadRequest, raspuns.StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task Publicare_Individual_FaraConfirmare_SoftConflict()
+    {
+        var admin = await AdminNouAsync();
+        using (admin)
+        {
+            var id = await admin.CreeazaDispozitieAsync(TipDispozitie.Individual);
+            await admin.AtribuieNumarDispozitieAsync(id);
+
+            var raspuns = await admin.PutAsJsonAsync($"/api/Dispozitii/{id}/Publicare",
+                new { estePublicat = true });
+            Assert.Equal(HttpStatusCode.Conflict, raspuns.StatusCode);
+
+            var payload = await raspuns.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.True(payload.GetProperty("necesitaConfirmarePublicareIndividuala").GetBoolean());
+        }
+    }
+
+    [Fact]
+    public async Task Publicare_Individual_CuConfirmare_200_ApoiDepublicareLibera()
+    {
+        var admin = await AdminNouAsync();
+        using (admin)
+        {
+            var id = await admin.CreeazaDispozitieAsync(TipDispozitie.Individual);
+            await admin.AtribuieNumarDispozitieAsync(id);
+
+            var on = await admin.PutAsJsonAsync($"/api/Dispozitii/{id}/Publicare",
+                new { estePublicat = true, confirmaPublicareIndividuala = true, motiv = "Act anonimizat." });
+            Assert.Equal(HttpStatusCode.OK, on.StatusCode);
+            Assert.True((await on.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("estePublicat").GetBoolean());
+
+            // depublicarea (EstePublicat=false) nu cere confirmare — nu expune nimic
+            var off = await admin.PutAsJsonAsync($"/api/Dispozitii/{id}/Publicare", new { estePublicat = false });
+            Assert.Equal(HttpStatusCode.OK, off.StatusCode);
+            Assert.False((await off.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("estePublicat").GetBoolean());
+        }
+    }
+
+    // === PDF (Pas 11) ===
+
+    [Fact]
+    public async Task ObtinePdf_Draft_IntoarcePdfValid()
+    {
+        var admin = await AdminNouAsync();
+        using (admin)
+        {
+            var id = await admin.CreeazaDispozitieAsync(); // Draft → watermark „DRAFT"
+            var raspuns = await admin.GetAsync($"/api/Dispozitii/{id}/Pdf");
+            Assert.Equal(HttpStatusCode.OK, raspuns.StatusCode);
+            Assert.Equal("application/pdf", raspuns.Content.Headers.ContentType?.MediaType);
+
+            var bytes = await raspuns.Content.ReadAsByteArrayAsync();
+            Assert.True(bytes.Length > 0);
+            Assert.Equal("%PDF", Encoding.ASCII.GetString(bytes, 0, 4)); // magic bytes PDF
+        }
+    }
+
+    [Fact]
+    public async Task ObtinePdf_Inexistenta_404()
+    {
+        var admin = await AdminNouAsync();
+        using (admin)
+        {
+            var raspuns = await admin.GetAsync("/api/Dispozitii/999999/Pdf");
+            Assert.Equal(HttpStatusCode.NotFound, raspuns.StatusCode);
+        }
+    }
+
+    private static async Task<int> PublicatInMolAsync(HttpClient admin)
+    {
+        var id = await admin.CreeazaDispozitieAsync(TipDispozitie.Normativ);
+        await admin.AtribuieNumarDispozitieAsync(id);
+        await admin.SemneazaDispozitieAsync(id);
+        await admin.PublicaMolDispozitieAsync(id);
+        return id;
     }
 
     // === Helpere private ===

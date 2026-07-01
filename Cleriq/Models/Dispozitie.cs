@@ -63,9 +63,14 @@ public class Dispozitie : EntitateDeBaza, IEntitateCuTenant, IActNumerotat, IAct
     public string? MotivInvalidareAltulText { get; set; }
     public int? InvalidatDe { get; set; }
 
+    // Legătură opțională la ședință — DOAR pentru dispoziția de convocare (Pas 12). FK Restrict,
+    // exclusă din cascada `case Sedinta`: un act numerotat nu moare odată cu ședința (paritar HCL).
+    public int? SedintaId { get; set; }
+    public Sedinta? Sedinta { get; set; }
+
     public int InstitutieId { get; set; }
     public Institutie Institutie { get; set; } = null!;
 
     public List<SemnatarDispozitie> Semnatari { get; set; } = new();
-    // Comunicari (List<ComunicareDispozitiePrefect>) — adăugat la Pas 10
+    public List<ComunicareDispozitiePrefect> Comunicari { get; set; } = new();
 }

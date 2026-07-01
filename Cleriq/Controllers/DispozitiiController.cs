@@ -18,6 +18,7 @@ public class DispozitiiController : ControllerBase
     private readonly IServiciuFunctiiIstorice _functiiIstorice;
     private readonly IServiciuNumerotareActe _numerotare;
     private readonly IGeneratorDispozitie _generator;
+    private readonly IGeneratorPdfDispozitie _generatorPdf;
     private readonly IStocareDocumente _stocare;
 
     public DispozitiiController(
@@ -25,12 +26,14 @@ public class DispozitiiController : ControllerBase
         IServiciuFunctiiIstorice functiiIstorice,
         IServiciuNumerotareActe numerotare,
         IGeneratorDispozitie generator,
+        IGeneratorPdfDispozitie generatorPdf,
         IStocareDocumente stocare)
     {
         _context = context;
         _functiiIstorice = functiiIstorice;
         _numerotare = numerotare;
         _generator = generator;
+        _generatorPdf = generatorPdf;
         _stocare = stocare;
     }
 
@@ -65,6 +68,23 @@ public class DispozitiiController : ControllerBase
         var dispozitie = await _context.Dispozitii.CuIncludeComplet().FirstOrDefaultAsync(d => d.Id == id);
         if (dispozitie is null) return NotFound();
         return Ok(MapareDispozitie.SpreDetaliiDto(dispozitie));
+    }
+
+    [HttpGet("{id}/Pdf")]
+    public async Task<IActionResult> ObtinePdf(int id)
+    {
+        var dispozitie = await _context.Dispozitii.FirstOrDefaultAsync(d => d.Id == id);
+        if (dispozitie is null) return NotFound();
+
+        var institutie = await _context.Institutii.FirstOrDefaultAsync();
+        if (institutie is null) return NotFound();
+
+        var pdf = _generatorPdf.Genereaza(dispozitie, institutie);
+        var nume = dispozitie.Numar != null
+            ? $"dispozitie-{dispozitie.Numar}-{dispozitie.AnNumerotare}.pdf"
+            : $"dispozitie-draft-{dispozitie.Id}.pdf";
+
+        return File(pdf, "application/pdf", nume);
     }
 
     [HttpPost]
@@ -428,6 +448,95 @@ public class DispozitiiController : ControllerBase
         return Ok(MapareDispozitie.SpreDetaliiDto(await ReincarcaCuIncludeAsync(id)));
     }
 
+    // ============ Publicare / MOL (Pas 9) ============
+
+    // Publicare pe portal (EstePublicat), reversibilă. Portalul public e Faza 9; aici ținem doar
+    // starea internă. (Override-ul de individual — nepublic implicit — se adaugă la Pas 9b.)
+    [HttpPut("{id}/Publicare")]
+    [Authorize(Roles = "Admin,Secretar")]
+    public async Task<IActionResult> Publicare(int id, PublicareDispozitieDto dto)
+    {
+        var dispozitie = await _context.Dispozitii.FirstOrDefaultAsync(d => d.Id == id);
+        if (dispozitie is null) return NotFound();
+
+        if (dto.EstePublicat)
+        {
+            if (dispozitie.Status < StatusActRedactional.Numerotat)
+                return Conflict("Dispoziția poate fi publicată doar după ce a primit număr (Status >= Numerotat).");
+
+            // Individual → nepublic implicit: override deliberat (confirmare + motiv + audit).
+            var gata = GateazaPublicareIndividuala(dispozitie, dto.ConfirmaPublicareIndividuala, dto.Motiv);
+            if (gata != null) return gata;
+        }
+
+        dispozitie.EstePublicat = dto.EstePublicat;
+        await _context.SaveChangesAsync();
+        return Ok(MapareDispozitie.SpreDetaliiDto(await ReincarcaCuIncludeAsync(id)));
+    }
+
+    // Publicare în MOL (art. 198 — aducere la cunoștință publică). Setează data + autorul + latch-ul
+    // AIntratInCircuit (îngheață varianta semnată definitiv). Doar din starea Semnat, paritar HCL.
+    [HttpPut("{id}/PublicareMol")]
+    [Authorize(Roles = "Admin,Secretar")]
+    public async Task<IActionResult> PublicareMol(int id, PublicareMolDispozitieDto dto)
+    {
+        var dispozitie = await _context.Dispozitii.FirstOrDefaultAsync(d => d.Id == id);
+        if (dispozitie is null) return NotFound();
+        if (dispozitie.Status != StatusActRedactional.Semnat)
+            return Conflict("Publicarea în MOL e posibilă doar pentru o dispoziție semnată.");
+
+        // Individual → nepublic implicit: override deliberat (confirmare + motiv + audit).
+        var gata = GateazaPublicareIndividuala(dispozitie, dto.ConfirmaPublicareIndividuala, dto.Motiv);
+        if (gata != null) return gata;
+
+        dispozitie.DataPublicareMol = dto.DataPublicareMol;
+        dispozitie.PublicataDe = _context.UserIdCurent;
+        dispozitie.AIntratInCircuit = true;   // intrare în circuit (aducere la cunoștință publică)
+        await _context.SaveChangesAsync();
+        return Ok(MapareDispozitie.SpreDetaliiDto(await ReincarcaCuIncludeAsync(id)));
+    }
+
+    // „Anulează MOL" = corecție de metadată (data publicării) pentru o eroare de înregistrare înainte
+    // ca actul să fi intrat formal în circuit. NU dezgheață varianta semnată (AIntratInCircuit rămâne)
+    // și e blocată după comunicarea la prefect.
+    [HttpDelete("{id}/PublicareMol")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> AnuleazaPublicareMol(int id, [FromBody] AnulareMolDispozitieDto dto)
+    {
+        var dispozitie = await _context.Dispozitii.FirstOrDefaultAsync(d => d.Id == id);
+        if (dispozitie is null) return NotFound();
+        if (dispozitie.DataPublicareMol == null)
+            return Conflict("Dispoziția nu are dată de publicare în MOL.");
+
+        // După comunicarea la prefect (art. 197), publicarea în MOL nu se mai poate anula — corecția
+        // se face printr-un act de îndreptare/erată (act nou), conform Legea 24/2000.
+        if (await _context.ComunicariDispozitiePrefect.AnyAsync(c => c.DispozitieId == id))
+            return Conflict("Dispoziție comunicată prefectului — publicarea în MOL nu se mai poate anula. "
+                + "Corecția se face printr-un act de îndreptare/erată (act nou), conform Legea 24/2000.");
+
+        var motiv = dto?.Motiv?.Trim();
+        if (string.IsNullOrWhiteSpace(motiv))
+            return BadRequest("Motivul anulării publicării în MOL este obligatoriu.");
+        if (motiv.Length > 1000)
+            return BadRequest("Motivul nu poate depăși 1000 de caractere.");
+
+        dispozitie.DataPublicareMol = null;
+        dispozitie.PublicataDe = null;
+        // AIntratInCircuit NU se resetează: varianta semnată rămâne înghețată definitiv.
+
+        _context.IstoricActiuniAct.Add(new IstoricActiuneAct
+        {
+            TipAct = TipAct.Dispozitie,
+            ActId = id,
+            Tip = TipActiuneAct.AnulareMol,
+            Motiv = motiv,
+            AdresaIp = HttpContext.Connection.RemoteIpAddress?.ToString()
+        });
+
+        await _context.SaveChangesAsync();
+        return Ok(MapareDispozitie.SpreDetaliiDto(await ReincarcaCuIncludeAsync(id)));
+    }
+
     // Matricea DELETE = gărzi ordonate cu early-return (paritar HCL).
     [HttpDelete("{id}")]
     [Authorize(Roles = "Admin")]
@@ -436,7 +545,9 @@ public class DispozitiiController : ControllerBase
         var dispozitie = await _context.Dispozitii.FirstOrDefaultAsync(d => d.Id == id);
         if (dispozitie is null) return NotFound();
 
-        // (Pas 10) Comunicări active la prefect → 409: registrul e inviolabil (ar cascada la soft-delete).
+        // Comunicări active la prefect → 409: registrul e inviolabil (ar cascada la soft-delete).
+        if (await _context.ComunicariDispozitiePrefect.AnyAsync(c => c.DispozitieId == id))
+            return Conflict("Dispoziția nu poate fi ștearsă: există comunicări către prefect în registru (audit inviolabil).");
 
         // Invalidat → OK (override: act mort legal, eliminare la cererea instanței, chiar și pe semnat)
         if (dispozitie.DataInvalidare != null)
@@ -460,6 +571,42 @@ public class DispozitiiController : ControllerBase
         return NoContent();
     }
 
+    // Individualele sunt nepublice implicit (Anexa 1 lit. d — în MOL doar normativul). Publicarea lor
+    // e un override deliberat: confirmare + motiv + rând de audit. Anonimizarea datelor cu caracter
+    // personal rămâne sarcina secretarului (defer-to-secretar, nu se procesează automat). Întoarce
+    // eroarea (soft-409 / 400) dacă override-ul nu e satisfăcut; altfel null — și, pentru individuala
+    // confirmată, adaugă rândul de audit (comis împreună cu publicarea, de către caller).
+    private IActionResult? GateazaPublicareIndividuala(Dispozitie dispozitie, bool confirma, string? motiv)
+    {
+        if (dispozitie.TipDispozitie != TipDispozitie.Individual)
+            return null;
+
+        if (!confirma)
+            return Conflict(new
+            {
+                mesaj = "Dispoziția are caracter individual (act de personal, posibil date cu caracter "
+                    + "personal). Nu se publică implicit. Anonimizarea datelor personale rămâne sarcina ta. "
+                    + "Confirmă cu ConfirmaPublicareIndividuala=true și un motiv pentru a continua.",
+                necesitaConfirmarePublicareIndividuala = true
+            });
+
+        var motivCurat = motiv?.Trim();
+        if (string.IsNullOrWhiteSpace(motivCurat))
+            return BadRequest("La publicarea unei dispoziții individuale, motivul este obligatoriu.");
+        if (motivCurat.Length > 1000)
+            return BadRequest("Motivul nu poate depăși 1000 de caractere.");
+
+        _context.IstoricActiuniAct.Add(new IstoricActiuneAct
+        {
+            TipAct = TipAct.Dispozitie,
+            ActId = dispozitie.Id,
+            Tip = TipActiuneAct.PublicareIndividualaOverride,
+            Motiv = motivCurat,
+            AdresaIp = HttpContext.Connection.RemoteIpAddress?.ToString()
+        });
+        return null;
+    }
+
     // ============ Reload cu include ============
 
     private Task<Dispozitie> ReincarcaCuIncludeAsync(int id, CancellationToken ct = default) =>
@@ -472,5 +619,5 @@ public class DispozitiiController : ControllerBase
         d.Id, d.Numar, d.AnNumerotare, d.TipDispozitie, d.Titlu,
         d.DataEmitere, d.DataIntrareInVigoare, d.Status,
         d.EstePublicat, d.DataPublicareMol,
-        d.DataInvalidare, d.MotivInvalidare, d.InstitutieId, d.CreatLa);
+        d.DataInvalidare, d.MotivInvalidare, d.SedintaId, d.InstitutieId, d.CreatLa);
 }

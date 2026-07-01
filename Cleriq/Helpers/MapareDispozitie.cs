@@ -13,8 +13,8 @@ public static class MapareDispozitie
         query
             .AsNoTracking()
             .Include(d => d.Semnatari).ThenInclude(s => s.Persoana)
-            .Include(d => d.Semnatari).ThenInclude(s => s.Consilier);
-            // .Include(d => d.Comunicari) — adăugat la Pas 10
+            .Include(d => d.Semnatari).ThenInclude(s => s.Consilier)
+            .Include(d => d.Comunicari);
 
     public static DispozitieDetaliiDto SpreDetaliiDto(Dispozitie d) => new(
         d.Id, d.Numar, d.AnNumerotare, d.TipDispozitie, d.Titlu, d.Continut,
@@ -25,11 +25,19 @@ public static class MapareDispozitie
         d.DataInvalidare, d.MotivInvalidare,
         d.DataInvalidare != null ? d.MotivInvalidare.EtichetaDispozitie() : null,
         d.RefInvalidare, d.MotivInvalidareAltulText,
+        d.SedintaId,
         d.InstitutieId, d.CreatLa,
-        d.Semnatari.OrderBy(s => s.OrdineAfisare).Select(SpreSemnatarDto).ToList());
+        d.Semnatari.OrderBy(s => s.OrdineAfisare).Select(SpreSemnatarDto).ToList(),
+        d.Comunicari.OrderByDescending(c => c.NumarOrdineInRegistru).Select(SpreComunicareDto).ToList());
 
     private static SemnatarDispozitieDto SpreSemnatarDto(SemnatarDispozitie s) => new(
         s.Id, s.RolSemnatar, s.PersoanaId, s.ConsilierId,
         s.Persoana?.NumeComplet ?? s.Consilier?.NumeComplet ?? "—",
         s.DataSemnare, s.OrdineAfisare);
+
+    private static ComunicareDispozitiePrefectDto SpreComunicareDto(ComunicareDispozitiePrefect c) => new(
+        c.Id, c.DispozitieId, c.NumarOrdineInRegistru, c.AnRegistru,
+        c.DataTrimiteri, c.DataInregistrareInRegistru, c.CanalTransmitere,
+        c.NrInregistrarePrefect, c.DataConfirmarePrefect, c.ObiectiiMotivate,
+        c.RaspunsPrefect, c.DataRaspunsPrefect, c.ObservatiiInterne, c.CreatLa);
 }

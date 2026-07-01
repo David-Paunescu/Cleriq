@@ -611,6 +611,43 @@ public static class ExtensiiTeste
         => admin.PostAsJsonAsync($"/api/Dispozitii/{dispozitieId}/Invalidare",
             new { motiv, motivAltulText, refInvalidare });
 
+    public static async Task PublicaDispozitieAsync(this HttpClient admin, int dispozitieId)
+    {
+        var raspuns = await admin.PutAsJsonAsync(
+            $"/api/Dispozitii/{dispozitieId}/Publicare", new { estePublicat = true });
+        await AsigurareSucces(raspuns, "Publicare dispoziție");
+    }
+
+    public static async Task PublicaMolDispozitieAsync(
+        this HttpClient admin, int dispozitieId, DateOnly? data = null)
+    {
+        var raspuns = await admin.PutAsJsonAsync($"/api/Dispozitii/{dispozitieId}/PublicareMol",
+            new { dataPublicareMol = data ?? DateOnly.FromDateTime(DateTime.UtcNow) });
+        await AsigurareSucces(raspuns, "Publicare MOL dispoziție");
+    }
+
+    // „Anulează MOL" cere motiv în body → DELETE cu conținut (paritar AnuleazaMolAsync de la HCL).
+    public static Task<HttpResponseMessage> AnuleazaMolDispozitieAsync(
+        this HttpClient admin, int dispozitieId, string motiv = "Corecție administrativă")
+    {
+        var cerere = new HttpRequestMessage(HttpMethod.Delete, $"/api/Dispozitii/{dispozitieId}/PublicareMol")
+        {
+            Content = JsonContent.Create(new { motiv })
+        };
+        return admin.SendAsync(cerere);
+    }
+
+    public static async Task AdaugaComunicarePrefectDispozitieAsync(
+        this HttpClient admin, int dispozitieId, DateOnly? dataTrimiteri = null)
+    {
+        var raspuns = await admin.PostAsJsonAsync($"/api/Dispozitii/{dispozitieId}/Comunicari", new
+        {
+            dataTrimiteri = dataTrimiteri ?? new DateOnly(2026, 6, 15),
+            canalTransmitere = CanalTransmiterePrefect.EmailOficial
+        });
+        await AsigurareSucces(raspuns, "Adăugare comunicare prefect dispoziție");
+    }
+
     private static async Task AsigurareSucces(HttpResponseMessage raspuns, string operatiune)
     {
         if (raspuns.IsSuccessStatusCode) return;

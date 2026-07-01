@@ -104,9 +104,12 @@ builder.Services.AddSingleton<ICalculatorZileLucratoare, CalculatorZileLucratoar
 builder.Services.AddScoped<IServiciuNumerotareActe, ServiciuNumerotareActe>();
 builder.Services.AddScoped<IServiciuNumerotareHcl, ServiciuNumerotareHcl>();
 builder.Services.AddScoped<IServiciuComunicareHclPrefect, ServiciuComunicareHclPrefect>();
+builder.Services.AddScoped<IServiciuComunicareDispozitiePrefect, ServiciuComunicareDispozitiePrefect>();
 builder.Services.AddScoped<IGeneratorHcl, GeneratorHcl>();
 builder.Services.AddScoped<IGeneratorPdfHcl, GeneratorPdfHcl>();
 builder.Services.AddScoped<IGeneratorDispozitie, GeneratorDispozitie>();
+builder.Services.AddScoped<IGeneratorPdfDispozitie, GeneratorPdfDispozitie>();
+builder.Services.AddScoped<IServiciuDispozitieConvocare, ServiciuDispozitieConvocare>();
 builder.Services.AddScoped<IServiciuValidareMandate, ServiciuValidareMandate>();
 builder.Services.AddScoped<IServiciuFunctiiIstorice, ServiciuFunctiiIstorice>();
 builder.Services.AddScoped<NotificareLogger>();

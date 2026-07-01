@@ -265,6 +265,79 @@ public class TesteConvocare
         Assert.Equal((int)StatusTrimitere.FaraDestinatie, dto.GetProperty("smsStatus").GetInt32());
     }
 
+    // === Dispoziția de convocare (Pas 12) ===
+
+    [Fact]
+    public async Task Convocare_CuMandate_GenereazaDispozitiaDeConvocare_DraftIndividualaLegata()
+    {
+        using var admin = await AdminAsync();
+        var azi = DateOnly.FromDateTime(DateTime.UtcNow);
+        await admin.AsigurareMandatPrimarAsync(azi);
+        await admin.AsigurareMandatSecretarAsync(azi);
+        await admin.CreeazaConsilierAsync("Ana Consilier", "ana@test.ro");
+        var sedintaId = await admin.CreeazaSedintaAsync();
+        await admin.CreeazaPunctAsync(sedintaId, TipMajoritate.Simpla, ordine: 1);
+
+        await admin.TrimiteConvocariAsync(sedintaId);
+
+        // dispoziția de convocare legată de ședință apare în lista de dispoziții
+        var lista = await admin.GetFromJsonAsync<JsonElement>("/api/Dispozitii");
+        var disp = lista.EnumerateArray().First(d =>
+            d.GetProperty("sedintaId").ValueKind != JsonValueKind.Null
+            && d.GetProperty("sedintaId").GetInt32() == sedintaId);
+
+        Assert.Equal((int)StatusActRedactional.Draft, disp.GetProperty("status").GetInt32());
+        Assert.Equal((int)TipDispozitie.Individual, disp.GetProperty("tipDispozitie").GetInt32());
+        Assert.False(disp.GetProperty("estePublicat").GetBoolean());
+
+        // conținutul are formula de convocare, temeiul și punctul din ordinea de zi
+        var detalii = await admin.GetFromJsonAsync<JsonElement>(
+            $"/api/Dispozitii/{disp.GetProperty("id").GetInt32()}");
+        var continut = detalii.GetProperty("continut").GetString()!;
+        Assert.Contains("Se convoacă", continut);
+        Assert.Contains("art. 134 alin. (1) lit. a)", continut);
+        Assert.Contains("Punct 1", continut);
+    }
+
+    [Fact]
+    public async Task Convocare_FaraMandate_NuGenereazaDispozitie_DarConvocareaReuseste()
+    {
+        using var admin = await AdminAsync();
+        await admin.CreeazaConsilierAsync("Ana Consilier", "ana@test.ro");
+        var sedintaId = await admin.CreeazaSedintaAsync();
+
+        // best-effort: fără mandate de primar/secretar, convocarea reușește oricum
+        var rezultat = await admin.TrimiteConvocariAsync(sedintaId);
+        Assert.Equal(1, rezultat.GetProperty("totalConsilieri").GetInt32());
+
+        var lista = await admin.GetFromJsonAsync<JsonElement>("/api/Dispozitii");
+        var sedinteLegate = lista.EnumerateArray()
+            .Where(d => d.GetProperty("sedintaId").ValueKind != JsonValueKind.Null)
+            .Select(d => d.GetProperty("sedintaId").GetInt32())
+            .ToList();
+        Assert.DoesNotContain(sedintaId, sedinteLegate);
+    }
+
+    [Fact]
+    public async Task Convocare_RePost_NuDublezaDispozitiaDeConvocare()
+    {
+        using var admin = await AdminAsync();
+        var azi = DateOnly.FromDateTime(DateTime.UtcNow);
+        await admin.AsigurareMandatPrimarAsync(azi);
+        await admin.AsigurareMandatSecretarAsync(azi);
+        await admin.CreeazaConsilierAsync("Ana Consilier", "ana@test.ro");
+        var sedintaId = await admin.CreeazaSedintaAsync();
+
+        await admin.TrimiteConvocariAsync(sedintaId);
+        await admin.TrimiteConvocariAsync(sedintaId); // re-POST nu trebuie să dubleze
+
+        var lista = await admin.GetFromJsonAsync<JsonElement>("/api/Dispozitii");
+        var count = lista.EnumerateArray().Count(d =>
+            d.GetProperty("sedintaId").ValueKind != JsonValueKind.Null
+            && d.GetProperty("sedintaId").GetInt32() == sedintaId);
+        Assert.Equal(1, count);
+    }
+
     [Fact]
     public async Task Retry_SedintaFinalizata_Returneaza409()
     {

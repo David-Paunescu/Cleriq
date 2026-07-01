@@ -515,6 +515,14 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             .HasForeignKey(x => x.InstitutieId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // Dispoziția de convocare → Sedinta (opțional, Restrict). NU intră în cascada `case Sedinta`:
+        // un act numerotat supraviețuiește ședinței (paritar Hcl → PunctOrdineZi).
+        modelBuilder.Entity<Dispozitie>()
+            .HasOne(d => d.Sedinta)
+            .WithMany()
+            .HasForeignKey(d => d.SedintaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         modelBuilder.Entity<SemnatarDispozitie>()
             .HasOne(x => x.Institutie)
             .WithMany()
@@ -537,6 +545,19 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
             .HasOne(s => s.Consilier)
             .WithMany()
             .HasForeignKey(s => s.ConsilierId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // === ComunicareDispozitiePrefect → Institutie + Dispoziție (Restrict, paritar HCL) ===
+        modelBuilder.Entity<ComunicareDispozitiePrefect>()
+            .HasOne(x => x.Institutie)
+            .WithMany()
+            .HasForeignKey(x => x.InstitutieId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<ComunicareDispozitiePrefect>()
+            .HasOne(c => c.Dispozitie)
+            .WithMany(d => d.Comunicari)
+            .HasForeignKey(c => c.DispozitieId)
             .OnDelete(DeleteBehavior.Restrict);
 
         // Registru propriu de numerotare — ambele tipuri (Normativ/Individual) în aceeași secvență
@@ -571,6 +592,12 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
                     "([RolSemnatar] = 2 AND [PersoanaId] IS NOT NULL AND [ConsilierId] IS NULL) " +
                     "OR ([RolSemnatar] = 1)");
             });
+
+        // Registru cronologic comunicări prefect dispoziții per (Institutie, AnRegistru)
+        modelBuilder.Entity<ComunicareDispozitiePrefect>()
+            .HasIndex(c => new { c.InstitutieId, c.AnRegistru, c.NumarOrdineInRegistru })
+            .IsUnique()
+            .HasFilter("[EsteSters] = 0");
 
         // Filtru global automat: soft-delete + tenant
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
@@ -682,6 +709,8 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
                 CascadaPeColectie(Convocari.Where(co => co.SedintaId == s.Id), acum, userId, coada);
                 CascadaPeColectie(Documente.Where(d => d.SedintaId == s.Id), acum, userId, coada);
                 CascadaPeColectie(Transcrieri.Where(t => t.SedintaId == s.Id), acum, userId, coada);
+                // Dispozitii.SedintaId NU se cascadează: dispoziția de convocare e act numerotat, cu
+                // viață proprie, care supraviețuiește ședinței (paritar Hcl → PunctOrdineZi).
                 break;
 
             case PunctOrdineZi p:
@@ -698,7 +727,8 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
 
             case Dispozitie d:
                 CascadaPeColectie(SemnatariDispozitie.Where(s => s.DispozitieId == d.Id), acum, userId, coada);
-                // ComunicariDispozitiePrefect — adăugat la Pas 10. Auditul NU se cascadează.
+                CascadaPeColectie(ComunicariDispozitiePrefect.Where(c => c.DispozitieId == d.Id), acum, userId, coada);
+                // Auditul (IstoricActiuneAct) NU se cascadează — log imutabil care supraviețuiește actului.
                 break;
 
             case Persoana pers:
@@ -748,4 +778,5 @@ public class AppDbContext : IdentityDbContext<Utilizator, Rol, int>
     public DbSet<IstoricActiuneAct> IstoricActiuniAct { get; set; }
     public DbSet<Dispozitie> Dispozitii { get; set; }
     public DbSet<SemnatarDispozitie> SemnatariDispozitie { get; set; }
+    public DbSet<ComunicareDispozitiePrefect> ComunicariDispozitiePrefect { get; set; }
 }

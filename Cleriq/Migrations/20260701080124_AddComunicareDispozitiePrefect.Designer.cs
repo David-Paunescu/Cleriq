@@ -4,6 +4,7 @@ using Cleriq.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Cleriq.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260701080124_AddComunicareDispozitiePrefect")]
+    partial class AddComunicareDispozitiePrefect
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -568,9 +571,6 @@ namespace Cleriq.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
-                    b.Property<int?>("SedintaId")
-                        .HasColumnType("int");
-
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
@@ -589,8 +589,6 @@ namespace Cleriq.Migrations
                         .HasColumnType("nvarchar(300)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("SedintaId");
 
                     b.HasIndex("InstitutieId", "AnNumerotare", "Numar")
                         .IsUnique()
@@ -2363,14 +2361,7 @@ namespace Cleriq.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Cleriq.Models.Sedinta", "Sedinta")
-                        .WithMany()
-                        .HasForeignKey("SedintaId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.Navigation("Institutie");
-
-                    b.Navigation("Sedinta");
                 });
 
             modelBuilder.Entity("Cleriq.Models.Document", b =>
