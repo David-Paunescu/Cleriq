@@ -61,14 +61,16 @@ function offsetFusOrar(data: Date, fus: string): number {
   return Math.round((asUtc - data.getTime()) / 60_000);
 }
 
-// DateOnly (API: „yyyy-MM-dd") → afișare „dd.MM.yyyy", FĂRĂ shift de fus.
-// Un DateOnly nu are oră/fus; helperele cu Europe/Bucharest ar adăuga o oră parazită
-// (și ar muta ziua pe fusuri în urma UTC). Ancorăm la miezul nopții UTC și formatăm în
-// UTC → corect-prin-construcție, indiferent de fusul instituției.
-export function formateazaDataDoar(dataOnly: string | null | undefined): string {
-  if (!dataOnly) return '—';
+// DateOnly (API: „yyyy-MM-dd") SAU DateTime ISO în UTC → afișare „dd.MM.yyyy", FĂRĂ shift de fus.
+// Un DateOnly nu are oră/fus; helperele cu Europe/Bucharest ar adăuga o oră parazită (și ar muta ziua pe
+// fusuri în urma UTC). Luăm doar partea de dată (primele 10 caractere), o ancorăm la miezul nopții UTC și
+// formatăm în UTC → corect-prin-construcție. Acceptă și un DateTime UTC (ex. DataEmitere, stocată la prânz
+// UTC doar pentru calculul anului de registru) — ora e un artefact și se omite.
+export function formateazaDataDoar(data: string | null | undefined): string {
+  if (!data) return '—';
+  const doar = data.substring(0, 10);
   return new Intl.DateTimeFormat('ro-RO', {
     timeZone: 'UTC',
     day: '2-digit', month: '2-digit', year: 'numeric'
-  }).format(new Date(`${dataOnly}T00:00:00Z`));
+  }).format(new Date(`${doar}T00:00:00Z`));
 }

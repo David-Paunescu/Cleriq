@@ -11,7 +11,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { AuthService } from '../../../core/auth/auth.service';
 import { extrageMesajEroare } from '../../../core/http/erori';
-import { formateazaDataScurta } from '../../../shared/data';
+import { formateazaDataDoar } from '../../../shared/data';
 import { StatusActRedactional, TipDispozitie } from '../../../shared/enums';
 import { etichetaStatusActRedactional, etichetaTipDispozitie } from '../../../shared/etichete';
 import { normalizeazaPentruCautare } from '../../../shared/text';
@@ -119,7 +119,7 @@ export class DispozitiiLista {
     return d.sedintaId != null;
   }
 
-  formateaza = formateazaDataScurta;
+  formateaza = formateazaDataDoar;
   etichetaStatus = etichetaStatusActRedactional;
   etichetaTip = etichetaTipDispozitie;
 

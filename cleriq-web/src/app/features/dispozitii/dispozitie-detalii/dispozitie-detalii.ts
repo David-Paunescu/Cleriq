@@ -17,7 +17,7 @@ import {
   ModificariNesalvateService, ProprietarStareModificari
 } from '../../../core/modificari/modificari-nesalvate.service';
 import { ConfirmareDialog, DateConfirmare } from '../../../shared/confirmare/confirmare-dialog';
-import { formateazaDataOra } from '../../../shared/data';
+import { formateazaDataDoar, formateazaDataOra } from '../../../shared/data';
 import { StatusActRedactional, TipDispozitie } from '../../../shared/enums';
 import { etichetaStatusActRedactional, etichetaTipDispozitie } from '../../../shared/etichete';
 import {
@@ -123,6 +123,7 @@ export class DispozitieDetaliiPagina implements OnInit, OnDestroy {
   readonly etichetaStatusActRedactional = etichetaStatusActRedactional;
   readonly etichetaTipDispozitie = etichetaTipDispozitie;
   readonly formateazaDataOra = formateazaDataOra;
+  readonly formateazaDataDoar = formateazaDataDoar;
 
   private readonly handlerKeydown = (event: KeyboardEvent): void => {
     if (this.indexTabActiv() !== 1) return;  // doar pe tab Conținut

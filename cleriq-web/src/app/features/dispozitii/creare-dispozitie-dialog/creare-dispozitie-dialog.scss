@@ -3,6 +3,7 @@
   flex-direction: column;
   gap: 4px;
   min-width: 360px;
+  padding-top: 12px;  // spațiu între titlul dialogului și eticheta flotantă a primului câmp (Tip)
 }
 
 .form-creare mat-form-field {
@@ -11,6 +12,6 @@
 
 .eroare-inline {
   color: var(--mat-sys-error);
-  margin: 4px 0 0;
+  margin: 12px 0 0;   // separă mesajul de eroare de hint-ul câmpului de deasupra (emitent)
   font-size: 14px;
 }
